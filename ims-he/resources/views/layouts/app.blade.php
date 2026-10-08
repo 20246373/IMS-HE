@@ -16,24 +16,25 @@
  .danger{background:#a33}.ok{background:#e6f4ea;padding:.6rem;border-radius:5px;margin-bottom:1rem}
  .err{background:#fdecea;padding:.6rem;border-radius:5px;margin-bottom:1rem;color:#8a1f17}
  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem}.low{color:#a33;font-weight:600}
+ .inline{display:inline;margin:0}
 </style>
 </head>
 <body>
 <nav>
  <strong>IMS-HE</strong>
- <a href="{{ route('catalog') }}">Store</a>
  @auth
-  @if(auth()->user()->isStaff())
-   <a href="{{ route('dashboard') }}">Dashboard</a>
-   @if(auth()->user()->hasRole('president','inventory_clerk','store_supervisor'))<a href="{{ route('products.index') }}">Inventory</a>@endif
-   @if(auth()->user()->hasRole('president','store_supervisor','employee'))<a href="{{ route('pos.index') }}">POS</a>@endif
+  <a href="{{ route('dashboard') }}">Dashboard</a>
+  {{-- Teammates: add your module links here, wrapped in the matching role check --}}
+  @if(auth()->user()->hasRole('President'))
+   <a href="{{ route('users.index') }}">Accounts</a>
+   <a href="{{ route('audit.index') }}">Audit log</a>
   @endif
   <span class="sp"></span>
-  <span>{{ auth()->user()->name }} ({{ str_replace('_',' ',auth()->user()->role) }})</span>
-  <form method="POST" action="{{ route('logout') }}" style="margin:0">@csrf<button>Logout</button></form>
+  <span>{{ auth()->user()->username }} ({{ auth()->user()->role }})</span>
+  <form method="POST" action="{{ route('logout') }}" class="inline">@csrf<button>Logout</button></form>
  @else
   <span class="sp"></span>
-  <a href="{{ route('login') }}">Login</a><a href="{{ route('register') }}">Register</a>
+  <a href="{{ route('login') }}">Login</a>
  @endauth
 </nav>
 <main>

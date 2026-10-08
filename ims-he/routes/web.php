@@ -1,43 +1,35 @@
 <?php
 
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\PosController;
-use App\Http\Controllers\ProductController;
+use App\Http\Controllers\UserController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
-// Public storefront (guests + customers)
-Route::get('/', [CatalogController::class, 'index'])->name('catalog');
-Route::get('/catalog/{product}', [CatalogController::class, 'show'])->name('catalog.show');
+// Entry point: staff go to the dashboard, everyone else to login.
+// (Person 5 will replace this with the public storefront.)
+Route::get('/', fn () => redirect()->route(auth()->check() ? 'dashboard' : 'login'));
 
-// Auth
+// Authentication
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
-    Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
-    Route::post('/register', [AuthController::class, 'register']);
 });
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 
-// Staff area (RBAC - SRS 4.3.b)
-$staff = implode(',', User::STAFF_ROLES);
-Route::middleware(['auth', "role:$staff"])->group(function () {
+// Staff area (RBAC). Add new module routes inside this group with their own role:... middleware.
+$allRoles = implode(',', User::ROLES);
+
+Route::middleware(['auth', "role:$allRoles"])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Inventory management
-    Route::middleware('role:president,inventory_clerk,store_supervisor')->prefix('manage')->group(function () {
-        Route::resource('products', ProductController::class)->except(['show']);
+    // User account management + audit log: President only (SRS 4.3.b)
+    Route::middleware('role:' . User::PRESIDENT)->group(function () {
+        Route::resource('users', UserController::class)->except(['show']);
+        Route::post('users/{user}/lock', [UserController::class, 'lock'])->name('users.lock');
+        Route::post('users/{user}/unlock', [UserController::class, 'unlock'])->name('users.unlock');
+        Route::post('users/{user}/password', [UserController::class, 'resetPassword'])->name('users.password');
+        Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit.index');
     });
-
-    // In-store sales / POS
-    Route::middleware('role:president,store_supervisor,employee')->prefix('pos')->name('pos.')->group(function () {
-        Route::get('/', [PosController::class, 'index'])->name('index');
-        Route::post('/', [PosController::class, 'store'])->name('store');
-        Route::get('/receipt/{invoice}', [PosController::class, 'receipt'])->name('receipt');
-    });
-
-    // TODO next: suppliers + purchase orders (ProcurementService), employees/attendance/payroll (PayrollService),
-    // financial ledger, reports, user management (president only), customer cart + checkout.
 });
