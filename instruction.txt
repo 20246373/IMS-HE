@@ -1,0 +1,3 @@
+you need to connect the .env manually, after
+need to migrate the seed
+then done
