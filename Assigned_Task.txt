@@ -1,3 +1,16 @@
 Benedict Rivera
 
 Done with Module:Sales Management part
+Changes at resources/views/pos...
+
+Added:
+1. Search or pick a product, set quantity, and show a running total. 
+2. Block quantities above stock_quantity. 
+3. Payment entry: amount paid, payment method, and the change calculation. 
+amount_paid must be at least the total. 
+4. On confirm, do everything inside one DB::transaction: created the invoice with 
+channel “In-store”, insert the invoice items (copy unit_price into price), insert the 
+payment, and call InventoryService::deduct() for each item.
+5. Receipt page with a print button that uses the browser’s print function. 
+6. Customer selector (optional, for registered customers) and a walk-in option. 
+7. Today’s sales total to the dashboard.
