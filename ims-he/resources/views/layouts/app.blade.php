@@ -17,6 +17,26 @@
  .err{background:#fdecea;padding:.6rem;border-radius:5px;margin-bottom:1rem;color:#8a1f17}
  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem}.low{color:#a33;font-weight:600}
  .inline{display:inline;margin:0}
+ /* Login: access chooser + forms, built on .card */
+ .auth{max-width:400px;margin:auto} .auth h2{margin-top:0}
+ .auth-top{display:flex;justify-content:space-between;font-size:.9rem;color:#666;margin-bottom:.4rem}
+ .auth-top a{color:#1f3a5f;text-decoration:none}
+ .auth input{display:block;width:100%;box-sizing:border-box}
+ .auth .btn{display:block;text-align:center;margin-bottom:.5rem}
+ .btn-alt{background:#fff;color:#1f3a5f;border:1px solid #1f3a5f}
+ /* Storefront (Product Catalog Module) */
+ .search{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center} .search input{flex:1;min-width:180px}
+ .cats a{display:inline-block;margin:.2rem .4rem .2rem 0;padding:.2rem .6rem;border:1px solid #1f3a5f;border-radius:999px;color:#1f3a5f;text-decoration:none;font-size:.85rem}
+ .product{display:flex;flex-direction:column;gap:.25rem;color:inherit;text-decoration:none;margin:0} .product:hover{box-shadow:0 2px 8px #0002}
+ .product img,.product .noimg{width:100%;height:150px;object-fit:cover;border-radius:5px}
+ .noimg{background:#eef0f3;color:#888;display:flex;align-items:center;justify-content:center;font-size:.85rem}
+ .product small,.detail small{color:#666}
+ .stock{font-size:.8rem;font-weight:600;padding:.1rem .5rem;border-radius:999px;align-self:flex-start}
+ .stock.in{background:#e6f4ea;color:#1e6b34} .stock.out{background:#fdecea;color:#8a1f17}
+ .detail{display:grid;grid-template-columns:minmax(0,320px) 1fr;gap:1.2rem} .detail img,.detail .noimg{width:100%;height:280px;object-fit:cover;border-radius:5px}
+ .detail h2{margin:.2rem 0} .price{font-size:1.3rem;font-weight:600;margin:.3rem 0}
+ @media (max-width:600px){.detail{grid-template-columns:1fr}}
+ .pager{display:flex;gap:1rem;justify-content:center;align-items:center} .pager span{color:#888}
 </style>
 </head>
 <body>
@@ -32,9 +52,18 @@
   <span class="sp"></span>
   <span>{{ auth()->user()->username }} ({{ auth()->user()->role }})</span>
   <form method="POST" action="{{ route('logout') }}" class="inline">@csrf<button>Logout</button></form>
- @else
+ @elseauth('customer')
+  <a href="{{ route('home') }}">Home</a>
+  <a href="{{ route('catalog.index') }}">Products</a>
+  <a href="{{ route('customer.account') }}">My account</a>
   <span class="sp"></span>
-  <a href="{{ route('login') }}">Login</a>
+  <span>{{ auth('customer')->user()->username }}</span>
+  <form method="POST" action="{{ route('customer.logout') }}" class="inline">@csrf<button>Logout</button></form>
+ @else
+  <a href="{{ route('home') }}">Home</a>
+  <a href="{{ route('catalog.index') }}">Products</a>
+  <span class="sp"></span>
+  <a href="{{ route('login') }}">Log in</a>
  @endauth
 </nav>
 <main>

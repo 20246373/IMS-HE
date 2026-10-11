@@ -2,21 +2,40 @@
 
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
-// Entry point: staff go to the dashboard, everyone else to login.
-// (Person 5 will replace this with the public storefront.)
-Route::get('/', fn () => redirect()->route(auth()->check() ? 'dashboard' : 'login'));
+// Product Catalog Module: public storefront (guests and customers). Staff hitting / go to the dashboard.
+Route::get('/', [CatalogController::class, 'home'])->name('home');
+Route::get('/shop', [CatalogController::class, 'index'])->name('catalog.index');
+Route::get('/shop/{product}', [CatalogController::class, 'show'])->name('catalog.show');
 
-// Authentication
+// Authentication: /login asks staff or customer first, then shows that guard's form.
 Route::middleware('guest')->group(function () {
-    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::view('/login', 'auth.choose')->name('login');
+    Route::get('/login/staff', [AuthController::class, 'showLogin'])->name('staff.login');
+    Route::post('/login/staff', [AuthController::class, 'login']);
 });
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+
+// Customer Account Module: storefront customers use the separate 'customer' guard (customers table).
+Route::name('customer.')->group(function () {
+    Route::middleware('guest:customer')->group(function () {
+        Route::get('/register', [CustomerAuthController::class, 'showRegister'])->name('register');
+        Route::post('/register', [CustomerAuthController::class, 'register']);
+        Route::get('/login/customer', [CustomerAuthController::class, 'showLogin'])->name('login');
+        Route::post('/login/customer', [CustomerAuthController::class, 'login'])->middleware('throttle:5,1');
+    });
+
+    Route::middleware('auth:customer')->group(function () {
+        Route::get('/account', [CustomerAuthController::class, 'account'])->name('account');
+        Route::post('/customer/logout', [CustomerAuthController::class, 'logout'])->name('logout');
+    });
+});
 
 // Staff area (RBAC). Add new module routes inside this group with their own role:... middleware.
 $allRoles = implode(',', User::ROLES);

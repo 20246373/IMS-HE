@@ -15,6 +15,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
+
+        // Send each guard to its own login / home page instead of the staff defaults.
+        $middleware->redirectGuestsTo(fn (Request $request) => $request->routeIs('customer.*')
+            ? route('customer.login') : route('staff.login'));
+        $middleware->redirectUsersTo(fn (Request $request) => $request->routeIs('customer.*')
+            ? route('customer.account') : route('dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
