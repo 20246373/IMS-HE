@@ -38,6 +38,7 @@
  @media (max-width:600px){.detail{grid-template-columns:1fr}}
  .pager{display:flex;gap:1rem;justify-content:center;align-items:center} .pager span{color:#888}
 </style>
+@stack('head')
 </head>
 <body>
 <nav>
@@ -66,6 +67,7 @@
   <a href="{{ route('login') }}">Log in</a>
  @endauth
 </nav>
+@yield('hero')
 <main>
  @if(session('status'))<div class="ok">{{ session('status') }}</div>@endif
  @if($errors->any())<div class="err">@foreach($errors->all() as $e)<div>{{ $e }}</div>@endforeach</div>@endif

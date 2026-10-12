@@ -25,7 +25,10 @@ class CatalogController extends Controller
 
         return view('catalog.home', [
             'featured' => $featured,
-            'categories' => Category::orderBy('category_name')->get(),
+            'categories' => Category::withCount(['products' => fn ($q) => $q->where('is_active', true)])->orderBy('category_name')->get(),
+            // category_id => image_path of its first product that has a photo (used for the category tiles)
+            'categoryThumbs' => Product::active()->whereNotNull('image_path')->orderBy('product_id')
+                ->get(['category_id', 'image_path'])->unique('category_id')->pluck('image_path', 'category_id'),
         ]);
     }
 
