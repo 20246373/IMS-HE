@@ -18,7 +18,7 @@ class RoleMiddleware
         $user = $request->user();
 
         if (! $user) {
-            return redirect()->route('login');
+            return redirect()->route('staff.login');
         }
 
         if ($user->status !== User::STATUS_ACTIVE) {
@@ -26,7 +26,7 @@ class RoleMiddleware
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('login')->withErrors(['username' => 'Your account is locked. Contact the President.']);
+            return redirect()->route('staff.login')->withErrors(['username' => 'Your account is locked. Contact the President.']);
         }
 
         abort_unless(in_array($user->role, $roles, true), 403, 'You do not have access to this module.');

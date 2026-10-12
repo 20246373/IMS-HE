@@ -1,9 +1,10 @@
 @extends('layouts.app')
-@section('title','Login')
+@section('title','Staff login')
 @section('content')
-<div class="card" style="max-width:380px;margin:auto">
+<div class="card auth">
+ <div class="auth-top"><a href="{{ route('login') }}">&larr; Change access</a><span>Staff</span></div>
  <h2>Staff login</h2>
- <form method="POST" action="{{ url('/login') }}">@csrf
+ <form method="POST" action="{{ route('staff.login') }}">@csrf
   <label>Username <input name="username" value="{{ old('username') }}" required autofocus></label>
   <label>Password <input type="password" name="password" required></label>
   <p><button>Sign in</button></p>
