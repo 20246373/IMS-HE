@@ -9,9 +9,25 @@ use App\Models\Product;
 use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
+    /**
+     * Photos live in storage/app/public/products/.
+     * By default a product's photo is found by its slug, e.g. "Claw Hammer 16oz" -> claw-hammer-16oz.jpg
+     * (.jpg .jpeg .png .webp). If your files are named differently, map them here:
+     *   'Claw Hammer 16oz' => 'hammer.jpg',
+     */
+    private array $photoFiles = [
+        'Claw Hammer 16oz'       => 'clawhammer.jpg',
+        'Cordless Drill 12V'     => 'cordlessdrill.jpg',
+        'PVC Pipe 1/2" x 3m'     => 'pvcpipe.jpg',
+        'THHN Wire #12 (per m)'  => 'thhnwire.jpg',
+        'Latex Paint White 4L'   => 'latexpaint.jpg',
+        'Common Nails 3" (kg)'   => 'commonnail.jpg',
+    ];
+
     public function run(): void
     {
         // DEV ONLY - sample data and shared passwords. Remove before any real deployment.
@@ -55,10 +71,21 @@ class DatabaseSeeder extends Seeder
             ['Latex Paint White 4L',   'Paint',       780,    5,  6],   // starts below reorder level
             ['Common Nails 3" (kg)',   'Fasteners',    85,   60, 15],
         ] as [$name, $cat, $price, $stock, $reorder]) {
-            Product::firstOrCreate(['product_name' => $name], [
+            $product = Product::firstOrCreate(['product_name' => $name], [
                 'category_id' => $cats[$cat], 'description' => $name, 'unit_price' => $price,
                 'stock_quantity' => $stock, 'reorder_level' => $reorder, 'is_active' => true,
             ]);
+
+            // Fill a missing photo path without touching stock or price, so `php artisan db:seed` is safe to re-run.
+            if (! $product->image_path) {
+                $photo = $this->photoFor($name);
+
+                if ($photo) {
+                    $product->update(['image_path' => $photo]);
+                } else {
+                    $this->command?->warn("No photo found for \"{$name}\" - expected storage/app/public/products/" . Str::slug($name) . '.jpg');
+                }
+            }
         }
 
         foreach ([
@@ -74,5 +101,24 @@ class DatabaseSeeder extends Seeder
             'email_verified_at' => now(), 'contact_number' => '09171234567', 'address' => 'Baguio City',
             'password' => 'password123',
         ]);
+    }
+
+    /** Returns "products/<file>" if the photo exists on disk, otherwise null. */
+    private function photoFor(string $productName): ?string
+    {
+        $dir = storage_path('app/public/products');
+
+        if (isset($this->photoFiles[$productName]) && is_file($dir . '/' . $this->photoFiles[$productName])) {
+            return 'products/' . $this->photoFiles[$productName];
+        }
+
+        $slug = Str::slug($productName);
+        foreach (['jpg', 'jpeg', 'png', 'webp'] as $ext) {
+            if (is_file("{$dir}/{$slug}.{$ext}")) {
+                return "products/{$slug}.{$ext}";
+            }
+        }
+
+        return null;
     }
 }
