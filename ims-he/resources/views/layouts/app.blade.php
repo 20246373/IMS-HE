@@ -45,6 +45,9 @@
  <strong>IMS-HE</strong>
  @auth
   <a href="{{ route('dashboard') }}">Dashboard</a>
+  <a href="{{ route('suppliers.index') }}">Suppliers</a>
+  <a href="{{ route('purchase-orders.index') }}">Purchase Orders</a>
+  <a href="{{ route('deliveries.create') }}">Receive Delivery</a>
   {{-- Teammates: add your module links here, wrapped in the matching role check --}}
   @if(auth()->user()->hasRole('President'))
    <a href="{{ route('users.index') }}">Accounts</a>

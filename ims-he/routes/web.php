@@ -5,6 +5,9 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DeliveryController;
+use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UserController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -42,9 +45,13 @@ $allRoles = implode(',', User::ROLES);
 
 Route::middleware(['auth', "role:$allRoles"])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::resource('suppliers', SupplierController::class)->except(['show']);
+    Route::resource('purchase-orders', PurchaseOrderController::class)->only(['index', 'create', 'store', 'show']);
+    Route::get('deliveries/create', [DeliveryController::class, 'create'])->name('deliveries.create');
+    Route::post('deliveries', [DeliveryController::class, 'store'])->name('deliveries.store');
 
     // User account management + audit log: President only (SRS 4.3.b)
-    Route::middleware('role:' . User::PRESIDENT)->group(function () {
+    Route::middleware('role:'.User::PRESIDENT)->group(function () {
         Route::resource('users', UserController::class)->except(['show']);
         Route::post('users/{user}/lock', [UserController::class, 'lock'])->name('users.lock');
         Route::post('users/{user}/unlock', [UserController::class, 'unlock'])->name('users.unlock');

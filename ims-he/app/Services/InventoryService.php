@@ -36,13 +36,13 @@ class InventoryService
             $product = Product::lockForUpdate()->findOrFail($productId);
 
             if ($qty < 1) {
-                throw ValidationException::withMessages(['items' => "Invalid quantity for {$product->name}."]);
+                throw ValidationException::withMessages(['items' => "Invalid quantity for {$product->product_name}."]);
             }
 
             if ($type === 'OUT') {
                 if ($product->stock_quantity < $qty) {
                     throw ValidationException::withMessages([
-                        'items' => "Insufficient stock for {$product->name} (available: {$product->stock_quantity}).",
+                        'items' => "Insufficient stock for {$product->product_name} (available: {$product->stock_quantity}).",
                     ]);
                 }
                 $product->decrement('stock_quantity', $qty);
@@ -51,12 +51,12 @@ class InventoryService
             }
 
             InventoryTransaction::create([
-                'product_id'       => $product->id,
-                'type'             => $type,
-                'quantity'         => $qty,
+                'product_id' => $product->product_id,
+                'transaction_type' => $type,
+                'quantity' => $qty,
                 'transaction_date' => today(),
-                'reference_type'   => $referenceType,
-                'reference_id'     => $referenceId === null ? null : (string) $referenceId,
+                'reference_type' => $referenceType,
+                'reference_id' => $referenceId === null ? null : (string) $referenceId,
             ]);
 
             return $product->refresh();
