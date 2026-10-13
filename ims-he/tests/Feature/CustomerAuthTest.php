@@ -62,7 +62,7 @@ class CustomerAuthTest extends TestCase
         $customer = Customer::create(collect($this->validData())->except('password_confirmation')->all());
 
         $this->post('/login/customer', ['login' => 'juan123', 'password' => 'secret123'])
-            ->assertRedirect(route('customer.account'));
+            ->assertRedirect(route('home'));
         $this->assertAuthenticatedAs($customer, 'customer');
         $this->assertGuest('web');                // customer login never touches the staff guard
 

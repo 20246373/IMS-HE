@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CartController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\DashboardController;
@@ -37,6 +38,12 @@ Route::name('customer.')->group(function () {
     Route::middleware('auth:customer')->group(function () {
         Route::get('/account', [CustomerAuthController::class, 'account'])->name('account');
         Route::post('/customer/logout', [CustomerAuthController::class, 'logout'])->name('logout');
+
+        // Cart (checkout not built yet). Guests hitting these are redirected to the customer login (UC19 includes UC01).
+        Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+        Route::post('/cart/{product}', [CartController::class, 'store'])->name('cart.add');
+        Route::patch('/cart/items/{item}', [CartController::class, 'update'])->name('cart.update');
+        Route::delete('/cart/items/{item}', [CartController::class, 'destroy'])->name('cart.remove');
     });
 });
 

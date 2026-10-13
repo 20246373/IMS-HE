@@ -17,10 +17,15 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         // Send each guard to its own login / home page instead of the staff defaults.
-        $middleware->redirectGuestsTo(fn (Request $request) => $request->routeIs('customer.*')
-            ? route('customer.login') : route('staff.login'));
+        $middleware->redirectGuestsTo(function (Request $request) {
+            if ($request->routeIs('customer.cart.*')) {
+                session()->flash('status', 'Please log in or sign up to use your cart.');
+            }
+
+            return $request->routeIs('customer.*') ? route('customer.login') : route('staff.login');
+        });
         $middleware->redirectUsersTo(fn (Request $request) => $request->routeIs('customer.*')
-            ? route('customer.account') : route('dashboard'));
+            ? route('home') : route('dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

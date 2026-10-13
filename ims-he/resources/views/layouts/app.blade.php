@@ -37,6 +37,16 @@
  .detail h2{margin:.2rem 0} .price{font-size:1.3rem;font-weight:600;margin:.3rem 0}
  @media (max-width:600px){.detail{grid-template-columns:1fr}}
  .pager{display:flex;gap:1rem;justify-content:center;align-items:center} .pager span{color:#888}
+ /* Cart */
+ .qty{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;margin:0} .qty label{margin:0}
+ .cart-table th,.cart-table td{text-align:center;vertical-align:middle} .cart-table .qty{justify-content:center}
+ .cart-table tr > :first-child{text-align:left}   /* Product column stays left-aligned */
+ .cart-table .cart-total-row th:first-child{text-align:right}   /* "Total" label sits next to the amount */
+ .stepper{display:inline-flex;align-items:stretch;border:1px solid #ccc;border-radius:5px;overflow:hidden;background:#fff}
+ .stepper button{background:#eef0f3;color:#1f3a5f;border-radius:0;padding:.3rem .7rem;font-size:1rem;font-weight:600}
+ .stepper button:hover{background:#dde2e8}
+ .stepper input{width:3.5rem;margin:0;border:0;border-left:1px solid #ccc;border-right:1px solid #ccc;text-align:center;-moz-appearance:textfield}
+ .stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 </style>
 @stack('head')
 </head>
@@ -59,6 +69,7 @@
  @elseauth('customer')
   <a href="{{ route('home') }}">Home</a>
   <a href="{{ route('catalog.index') }}">Products</a>
+  <a href="{{ route('customer.cart.index') }}">Cart (<span id="cart-count">{{ auth('customer')->user()->cart?->items()->sum('quantity') ?? 0 }}</span>)</a>
   <a href="{{ route('customer.account') }}">My account</a>
   <span class="sp"></span>
   <span>{{ auth('customer')->user()->username }}</span>
@@ -76,5 +87,18 @@
  @if($errors->any())<div class="err">@foreach($errors->all() as $e)<div>{{ $e }}</div>@endforeach</div>@endif
  @yield('content')
 </main>
+<script>
+ // Quantity steppers (partials/qty): - / + stay within the input's min and max (available stock).
+ document.addEventListener('click', function (e) {
+  var btn = e.target.closest('.stepper [data-step]');
+  if (!btn) return;
+  var input = btn.parentElement.querySelector('input');
+  var min = Number(input.min) || 1, max = Number(input.max) || Infinity;
+  var next = (Number(input.value) || min) + Number(btn.dataset.step);
+  input.value = Math.min(max, Math.max(min, next));
+  input.dispatchEvent(new Event('input', { bubbles: true }));   // lets pages react, e.g. the cart's auto-update
+ });
+</script>
+@stack('scripts')
 </body>
 </html>
