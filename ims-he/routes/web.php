@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CartController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\DashboardController;
@@ -37,6 +38,11 @@ Route::name('customer.')->group(function () {
     Route::middleware('auth:customer')->group(function () {
         Route::get('/account', [CustomerAuthController::class, 'account'])->name('account');
         Route::post('/customer/logout', [CustomerAuthController::class, 'logout'])->name('logout');
+        Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+        Route::post('/cart', [CartController::class, 'add'])->name('cart.add');
+        Route::patch('/cart/{cartItem}', [CartController::class, 'update'])->name('cart.update');
+        Route::delete('/cart/{cartItem}', [CartController::class, 'remove'])->name('cart.remove');
+        Route::delete('/cart', [CartController::class, 'clear'])->name('cart.clear');
     });
 });
 

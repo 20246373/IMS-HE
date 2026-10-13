@@ -57,8 +57,10 @@
   <span>{{ auth()->user()->username }} ({{ auth()->user()->role }})</span>
   <form method="POST" action="{{ route('logout') }}" class="inline">@csrf<button>Logout</button></form>
  @elseauth('customer')
+  @php($cartCount = auth('customer')->user()->cart ? auth('customer')->user()->cart->items()->count() : 0)
   <a href="{{ route('home') }}">Home</a>
   <a href="{{ route('catalog.index') }}">Products</a>
+  <a href="{{ route('customer.cart.index') }}">Cart @if($cartCount > 0)<span style="background:#e6f4ea;color:#1e6b34;padding:.1rem .4rem;border-radius:999px;font-size:.8rem">{{ $cartCount }}</span>@endif</a>
   <a href="{{ route('customer.account') }}">My account</a>
   <span class="sp"></span>
   <span>{{ auth('customer')->user()->username }}</span>

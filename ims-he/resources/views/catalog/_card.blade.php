@@ -1,12 +1,21 @@
 {{-- One product tile; used by the landing page and the catalog grid --}}
-<a class="card product" href="{{ route('catalog.show', $product) }}">
+<div class="card product">
  @if($product->image_path)
-  <img src="{{ asset('storage/' . $product->image_path) }}" alt="{{ $product->product_name }}">
+  <a href="{{ route('catalog.show', $product) }}"><img src="{{ asset('storage/' . $product->image_path) }}" alt="{{ $product->product_name }}"></a>
  @else
-  <div class="noimg">No image</div>
+  <a href="{{ route('catalog.show', $product) }}"><div class="noimg">No image</div></a>
  @endif
  <small>{{ $product->category->category_name }}</small>
- <strong>{{ $product->product_name }}</strong>
+ <strong><a href="{{ route('catalog.show', $product) }}">{{ $product->product_name }}</a></strong>
  <div>&#8369;{{ number_format($product->unit_price, 2) }}</div>
  @include('catalog._stock')
-</a>
+ @if($product->isInStock())
+  <form method="POST" action="{{ route('customer.cart.add') }}" class="inline">@csrf
+   <input type="hidden" name="product_id" value="{{ $product->product_id }}">
+   <input type="number" name="quantity" value="1" min="1" max="{{ $product->stock_quantity }}" step="1" style="width:50px" required>
+   <button>Add to cart</button>
+  </form>
+ @else
+  <button disabled>Out of stock</button>
+ @endif
+</div>

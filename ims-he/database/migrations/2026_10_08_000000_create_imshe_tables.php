@@ -1,4 +1,4 @@
-
+```php
 <?php
 
 use Illuminate\Database\Migrations\Migration;
@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
         // 7.2.8 Employees
@@ -137,6 +140,7 @@ return new class extends Migration
         });
 
         // 7.2.10 Payrolls
+        $t = null;
         Schema::create('payrolls', function (Blueprint $t) {
             $t->increments('payroll_id');
             $t->date('period_start');
@@ -323,6 +327,9 @@ return new class extends Migration
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
         foreach ([
@@ -351,3 +358,4 @@ return new class extends Migration
         }
     }
 };
+```
