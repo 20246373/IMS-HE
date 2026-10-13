@@ -43,7 +43,7 @@
 <body>
 <nav>
  <strong>IMS-HE</strong>
- @auth
+ @auth('web')
   <a href="{{ route('dashboard') }}">Dashboard</a>
   <a href="{{ route('suppliers.index') }}">Suppliers</a>
   <a href="{{ route('purchase-orders.index') }}">Purchase Orders</a>
