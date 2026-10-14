@@ -10,8 +10,6 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PurchaseOrderController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\StockController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UserController;
 use App\Models\User;
@@ -37,7 +35,11 @@ Route::name('customer.')->group(function () {
         Route::post('/register', [CustomerAuthController::class, 'register']);
         Route::get('/login/customer', [CustomerAuthController::class, 'showLogin'])->name('login');
         Route::post('/login/customer', [CustomerAuthController::class, 'login'])->middleware('throttle:5,1');
+        Route::post('/email/resend', [CustomerAuthController::class, 'resend'])->middleware('throttle:3,1')->name('verification.resend');
     });
+
+    Route::get('/email/verify/{customer}/{hash}', [CustomerAuthController::class, 'verify'])
+        ->middleware('signed')->name('verification.verify');
 
     Route::middleware('auth:customer')->group(function () {
         Route::get('/account', [CustomerAuthController::class, 'account'])->name('account');
@@ -56,16 +58,21 @@ $allRoles = implode(',', User::ROLES);
 
 Route::middleware(['auth', "role:$allRoles"])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/reports/sales', [ReportController::class, 'sales'])->name('reports.sales');
-    Route::get('/reports/sales/download', [ReportController::class, 'downloadSales'])->name('reports.sales.download');
-    Route::get('/reports/inventory', [ReportController::class, 'inventory'])->name('reports.inventory');
-    Route::get('/reports/inventory/download', [ReportController::class, 'downloadInventory'])->name('reports.inventory.download');
-    Route::resource('categories', CategoryController::class)->only(['index', 'store', 'edit', 'update']);
-    Route::patch('categories/{category}/toggle', [CategoryController::class, 'toggle'])->name('categories.toggle');
-    Route::resource('products', ProductController::class)->except(['show', 'destroy']);
-    Route::patch('products/{product}/toggle', [ProductController::class, 'toggle'])->name('products.toggle');
-    Route::get('/stock', [StockController::class, 'index'])->name('stock.index');
-    Route::resource('suppliers', SupplierController::class)->except(['show']);
+
+    // Procurement, UC12/UC13 suppliers: President, Store Supervisor. UC14 delete supplier: President only.
+    Route::middleware('role:'.User::PRESIDENT.','.User::STORE_SUPERVISOR)->group(function () {
+        Route::resource('suppliers', SupplierController::class)->except(['show', 'destroy']);
+    });
+    Route::delete('suppliers/{supplier}', [SupplierController::class, 'destroy'])
+        ->middleware('role:'.User::PRESIDENT)->name('suppliers.destroy');
+
+    // Inventory, UC12-UC14 products: Inventory Clerk, Store Supervisor.
+    Route::middleware('role:'.User::INVENTORY_CLERK.','.User::STORE_SUPERVISOR)->group(function () {
+        Route::resource('categories', CategoryController::class)->except(['show', 'create']);
+        Route::resource('products', ProductController::class)->except(['show']);
+        Route::patch('products/{product}/toggle', [ProductController::class, 'toggle'])->name('products.toggle');
+    });
+
     Route::resource('purchase-orders', PurchaseOrderController::class)->only(['index', 'create', 'store', 'show']);
     Route::get('deliveries/create', [DeliveryController::class, 'create'])->name('deliveries.create');
     Route::post('deliveries', [DeliveryController::class, 'store'])->name('deliveries.store');

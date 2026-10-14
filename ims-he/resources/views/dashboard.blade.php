@@ -7,7 +7,7 @@
 </div>
 <div class="card">
  <h3>Low-stock products <span>({{ $lowStockCount }})</span></h3>
- <a class="btn" href="{{ route('stock.index', ['low' => 1]) }}">View low-stock items</a>
+ <a class="btn" href="{{ route('products.index', ['low' => 1]) }}">View low-stock items</a>
 </div>
 @if(!is_null($accounts))
 <div class="grid">

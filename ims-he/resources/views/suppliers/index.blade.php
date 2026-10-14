@@ -16,9 +16,9 @@
    <td>{{ $supplier->purchase_orders_count }}</td>
    <td>
     <a class="btn" href="{{ route('suppliers.edit', $supplier) }}">Edit</a>
-    <form method="POST" action="{{ route('suppliers.destroy', $supplier) }}" class="inline" onsubmit="return confirm('Delete this supplier?')">
+    <form method="POST" action="{{ route('suppliers.destroy', $supplier) }}" class="inline" onsubmit="return confirm('Are you sure you want to delete this record? This action cannot be undone.')">
      @csrf @method('DELETE')
-     <button class="danger" @disabled($supplier->purchase_orders_count > 0)>Delete</button>
+     @if(auth()->user()->hasRole('President'))<button class="danger">Delete</button>@endif
     </form>
    </td>
   </tr>

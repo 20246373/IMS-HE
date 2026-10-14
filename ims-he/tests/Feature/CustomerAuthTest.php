@@ -2,9 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Mail\VerifyCustomerEmail;
 use App\Models\Customer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class CustomerAuthTest extends TestCase
@@ -27,7 +30,10 @@ class CustomerAuthTest extends TestCase
 
     public function test_customer_can_register_with_hashed_password(): void
     {
+        Mail::fake();
+
         $this->post('/register', $this->validData())->assertRedirect(route('customer.login'));
+        Mail::assertSent(VerifyCustomerEmail::class, fn ($mail) => $mail->hasTo('juan@example.com'));
 
         $customer = Customer::where('username', 'juan123')->firstOrFail();
         $this->assertNotSame('secret123', $customer->password);
@@ -59,7 +65,7 @@ class CustomerAuthTest extends TestCase
 
     public function test_customer_can_log_in_with_username_or_email_on_customer_guard(): void
     {
-        $customer = Customer::create(collect($this->validData())->except('password_confirmation')->all());
+        $customer = Customer::create(collect($this->validData())->except('password_confirmation')->all() + ['email_verified_at' => now()]);
 
         $this->post('/login/customer', ['login' => 'juan123', 'password' => 'secret123'])
             ->assertRedirect(route('home'));
@@ -93,5 +99,53 @@ class CustomerAuthTest extends TestCase
     public function test_account_page_requires_customer_login(): void
     {
         $this->get('/account')->assertRedirect(route('customer.login'));
+    }
+
+    public function test_unverified_customer_cannot_log_in(): void
+    {
+        Customer::create(collect($this->validData())->except('password_confirmation')->all());
+
+        $this->post('/login/customer', ['login' => 'juan123', 'password' => 'secret123'])
+            ->assertSessionHasErrors('login');
+        $this->assertGuest('customer');
+    }
+
+    public function test_signed_verification_link_verifies_the_email(): void
+    {
+        $customer = Customer::create(collect($this->validData())->except('password_confirmation')->all());
+
+        $this->get($customer->verificationUrl())->assertRedirect(route('customer.login'));
+
+        $this->assertNotNull($customer->fresh()->email_verified_at);
+        $this->post('/login/customer', ['login' => 'juan123', 'password' => 'secret123']);
+        $this->assertAuthenticatedAs($customer->fresh(), 'customer');
+    }
+
+    public function test_unsigned_or_tampered_verification_links_are_rejected(): void
+    {
+        $customer = Customer::create(collect($this->validData())->except('password_confirmation')->all());
+
+        // no signature
+        $this->get(route('customer.verification.verify', ['customer' => $customer->customer_id, 'hash' => sha1($customer->email)]))
+            ->assertForbidden();
+
+        // valid signature, wrong hash
+        $tampered = URL::temporarySignedRoute('customer.verification.verify', now()->addHour(), ['customer' => $customer->customer_id, 'hash' => 'wrong']);
+        $this->get($tampered)->assertForbidden();
+
+        $this->assertNull($customer->fresh()->email_verified_at);
+    }
+
+    public function test_resend_sends_a_new_link_only_to_unverified_accounts(): void
+    {
+        Mail::fake();
+        Customer::create(collect($this->validData())->except('password_confirmation')->all());
+        Customer::create(collect($this->validData(['username' => 'maria1', 'email' => 'maria@example.com']))->except('password_confirmation')->all() + ['email_verified_at' => now()]);
+
+        $this->post(route('customer.verification.resend'), ['email' => 'juan@example.com'])->assertSessionHas('status');
+        $this->post(route('customer.verification.resend'), ['email' => 'maria@example.com'])->assertSessionHas('status');
+
+        Mail::assertSent(VerifyCustomerEmail::class, 1);
+        Mail::assertSent(VerifyCustomerEmail::class, fn ($mail) => $mail->hasTo('juan@example.com'));
     }
 }

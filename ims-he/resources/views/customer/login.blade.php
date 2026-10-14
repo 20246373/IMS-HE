@@ -10,5 +10,12 @@
   <p><button>Sign in</button></p>
  </form>
  <p>No account yet? <a href="{{ route('customer.register') }}">Sign up</a></p>
+ @if(session('dev_verification_url'))
+  <p><small>Local dev only: <a href="{{ session('dev_verification_url') }}">open the verification link</a></small></p>
+ @endif
+ <form method="POST" action="{{ route('customer.verification.resend') }}">@csrf
+  <label>Resend verification email <input type="email" name="email" maxlength="100" required></label>
+  <p><button>Resend</button></p>
+ </form>
 </div>
 @endsection
