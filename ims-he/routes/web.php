@@ -14,6 +14,8 @@ use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UserController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\StockController;
+use App\Http\Controllers\ReportController;
 
 // Product Catalog Module: public storefront (guests and customers). Staff hitting / go to the dashboard.
 Route::get('/', [CatalogController::class, 'home'])->name('home');
@@ -67,7 +69,7 @@ Route::middleware(['auth', "role:$allRoles"])->group(function () {
         ->middleware('role:'.User::PRESIDENT)->name('suppliers.destroy');
 
     // Inventory, UC12-UC14 products: Inventory Clerk, Store Supervisor.
-    Route::middleware('role:'.User::INVENTORY_CLERK.','.User::STORE_SUPERVISOR)->group(function () {
+    Route::middleware('role:'.User::PRESIDENT.','.User::INVENTORY_CLERK.','.User::STORE_SUPERVISOR)->group(function () {
         Route::resource('categories', CategoryController::class)->except(['show', 'create']);
         Route::resource('products', ProductController::class)->except(['show']);
         Route::patch('products/{product}/toggle', [ProductController::class, 'toggle'])->name('products.toggle');
@@ -84,5 +86,24 @@ Route::middleware(['auth', "role:$allRoles"])->group(function () {
         Route::post('users/{user}/unlock', [UserController::class, 'unlock'])->name('users.unlock');
         Route::post('users/{user}/password', [UserController::class, 'resetPassword'])->name('users.password');
         Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit.index');
+    });
+    // Stock and inventory reports: Inventory Clerk and Store Supervisor.
+    Route::middleware('role:'.User::INVENTORY_CLERK.','.User::STORE_SUPERVISOR.','.User::PRESIDENT)->group(function () {
+        Route::get('stock', [StockController::class, 'index'])->name('stock.index');
+
+        Route::get('reports/inventory', [ReportController::class, 'inventory'])
+            ->name('reports.inventory');
+
+        Route::get('reports/inventory/download', [ReportController::class, 'downloadInventory'])
+            ->name('reports.inventory.download');
+    });
+
+    // Sales reports: President and Treasurer.
+    Route::middleware('role:'.User::PRESIDENT.','.User::TREASURER.','.User::STORE_SUPERVISOR)->group(function () {
+        Route::get('reports/sales', [ReportController::class, 'sales'])
+            ->name('reports.sales');
+
+        Route::get('reports/sales/download', [ReportController::class, 'downloadSales'])
+            ->name('reports.sales.download');
     });
 });
