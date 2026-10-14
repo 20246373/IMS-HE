@@ -97,50 +97,179 @@
 </head>
 <body class="@auth('web') staff-layout @endauth">
 <nav @auth('web') class="staff-nav" @endauth>
- <strong>IMS-HE</strong>
- @auth('web')
-  <span class="nav-section">Workspace</span>
-  <a class="{{ request()->routeIs('dashboard') ? 'nav-link-active' : '' }}" href="{{ route('dashboard') }}">Dashboard</a>
-  <details class="nav-dropdown">
-   <summary>Inventory</summary>
-   <div>
-    <a class="{{ request()->routeIs('products.*') ? 'nav-link-active' : '' }}" href="{{ route('products.index') }}">Products</a>
-    <a class="{{ request()->routeIs('categories.*') ? 'nav-link-active' : '' }}" href="{{ route('categories.index') }}">Categories</a>
-    <a class="{{ request()->routeIs('stock.*') ? 'nav-link-active' : '' }}" href="{{ route('stock.index') }}">Stock</a>
-   </div>
-  </details>
-  <span class="nav-section">Operations</span>
-  <a class="{{ request()->routeIs('suppliers.*') ? 'nav-link-active' : '' }}" href="{{ route('suppliers.index') }}">Suppliers</a>
-  <a class="{{ request()->routeIs('purchase-orders.*') ? 'nav-link-active' : '' }}" href="{{ route('purchase-orders.index') }}">Purchase Orders</a>
-  <a class="{{ request()->routeIs('deliveries.*') ? 'nav-link-active' : '' }}" href="{{ route('deliveries.create') }}">Receive Delivery</a>
-  <details class="nav-dropdown">
-   <summary>Reports</summary>
-   <div><a class="{{ request()->routeIs('reports.sales*') ? 'nav-link-active' : '' }}" href="{{ route('reports.sales') }}">Sales report</a><a class="{{ request()->routeIs('reports.inventory*') ? 'nav-link-active' : '' }}" href="{{ route('reports.inventory') }}">Inventory report</a></div>
-  </details>
-  {{-- Teammates: add your module links here, wrapped in the matching role check --}}
-  @if(auth()->user()->hasRole('President'))
-   <span class="nav-section">Administration</span>
-   <a class="{{ request()->routeIs('users.*') ? 'nav-link-active' : '' }}" href="{{ route('users.index') }}">Accounts</a>
-   <a class="{{ request()->routeIs('audit.*') ? 'nav-link-active' : '' }}" href="{{ route('audit.index') }}">Audit log</a>
-  @endif
-  <span class="nav-sp"></span>
-  <div class="nav-user"><strong>{{ auth()->user()->username }}</strong><span>{{ auth()->user()->role }}</span></div>
-  <form method="POST" action="{{ route('logout') }}">@csrf<button>Logout</button></form>
- @elseauth('customer')
-  <a href="{{ route('home') }}">Home</a>
-  <a href="{{ route('catalog.index') }}">Products</a>
-  <a href="{{ route('customer.cart.index') }}">Cart (<span id="cart-count">{{ auth('customer')->user()->cart?->items()->sum('quantity') ?? 0 }}</span>)</a>
-  <a href="{{ route('customer.account') }}">My account</a>
-  <span class="sp"></span>
-  <span>{{ auth('customer')->user()->username }}</span>
-  <form method="POST" action="{{ route('customer.logout') }}" class="inline">@csrf<button>Logout</button></form>
- @else
-  <a href="{{ route('home') }}">Home</a>
-  <a href="{{ route('catalog.index') }}">Products</a>
-  <span class="sp"></span>
-  <a href="{{ route('login') }}">Log in</a>
- @endauth
+    <strong>IMS-HE</strong>
+
+    @auth('web')
+        @php
+            $user = auth()->user();
+
+            $isPresident = $user->hasRole('President');
+            $isTreasurer = $user->hasRole('Treasurer');
+            $isInventoryClerk = $user->hasRole('Inventory Clerk');
+            $isSupervisor = $user->hasRole('Store Supervisor');
+            $isEmployee = $user->hasRole('Employees');
+
+            $canManageInventory =
+                $isPresident || $isInventoryClerk || $isSupervisor;
+
+            $canManageProcurement =
+                $isPresident || $isInventoryClerk || $isSupervisor;
+
+            $canViewSalesReports =
+                $isPresident || $isTreasurer || $isSupervisor;
+
+            $canViewInventoryReports =
+                $isPresident || $isInventoryClerk || $isSupervisor;
+        @endphp
+
+        {{-- WORKSPACE --}}
+        <span class="nav-section">Workspace</span>
+
+        <a class="{{ request()->routeIs('dashboard') ? 'nav-link-active' : '' }}"
+           href="{{ route('dashboard') }}">
+            Dashboard
+        </a>
+
+        {{-- INVENTORY --}}
+        @if($canManageInventory)
+            <details class="nav-dropdown"
+                {{ request()->routeIs('products.*', 'categories.*', 'stock.*') ? 'open' : '' }}>
+                <summary>Inventory</summary>
+                <div>
+                    <a class="{{ request()->routeIs('products.*') ? 'nav-link-active' : '' }}"
+                       href="{{ route('products.index') }}">
+                        Products
+                    </a>
+
+                    <a class="{{ request()->routeIs('categories.*') ? 'nav-link-active' : '' }}"
+                       href="{{ route('categories.index') }}">
+                        Categories
+                    </a>
+
+                    <a class="{{ request()->routeIs('stock.*') ? 'nav-link-active' : '' }}"
+                       href="{{ route('stock.index') }}">
+                        Stock
+                    </a>
+                </div>
+            </details>
+        @endif
+
+        {{-- OPERATIONS --}}
+        @if($canManageProcurement)
+            <span class="nav-section">Operations</span>
+
+            <a class="{{ request()->routeIs('suppliers.*') ? 'nav-link-active' : '' }}"
+               href="{{ route('suppliers.index') }}">
+                Suppliers
+            </a>
+
+            <a class="{{ request()->routeIs('purchase-orders.*') ? 'nav-link-active' : '' }}"
+               href="{{ route('purchase-orders.index') }}">
+                Purchase Orders
+            </a>
+
+            <a class="{{ request()->routeIs('deliveries.*') ? 'nav-link-active' : '' }}"
+               href="{{ route('deliveries.create') }}">
+                Receive Delivery
+            </a>
+        @endif
+
+        {{-- REPORTS --}}
+        @if($canViewSalesReports || $canViewInventoryReports)
+            <details class="nav-dropdown"
+                {{ request()->routeIs('reports.*') ? 'open' : '' }}>
+                <summary>Reports</summary>
+                <div>
+                    @if($canViewSalesReports)
+                        <a class="{{ request()->routeIs('reports.sales*') ? 'nav-link-active' : '' }}"
+                           href="{{ route('reports.sales') }}">
+                            Sales Report
+                        </a>
+                    @endif
+
+                    @if($canViewInventoryReports)
+                        <a class="{{ request()->routeIs('reports.inventory*') ? 'nav-link-active' : '' }}"
+                           href="{{ route('reports.inventory') }}">
+                            Inventory Report
+                        </a>
+                    @endif
+
+                    @if($isPresident || $isTreasurer)
+                        {{-- Add this link only if the route exists --}}
+                        {{-- <a href="{{ route('reports.financial') }}">Financial Reports</a> --}}
+                    @endif
+                </div>
+            </details>
+        @endif
+
+        {{-- ADMINISTRATION: PRESIDENT ONLY FOR NOW --}}
+        @if($isPresident)
+            <span class="nav-section">Administration</span>
+
+            <a class="{{ request()->routeIs('users.*') ? 'nav-link-active' : '' }}"
+               href="{{ route('users.index') }}">
+                User Accounts
+            </a>
+
+            <a class="{{ request()->routeIs('audit.*') ? 'nav-link-active' : '' }}"
+               href="{{ route('audit.index') }}">
+                Audit Log
+            </a>
+        @endif
+
+        {{-- USER ACCOUNT AND LOGOUT --}}
+        <span class="nav-sp"></span>
+
+        <div class="nav-user">
+            <strong>{{ $user->username }}</strong>
+            <span>{{ $user->role }}</span>
+        </div>
+
+        <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button type="submit">Logout</button>
+        </form>
+
+    @elseauth('customer')
+
+        {{-- CUSTOMER NAVIGATION --}}
+        <a href="{{ route('home') }}">Home</a>
+        <a href="{{ route('catalog.index') }}">Products</a>
+
+        <a href="{{ route('customer.cart.index') }}">
+            Cart (
+            <span id="cart-count">
+                {{ auth('customer')->user()->cart?->items()->sum('quantity') ?? 0 }}
+            </span>
+            )
+        </a>
+
+        <a href="{{ route('customer.account') }}">My Account</a>
+
+        <span class="sp"></span>
+
+        <span>{{ auth('customer')->user()->username }}</span>
+
+        <form method="POST"
+              action="{{ route('customer.logout') }}"
+              class="inline">
+            @csrf
+            <button type="submit">Logout</button>
+        </form>
+
+    @else
+
+        {{-- GUEST NAVIGATION --}}
+        <a href="{{ route('home') }}">Home</a>
+        <a href="{{ route('catalog.index') }}">Products</a>
+
+        <span class="sp"></span>
+
+        <a href="{{ route('login') }}">Log In</a>
+
+    @endauth
 </nav>
+
 @yield('hero')
 <main>
  @if(session('status'))<div class="ok">{{ session('status') }}</div>@endif
