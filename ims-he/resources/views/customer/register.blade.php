@@ -2,7 +2,7 @@
 @section('title','Sign up')
 @section('content')
 <div class="card auth" style="max-width:460px">
- <div class="auth-top"><a href="{{ route('login') }}">&larr; Change access</a><span>Customer</span></div>
+ <div class="auth-top"><a href="{{ route('login') }}">Change access</a><span>Customer</span></div>
  <h2>Create a customer account</h2>
  <form method="POST" action="{{ route('customer.register') }}">@csrf
   <label>First name <input name="first_name" value="{{ old('first_name') }}" maxlength="50" required autofocus></label>

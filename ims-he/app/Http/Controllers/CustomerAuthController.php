@@ -61,7 +61,7 @@ class CustomerAuthController extends Controller
         Auth::guard('customer')->login($customer);
         $request->session()->regenerate();
 
-        return redirect()->intended(route('customer.account'));
+        return redirect()->intended(route('home'));
     }
 
     public function logout(Request $request)

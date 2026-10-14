@@ -2,7 +2,7 @@
 @section('title','Customer login')
 @section('content')
 <div class="card auth">
- <div class="auth-top"><a href="{{ route('login') }}">&larr; Change access</a><span>Customer</span></div>
+ <div class="auth-top"><a href="{{ route('login') }}">Change access</a><span>Customer</span></div>
  <h2>Customer login</h2>
  <form method="POST" action="{{ route('customer.login') }}">@csrf
   <label>Username or email <input name="login" value="{{ old('login') }}" required autofocus></label>
