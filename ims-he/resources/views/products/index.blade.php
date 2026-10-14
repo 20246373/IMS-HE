@@ -7,8 +7,8 @@
  </div>
  <form method="GET" class="row">
   <input name="q" placeholder="Search" value="{{ request('q') }}">
-  <select name="category"><option value="">All categories</option>
-   @foreach($categories as $c)<option value="{{ $c->id }}" @selected(request('category')==$c->id)>{{ $c->name }}</option>@endforeach
+  <select name="category"><option value="">All active categories</option>
+   @foreach($categories as $c)<option value="{{ $c->category_id }}" @selected(request('category')==$c->category_id)>{{ $c->category_name }}</option>@endforeach
   </select>
   <button>Filter</button>
  </form>
@@ -16,8 +16,8 @@
   <tr><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Reorder</th><th>Status</th><th></th></tr>
   @foreach($products as $p)
   <tr style="{{ $p->is_active ? '' : 'opacity:.55' }}">
-   <td>{{ $p->name }}</td><td>{{ $p->category?->name }}</td><td>{{ number_format($p->unit_price,2) }}</td>
-   <td class="{{ $p->isLowStock() ? 'low' : '' }}">{{ $p->stock_quantity }}</td><td>{{ $p->reorder_point }}</td>
+   <td>{{ $p->product_name }}</td><td>{{ $p->category?->category_name }}</td><td>{{ number_format($p->unit_price,2) }}</td>
+   <td class="{{ $p->isLowStock() ? 'low' : '' }}">{{ $p->stock_quantity }}</td><td>{{ $p->reorder_level }}</td>
    <td><span class="badge {{ $p->is_active ? 'green' : '' }}">{{ $p->is_active ? 'Active' : 'Hidden' }}</span></td>
    <td class="row"><a class="btn" href="{{ route('products.edit',$p) }}">Edit</a>
     <form method="POST" action="{{ route('products.toggle',$p) }}" class="inline">@csrf @method('PATCH')<button class="muted">{{ $p->is_active ? 'Hide' : 'Show' }}</button></form></td>

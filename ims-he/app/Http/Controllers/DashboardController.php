@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\User;
 
@@ -14,6 +15,7 @@ class DashboardController extends Controller
         return view('dashboard', [
             'accounts' => $isPresident ? User::count() : null,
             'locked' => $isPresident ? User::where('status', User::STATUS_LOCKED)->count() : null,
+            'lowStockCount' => Product::active()->whereColumn('stock_quantity', '<=', 'reorder_level')->count(),
             'pendingPurchaseOrderCount' => PurchaseOrder::where('status', 'Pending')->count(),
             'pendingPurchaseOrders' => PurchaseOrder::with(['supplier', 'items'])
                 ->where('status', 'Pending')

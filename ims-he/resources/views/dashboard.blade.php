@@ -5,6 +5,10 @@
  <h2>Welcome, {{ auth()->user()->employee?->full_name ?? auth()->user()->username }}</h2>
  <p>Signed in as <strong>{{ auth()->user()->role }}</strong>.</p>
 </div>
+<div class="card">
+ <h3>Low-stock products <span>({{ $lowStockCount }})</span></h3>
+ <a class="btn" href="{{ route('stock.index', ['low' => 1]) }}">View low-stock items</a>
+</div>
 @if(!is_null($accounts))
 <div class="grid">
  <div class="card"><div>User accounts</div><h2>{{ $accounts }}</h2></div>

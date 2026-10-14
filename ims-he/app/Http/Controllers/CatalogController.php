@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 class CatalogController extends Controller
 {
     public const FEATURED_COUNT = 8;
+
     public const PER_PAGE = 12;
 
     public function home()
@@ -25,7 +26,10 @@ class CatalogController extends Controller
 
         return view('catalog.home', [
             'featured' => $featured,
-            'categories' => Category::withCount(['products' => fn ($q) => $q->where('is_active', true)])->orderBy('category_name')->get(),
+            'categories' => Category::active()
+                ->withCount(['products' => fn ($q) => $q->where('is_active', true)])
+                ->orderBy('category_name')
+                ->get(),
             // category_id => image_path of its first product that has a photo (used for the category tiles)
             'categoryThumbs' => Product::active()->whereNotNull('image_path')->orderBy('product_id')
                 ->get(['category_id', 'image_path'])->unique('category_id')->pluck('image_path', 'category_id'),
@@ -40,7 +44,7 @@ class CatalogController extends Controller
         ]);
 
         $products = Product::active()->with('category')
-            ->when($filters['q'] ?? null, fn ($query, $q) => $query->where('product_name', 'like', '%' . addcslashes($q, '%_\\') . '%'))
+            ->when($filters['q'] ?? null, fn ($query, $q) => $query->where('product_name', 'like', '%'.addcslashes($q, '%_\\').'%'))
             ->when($filters['category'] ?? null, fn ($query, $id) => $query->where('category_id', $id))
             ->orderBy('product_name')
             ->paginate(self::PER_PAGE)
@@ -48,7 +52,7 @@ class CatalogController extends Controller
 
         return view('catalog.index', [
             'products' => $products,
-            'categories' => Category::orderBy('category_name')->get(),
+            'categories' => Category::active()->orderBy('category_name')->get(),
             'q' => $filters['q'] ?? '',
             'categoryId' => (int) ($filters['category'] ?? 0),
         ]);
