@@ -1,0 +1,36 @@
+<?php
+
+namespace App\Http\Middleware;
+
+use App\Models\User;
+use Closure;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+class RoleMiddleware
+{
+    /**
+     * Usage: ->middleware('role:Admin,Treasurer')
+     * Also ends the session if an admin locked the account while the user was logged in.
+     */
+    public function handle(Request $request, Closure $next, string ...$roles)
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return redirect()->route('staff.login');
+        }
+
+        if ($user->locked_at) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('staff.login')->withErrors(['username' => 'Your account is locked. Contact the Admin.']);
+        }
+
+        abort_unless(in_array($user->role, $roles, true), 403, 'You do not have access to this module.');
+
+        return $next($request);
+    }
+}
