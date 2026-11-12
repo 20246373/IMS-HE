@@ -10,12 +10,16 @@ class CategoryController extends Controller
 {
     public function index()
     {
-        return view('categories.index', ['categories' => Category::withCount('products')->orderBy('name')->get()]);
+        return view('categories.index', [
+            'categories' => Category::withCount('products')->orderByDesc('is_active')->orderBy('category_name')->get(),
+        ]);
     }
 
     public function store(Request $request)
     {
-        Category::create($request->validate(['name' => 'required|max:100|unique:categories,name']));
+        Category::create($request->validate([
+            'category_name' => ['required', 'string', 'max:50', 'unique:categories,category_name'],
+        ]));
 
         return redirect()->route('categories.index')->with('status', 'Category added.');
     }
@@ -27,18 +31,25 @@ class CategoryController extends Controller
 
     public function update(Request $request, Category $category)
     {
-        $category->update($request->validate(['name' => ['required', 'max:100', Rule::unique('categories', 'name')->ignore($category->id)]]));
+        $category->update($request->validate([
+            'category_name' => [
+                'required',
+                'string',
+                'max:50',
+                Rule::unique('categories', 'category_name')->ignore($category->category_id, 'category_id'),
+            ],
+        ]));
 
         return redirect()->route('categories.index')->with('status', 'Category updated.');
     }
 
-    public function destroy(Category $category)
+    public function toggle(Category $category)
     {
-        if ($category->products()->exists()) {
-            return back()->withErrors(['category' => 'Category still has products. Move or hide them first.']);
-        }
-        $category->delete();
+        $category->update(['is_active' => ! $category->is_active]);
 
-        return redirect()->route('categories.index')->with('status', 'Category deleted.');
+        return redirect()->route('categories.index')->with(
+            'status',
+            $category->is_active ? 'Category activated.' : 'Category hidden.'
+        );
     }
 }
