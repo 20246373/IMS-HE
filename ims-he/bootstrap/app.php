@@ -22,9 +22,9 @@ return Application::configure(basePath: dirname(__DIR__))
                 session()->flash('status', 'Please log in or sign up to use your cart.');
             }
 
-            return $request->routeIs('customer.*') ? route('customer.login') : route('staff.login');
+            return route('login');
         });
-        $middleware->redirectUsersTo(fn (Request $request) => $request->routeIs('customer.*')
+        $middleware->redirectUsersTo(fn (Request $request) => auth('customer')->check()
             ? route('home') : route('dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {

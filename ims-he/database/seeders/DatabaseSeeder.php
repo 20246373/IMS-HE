@@ -47,9 +47,15 @@ class DatabaseSeeder extends Seeder
 
             User::updateOrCreate(
                 ['username' => $username],
-                ['employee_id' => $emp->employee_id, 'role' => $role, 'password' => 'password123', 'status' => User::STATUS_ACTIVE, 'login_attempt_count' => 0]
+                ['email' => "{$username}@example.com", 'employee_id' => $emp->employee_id, 'role' => $role, 'password' => 'password123', 'status' => User::STATUS_ACTIVE, 'login_attempt_count' => 0]
             );
         }
+
+        // An employee who signed up and is waiting for the President to give a role (try it under User Accounts).
+        User::updateOrCreate(
+            ['email' => 'newhire@example.com'],
+            ['role' => User::PENDING, 'password' => 'password123', 'status' => User::STATUS_ACTIVE, 'login_attempt_count' => 0]
+        );
 
         // An employee without an account (shows up in the "link employee" dropdown)
         Employee::firstOrCreate(

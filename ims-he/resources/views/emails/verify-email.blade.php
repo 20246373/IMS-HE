@@ -1,4 +1,4 @@
-<p>Hello {{ $customer->first_name }},</p>
+<p>Hello {{ $customer->display_name }},</p>
 <p>Thanks for signing up with Ibay Enterprises. Please confirm your email address to activate your account:</p>
 <p><a href="{{ $url }}">Verify my email</a></p>
 <p>If the button does not work, copy this link into your browser:<br>{{ $url }}</p>

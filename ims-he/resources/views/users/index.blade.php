@@ -1,13 +1,44 @@
 @extends('layouts.app')
 @section('title','Accounts')
 @section('content')
+@if($pending->isNotEmpty())
+<div class="card">
+ <h3>Waiting for a role ({{ $pending->count() }})</h3>
+ <p><small>These employees signed up themselves. Choose a role to give them access, or delete the account if you do not know them.</small></p>
+ <table>
+  <tr><th>Email</th><th>Signed up</th><th>Role</th><th>Employee record</th><th></th></tr>
+  @foreach($pending as $p)
+  <tr>
+   <td>{{ $p->label() }}</td>
+   <td>{{ $p->created_at?->format('M d, Y') }}</td>
+   <td>
+    <select name="role" form="role-{{ $p->user_id }}" required>
+     @foreach($roles as $r)<option value="{{ $r }}">{{ $r }}</option>@endforeach
+    </select>
+   </td>
+   <td>
+    <select name="employee_id" form="role-{{ $p->user_id }}">
+     <option value="">-- none --</option>
+     @foreach($employees as $e)<option value="{{ $e->employee_id }}">{{ $e->full_name }}</option>@endforeach
+    </select>
+   </td>
+   <td>
+    <form id="role-{{ $p->user_id }}" method="POST" action="{{ route('users.role', $p) }}" class="inline">@csrf<button>Give role</button></form>
+    <form method="POST" action="{{ route('users.destroy', $p) }}" class="inline" onsubmit="return confirm('Delete this account?')">@csrf @method('DELETE')<button class="danger">Delete</button></form>
+   </td>
+  </tr>
+  @endforeach
+ </table>
+</div>
+@endif
+
 <div class="card">
  <p><a class="btn" href="{{ route('users.create') }}">+ New account</a></p>
  <table>
-  <tr><th>Username</th><th>Employee</th><th>Role</th><th>Status</th><th>Last login</th><th></th></tr>
+  <tr><th>Account</th><th>Employee</th><th>Role</th><th>Status</th><th>Last login</th><th></th></tr>
   @foreach($users as $u)
   <tr>
-   <td>{{ $u->username }}</td>
+   <td>{{ $u->label() }}@if($u->username && $u->email)<br><small>{{ $u->email }}</small>@endif</td>
    <td>{{ $u->employee?->full_name ?? '-' }}</td>
    <td>{{ $u->role }}</td>
    <td class="{{ $u->isLocked() ? 'low' : '' }}">{{ $u->status }}</td>

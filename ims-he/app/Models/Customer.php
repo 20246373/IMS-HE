@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 
 class Customer extends Authenticatable
 {
@@ -21,6 +22,12 @@ class Customer extends Authenticatable
 
     // No remember_token column in the SDD schema.
     public function getRememberTokenName() { return ''; }
+
+    /** Shown in the menu: first name once the profile is filled in, otherwise the part of the email before the @. */
+    public function getDisplayNameAttribute(): string
+    {
+        return $this->first_name ?: Str::before((string) $this->email, '@');
+    }
 
     public function hasVerifiedEmail(): bool { return $this->email_verified_at !== null; }
 

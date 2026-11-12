@@ -11,6 +11,7 @@ class User extends Authenticatable
     public const INVENTORY_CLERK = 'Inventory Clerk';
     public const STORE_SUPERVISOR = 'Store Supervisor';
     public const EMPLOYEE = 'Employee';
+    public const PENDING = 'Pending';        // self-registered, waiting for the President to assign a role
 
     public const ROLES = [self::PRESIDENT, self::TREASURER, self::INVENTORY_CLERK, self::STORE_SUPERVISOR, self::EMPLOYEE];
 
@@ -35,6 +36,14 @@ class User extends Authenticatable
 
     public function employee() { return $this->belongsTo(Employee::class, 'employee_id', 'employee_id'); }
     public function auditLogs() { return $this->hasMany(AuditLog::class, 'user_id', 'user_id'); }
+
+    /** Roles the President can hand out (Pending is only the "no access yet" state). */
+    public static function roleChoices(): array { return [...self::ROLES, self::PENDING]; }
+
+    /** Name shown in lists and menus: username if there is one, otherwise the email. */
+    public function label(): string { return $this->username ?: (string) $this->email; }
+
+    public function isPending(): bool { return $this->role === self::PENDING; }
 
     public function hasRole(string ...$roles): bool { return in_array($this->role, $roles, true); }
     public function isActive(): bool { return $this->status === self::STATUS_ACTIVE; }

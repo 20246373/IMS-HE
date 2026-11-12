@@ -36,7 +36,10 @@
    @endforeach
    <tr class="cart-total-row"><th colspan="3">Total</th><th id="cart-total">&#8369;{{ number_format($total, 2) }}</th><th></th></tr>
   </table>
-  <p><a href="{{ route('catalog.index') }}">Continue shopping</a></p>
+  <p>
+   <a class="btn" href="{{ route('customer.checkout.show') }}">Checkout</a>
+   <a href="{{ route('catalog.index') }}">Continue shopping</a>
+  </p>
  @endif
 </div>
 @endsection

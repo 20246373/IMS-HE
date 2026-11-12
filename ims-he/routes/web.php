@@ -5,9 +5,11 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\SupplierController;
@@ -21,39 +23,56 @@ Route::get('/', [CatalogController::class, 'home'])->name('home');
 Route::get('/shop', [CatalogController::class, 'index'])->name('catalog.index');
 Route::get('/shop/{product}', [CatalogController::class, 'show'])->name('catalog.show');
 
-Route::middleware('guest')->group(function () {
-    Route::view('/login', 'auth.choose')->name('login');
-    Route::get('/login/staff', [AuthController::class, 'showLogin'])->name('staff.login');
-    Route::post('/login/staff', [AuthController::class, 'login']);
+// One login page for customers and staff. Sign up is email + password only.
+Route::middleware('guest:web,customer')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+
+    // Employees sign up the same way, then wait for the President to give them a role.
+    Route::get('/register/employee', [AuthController::class, 'showRegister'])->name('staff.register');
+    Route::post('/register/employee', [AuthController::class, 'register'])->middleware('throttle:5,1');
+
+    // Old login URLs still work (bookmarks, old links).
+    Route::redirect('/login/staff', '/login')->name('staff.login');
+    Route::redirect('/login/customer', '/login')->name('customer.login');
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
 
+// Waiting page for employees who have no role yet (not behind the role middleware).
+Route::get('/pending', [AuthController::class, 'pending'])
+    ->middleware('auth')
+    ->name('staff.pending');
+
 Route::name('customer.')->group(function () {
     Route::middleware('guest:customer')->group(function () {
         Route::get('/register', [CustomerAuthController::class, 'showRegister'])->name('register');
         Route::post('/register', [CustomerAuthController::class, 'register']);
-        Route::get('/login/customer', [CustomerAuthController::class, 'showLogin'])->name('login');
-        Route::post('/login/customer', [CustomerAuthController::class, 'login'])->middleware('throttle:5,1');
         Route::post('/email/resend', [CustomerAuthController::class, 'resend'])
             ->middleware('throttle:3,1')
             ->name('verification.resend');
     });
 
     Route::get('/email/verify/{customer}/{hash}', [CustomerAuthController::class, 'verify'])
-        ->middleware('signed')
-        ->name('verification.verify');
+        ->name('verification.verify');   // signature is checked inside verify()
 
     Route::middleware('auth:customer')->group(function () {
         Route::get('/account', [CustomerAuthController::class, 'account'])->name('account');
+        Route::patch('/account', [CustomerAuthController::class, 'updateProfile'])->name('account.update');
         Route::post('/customer/logout', [CustomerAuthController::class, 'logout'])->name('logout');
 
         Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
         Route::post('/cart/{product}', [CartController::class, 'store'])->name('cart.add');
         Route::patch('/cart/items/{item}', [CartController::class, 'update'])->name('cart.update');
         Route::delete('/cart/items/{item}', [CartController::class, 'destroy'])->name('cart.remove');
+
+        // UC20 Checkout, then the receipt and order history
+        Route::get('/checkout', [CheckoutController::class, 'show'])->name('checkout.show');
+        Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:10,1')->name('checkout.store');
+        Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/{invoice}', [OrderController::class, 'show'])->name('orders.show');
     });
 });
 
@@ -86,6 +105,7 @@ Route::middleware(['auth', "role:$allRoles"])->group(function () {
 
     Route::middleware('role:'.User::PRESIDENT)->group(function () {
         Route::resource('users', UserController::class)->except(['show']);
+        Route::post('users/{user}/role', [UserController::class, 'assignRole'])->name('users.role');
         Route::post('users/{user}/lock', [UserController::class, 'lock'])->name('users.lock');
         Route::post('users/{user}/unlock', [UserController::class, 'unlock'])->name('users.unlock');
         Route::post('users/{user}/password', [UserController::class, 'resetPassword'])->name('users.password');

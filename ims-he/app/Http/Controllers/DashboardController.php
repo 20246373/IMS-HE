@@ -40,6 +40,7 @@ class DashboardController extends Controller
         return [
             'accounts' => User::count(),
             'locked' => User::where('status', User::STATUS_LOCKED)->count(),
+            'pendingAccounts' => User::where('role', User::PENDING)->count(),
         ];
     }
 

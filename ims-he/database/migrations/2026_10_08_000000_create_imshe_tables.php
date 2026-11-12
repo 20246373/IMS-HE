@@ -28,9 +28,10 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $t) {
             $t->increments('user_id');
             $t->unsignedInteger('employee_id')->nullable()->unique();
-            $t->string('username', 50)->unique();
+            $t->string('email', 100)->nullable()->unique();      // sign-up identity (username is optional now)
+            $t->string('username', 50)->nullable()->unique();
             $t->string('password', 255);
-            $t->string('role', 50);
+            $t->string('role', 50);                              // President, Treasurer, Inventory Clerk, Store Supervisor, Employee, or Pending (waiting for the President)
             $t->string('status', 10)->default('Active');
             $t->unsignedInteger('login_attempt_count')->default(0);
             $t->dateTime('last_login')->nullable();
@@ -45,13 +46,13 @@ return new class extends Migration
         // 7.2.2 Customers
         Schema::create('customers', function (Blueprint $t) {
             $t->increments('customer_id');
-            $t->string('first_name', 50);
-            $t->string('last_name', 50);
-            $t->string('username', 50)->unique();
+            $t->string('first_name', 50)->nullable();           // profile details are optional at sign-up
+            $t->string('last_name', 50)->nullable();
+            $t->string('username', 50)->nullable()->unique();
             $t->string('email', 100)->unique();
             $t->dateTime('email_verified_at')->nullable();
-            $t->string('contact_number', 14);
-            $t->string('address', 100);
+            $t->string('contact_number', 14)->nullable();
+            $t->string('address', 100)->nullable();
             $t->string('password', 255);
             $t->dateTime('created_at')->useCurrent();
         });

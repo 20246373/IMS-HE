@@ -2,7 +2,7 @@
 @section('title','Dashboard')
 @section('content')
 <div class="card">
- <h2>Welcome, {{ auth()->user()->employee?->full_name ?? auth()->user()->username }}</h2>
+ <h2>Welcome, {{ auth()->user()->employee?->full_name ?? auth()->user()->label() }}</h2>
  <p>Signed in as <strong>{{ auth()->user()->role }}</strong>.</p>
 </div>
 @forelse($widgets as $widget)

@@ -125,10 +125,12 @@
         {{-- WORKSPACE --}}
         <span class="nav-section">Workspace</span>
 
+        @unless($user->isPending())
         <a class="{{ request()->routeIs('dashboard') ? 'nav-link-active' : '' }}"
            href="{{ route('dashboard') }}">
             Dashboard
         </a>
+        @endunless
 
         {{-- INVENTORY --}}
         @if($canManageInventory)
@@ -221,7 +223,7 @@
         <span class="nav-sp"></span>
 
         <div class="nav-user">
-            <strong>{{ $user->username }}</strong>
+            <strong>{{ $user->label() }}</strong>
             <span>{{ $user->role }}</span>
         </div>
 
@@ -244,11 +246,12 @@
             )
         </a>
 
+        <a href="{{ route('customer.orders.index') }}">My Orders</a>
         <a href="{{ route('customer.account') }}">My Account</a>
 
         <span class="sp"></span>
 
-        <span>{{ auth('customer')->user()->username }}</span>
+        <span>{{ auth('customer')->user()->display_name }}</span>
 
         <form method="POST"
               action="{{ route('customer.logout') }}"
@@ -265,6 +268,7 @@
 
         <span class="sp"></span>
 
+        <a href="{{ route('customer.register') }}">Sign Up</a>
         <a href="{{ route('login') }}">Log In</a>
 
     @endauth

@@ -43,8 +43,8 @@ class CartTest extends TestCase
         $product = $this->product();
 
         $this->from(route('catalog.show', $product))->post(route('customer.cart.add', $product), ['quantity' => 1])
-            ->assertRedirect(route('customer.login'));
-        $this->get('/cart')->assertRedirect(route('customer.login'));
+            ->assertRedirect(route('login'));
+        $this->get('/cart')->assertRedirect(route('login'));
         $this->assertDatabaseCount('cart_items', 0);
     }
 
