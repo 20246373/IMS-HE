@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\SaleController;
 use App\Http\Controllers\UserController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -42,6 +43,14 @@ $allRoles = implode(',', User::ROLES);
 
 Route::middleware(['auth', "role:$allRoles"])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // POS / in-store sales: Employee and Store Supervisor only (SRS 4.3.d)
+    Route::middleware('role:' . implode(',', [User::EMPLOYEE, User::STORE_SUPERVISOR]))->group(function () {
+        Route::get('sales/create', [SaleController::class, 'create'])->name('sales.create');
+        Route::post('sales', [SaleController::class, 'store'])->name('sales.store');
+        Route::get('sales', [SaleController::class, 'index'])->name('sales.index');
+        Route::get('sales/{invoice}', [SaleController::class, 'show'])->name('sales.show');
+    });
 
     // User account management + audit log: President only (SRS 4.3.b)
     Route::middleware('role:' . User::PRESIDENT)->group(function () {
