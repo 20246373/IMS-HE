@@ -144,24 +144,26 @@ class ProductManagementTest extends TestCase
     {
         $this->get(route('products.index'))->assertRedirect(route('login'));
 
-        foreach ([User::EMPLOYEE, User::TREASURER, User::PRESIDENT] as $role) {
+        foreach ([User::EMPLOYEE, User::TREASURER] as $role) {
             $this->actingAs($this->staff($role))->get(route('products.index'))->assertForbidden();
         }
 
         $this->actingAs($this->staff(User::INVENTORY_CLERK))->get(route('products.index'))->assertOk();
         $this->actingAs($this->staff(User::STORE_SUPERVISOR))->get(route('products.index'))->assertOk();
+        $this->actingAs($this->staff(User::PRESIDENT))->get(route('products.index'))->assertOk();
     }
 
     public function test_supplier_roles_follow_the_use_cases(): void
     {
         $supplier = Supplier::create(['supplier_name' => 'Sample Supply', 'contact_number' => '09170000000', 'address' => 'Baguio City']);
 
-        $this->actingAs($this->staff(User::INVENTORY_CLERK))->get(route('suppliers.index'))->assertForbidden();
+        $this->actingAs($this->staff(User::INVENTORY_CLERK))->get(route('suppliers.index'))->assertOk();
         $this->actingAs($this->staff(User::STORE_SUPERVISOR))->get(route('suppliers.index'))->assertOk();
+        $this->actingAs($this->staff(User::PRESIDENT))->get(route('suppliers.index'))->assertOk();
 
         // delete is President only
-        $this->actingAs($this->staff(User::STORE_SUPERVISOR))->delete(route('suppliers.destroy', $supplier))->assertForbidden();
-        $this->actingAs($this->staff(User::PRESIDENT))->delete(route('suppliers.destroy', $supplier))->assertRedirect(route('suppliers.index'));
+        $this->actingAs($this->staff(User::STORE_SUPERVISOR, 'supervisor-delete'))->delete(route('suppliers.destroy', $supplier))->assertForbidden();
+        $this->actingAs($this->staff(User::PRESIDENT, 'president-delete'))->delete(route('suppliers.destroy', $supplier))->assertRedirect(route('suppliers.index'));
         $this->assertDatabaseCount('suppliers', 0);
     }
 

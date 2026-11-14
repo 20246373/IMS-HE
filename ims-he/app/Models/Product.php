@@ -14,6 +14,7 @@ class Product extends Model
     protected $casts = ['unit_price' => 'decimal:2', 'is_active' => 'boolean'];
 
     public function category() { return $this->belongsTo(Category::class, 'category_id', 'category_id'); }
+    public function supplier() { return $this->belongsTo(Supplier::class, 'supplier_id', 'supplier_id'); }
     public function isLowStock(): bool { return $this->stock_quantity <= $this->reorder_level; }
     public function isInStock(): bool { return $this->stock_quantity > 0; }
 

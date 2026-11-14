@@ -6,14 +6,15 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 
 class User extends Authenticatable
 {
+    public const ADMINISTRATOR = 'Administrator';
     public const PRESIDENT = 'President';
     public const TREASURER = 'Treasurer';
     public const INVENTORY_CLERK = 'Inventory Clerk';
     public const STORE_SUPERVISOR = 'Store Supervisor';
     public const EMPLOYEE = 'Employee';
-    public const PENDING = 'Pending';        // self-registered, waiting for the President to assign a role
+    public const PENDING = 'Pending';        // self-registered, waiting for the Administrator to assign a role
 
-    public const ROLES = [self::PRESIDENT, self::TREASURER, self::INVENTORY_CLERK, self::STORE_SUPERVISOR, self::EMPLOYEE];
+    public const ROLES = [self::ADMINISTRATOR, self::PRESIDENT, self::TREASURER, self::INVENTORY_CLERK, self::STORE_SUPERVISOR, self::EMPLOYEE];
 
     public const STATUS_ACTIVE = 'Active';
     public const STATUS_LOCKED = 'Locked';
@@ -37,8 +38,11 @@ class User extends Authenticatable
     public function employee() { return $this->belongsTo(Employee::class, 'employee_id', 'employee_id'); }
     public function auditLogs() { return $this->hasMany(AuditLog::class, 'user_id', 'user_id'); }
 
-    /** Roles the President can hand out (Pending is only the "no access yet" state). */
-    public static function roleChoices(): array { return [...self::ROLES, self::PENDING]; }
+    /** Roles the Administrator can assign (Administrator and Pending are excluded). */
+    public static function roleChoices(): array
+    {
+        return array_values(array_diff(self::ROLES, [self::ADMINISTRATOR, self::PENDING]));
+    }
 
     /** Name shown in lists and menus: username if there is one, otherwise the email. */
     public function label(): string { return $this->username ?: (string) $this->email; }

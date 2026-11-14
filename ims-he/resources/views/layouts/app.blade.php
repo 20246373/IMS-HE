@@ -51,6 +51,13 @@
  .card{background:#fff;border-radius:8px;padding:1rem 1.2rem;margin-bottom:1rem;box-shadow:0 1px 3px #0001}
  table{width:100%;border-collapse:collapse} th,td{padding:.45rem .5rem;border-bottom:1px solid #eee;text-align:left}
  input,select,textarea{padding:.4rem;margin:.2rem 0;max-width:100%} label{display:block;margin-top:.5rem;font-size:.9rem}
+ .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem 1rem}
+ .field{min-width:0}.field label{margin:0 0 .25rem}.field input,.field select,.field textarea{box-sizing:border-box;width:100%;height:2.35rem;margin:0}
+ .field textarea{height:auto;min-height:5rem}.required:after{content:" *";color:#b42318}.optional{color:#555}.optional:after{content:" (optional)";color:#777;font-weight:400}
+ input[readonly],textarea[readonly]{background:#eef0f3;color:#666}.field-error{margin-top:.25rem;color:#b42318;font-size:.82rem}
+ .required-note{margin:.2rem 0 1rem;color:#555;font-size:.88rem}.required-note span{font-weight:600}
+ .alert{display:flex;align-items:flex-start;gap:.7rem;padding:.75rem 1rem;margin-bottom:1rem;border:1px solid;border-radius:7px}.alert-success{background:#e8f7ed;border-color:#98d5aa;color:#176b35}.alert-error{background:#fcedeb;border-color:#e7a39c;color:#8a1f17}.alert-warning{background:#fff5d8;border-color:#e8c66d;color:#785b00}.alert-icon svg{display:block;width:1.2rem;height:1.2rem}.alert-body{flex:1}.alert-body strong{display:block;margin-bottom:.15rem}.alert-body ul{margin:.25rem 0 0;padding-left:1.2rem}.alert-dismiss{padding:0;background:transparent;color:currentColor;font-size:1.2rem;line-height:1;border:0}
+ @media (max-width:700px){.form-grid{grid-template-columns:1fr}}
  button,.btn{background:#1f3a5f;color:#fff;border:0;border-radius:5px;padding:.45rem .9rem;cursor:pointer;text-decoration:none;display:inline-block}
  .danger{background:#a33}.ok{background:#e6f4ea;padding:.6rem;border-radius:5px;margin-bottom:1rem}
  .err{background:#fdecea;padding:.6rem;border-radius:5px;margin-bottom:1rem;color:#8a1f17}
@@ -103,6 +110,7 @@
         @php
             $user = auth()->user();
 
+            $isAdministrator = $user->hasRole('Administrator');
             $isPresident = $user->hasRole('President');
             $isTreasurer = $user->hasRole('Treasurer');
             $isInventoryClerk = $user->hasRole('Inventory Clerk');
@@ -120,6 +128,9 @@
 
             $canViewInventoryReports =
                 $isPresident || $isInventoryClerk || $isSupervisor;
+
+            $canExport =
+                $isAdministrator || $isPresident || $isTreasurer || $isInventoryClerk || $isSupervisor;
         @endphp
 
         {{-- WORKSPACE --}}
@@ -204,8 +215,8 @@
             </details>
         @endif
 
-        {{-- ADMINISTRATION: PRESIDENT ONLY FOR NOW --}}
-        @if($isPresident)
+        {{-- ADMINISTRATION --}}
+        @if($isAdministrator)
             <span class="nav-section">Administration</span>
 
             <a class="{{ request()->routeIs('users.*') ? 'nav-link-active' : '' }}"
@@ -216,6 +227,13 @@
             <a class="{{ request()->routeIs('audit.*') ? 'nav-link-active' : '' }}"
                href="{{ route('audit.index') }}">
                 Audit Log
+            </a>
+        @endif
+
+        @if($canExport)
+            <a class="{{ request()->routeIs('exports.*') ? 'nav-link-active' : '' }}"
+               href="{{ route('exports.index') }}">
+                Export Center
             </a>
         @endif
 
@@ -276,8 +294,13 @@
 
 @yield('hero')
 <main>
- @if(session('status'))<div class="ok">{{ session('status') }}</div>@endif
- @if($errors->any())<div class="err">@foreach($errors->all() as $e)<div>{{ $e }}</div>@endforeach</div>@endif
+ @if(session('status'))<x-alert type="success" title="Success">{{ session('status') }}</x-alert>@endif
+ @if(session('warning'))<x-alert type="warning" title="Warning">{{ session('warning') }}</x-alert>@endif
+ @if($errors->any())
+  <x-alert type="error" title="Please correct the following">
+   <ul>@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
+  </x-alert>
+ @endif
  @yield('content')
 </main>
 <script>

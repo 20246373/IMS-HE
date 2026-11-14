@@ -23,7 +23,7 @@
     </select>
    </td>
    <td>
-    <form id="role-{{ $p->user_id }}" method="POST" action="{{ route('users.role', $p) }}" class="inline">@csrf<button>Give role</button></form>
+    <form id="role-{{ $p->user_id }}" method="POST" action="{{ route('users.role', $p) }}" class="inline">@csrf<button>Approve</button></form>
     <form method="POST" action="{{ route('users.destroy', $p) }}" class="inline" onsubmit="return confirm('Delete this account?')">@csrf @method('DELETE')<button class="danger">Delete</button></form>
    </td>
   </tr>
@@ -33,7 +33,6 @@
 @endif
 
 <div class="card">
- <p><a class="btn" href="{{ route('users.create') }}">+ New account</a></p>
  <table>
   <tr><th>Account</th><th>Employee</th><th>Role</th><th>Status</th><th>Last login</th><th></th></tr>
   @foreach($users as $u)

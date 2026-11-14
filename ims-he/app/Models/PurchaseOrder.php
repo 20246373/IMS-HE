@@ -11,7 +11,7 @@ class PurchaseOrder extends Model
     public $timestamps = false;
     protected $guarded = [];
 
-    protected $casts = ['order_date' => 'date'];
+    protected $casts = ['order_date' => 'date', 'is_auto' => 'boolean'];
 
     public function supplier() { return $this->belongsTo(Supplier::class, 'supplier_id', 'supplier_id'); }
     public function items() { return $this->hasMany(PurchaseOrderItem::class, 'po_id', 'po_id'); }

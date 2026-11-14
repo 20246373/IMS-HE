@@ -18,6 +18,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ExportController;
 
 Route::get('/', [CatalogController::class, 'home'])->name('home');
 Route::get('/shop', [CatalogController::class, 'index'])->name('catalog.index');
@@ -27,8 +28,12 @@ Route::get('/shop/{product}', [CatalogController::class, 'show'])->name('catalog
 Route::middleware('guest:web,customer')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+    Route::get('/forgot-password', [AuthController::class, 'showForgotPassword'])->name('password.forgot');
+    Route::post('/forgot-password', [AuthController::class, 'sendPasswordResetLink'])->middleware('throttle:password-reset')->name('password.email');
+    Route::get('/reset-password/{guard}/{id}/{hash}', [AuthController::class, 'showResetPassword'])->name('password.reset');
+    Route::post('/reset-password/{guard}/{id}/{hash}', [AuthController::class, 'resetPassword']);
 
-    // Employees sign up the same way, then wait for the President to give them a role.
+    // Employees sign up the same way, then wait for the Administrator to give them a role.
     Route::get('/register/employee', [AuthController::class, 'showRegister'])->name('staff.register');
     Route::post('/register/employee', [AuthController::class, 'register'])->middleware('throttle:5,1');
 
@@ -103,8 +108,8 @@ Route::middleware(['auth', "role:$allRoles"])->group(function () {
         Route::post('deliveries', [DeliveryController::class, 'store'])->name('deliveries.store');
     });
 
-    Route::middleware('role:'.User::PRESIDENT)->group(function () {
-        Route::resource('users', UserController::class)->except(['show']);
+    Route::middleware('role:'.User::ADMINISTRATOR)->group(function () {
+        Route::resource('users', UserController::class)->only(['index', 'edit', 'update', 'destroy']);
         Route::post('users/{user}/role', [UserController::class, 'assignRole'])->name('users.role');
         Route::post('users/{user}/lock', [UserController::class, 'lock'])->name('users.lock');
         Route::post('users/{user}/unlock', [UserController::class, 'unlock'])->name('users.unlock');
@@ -122,5 +127,15 @@ Route::middleware(['auth', "role:$allRoles"])->group(function () {
         Route::get('reports/sales', [ReportController::class, 'sales'])->name('reports.sales');
         Route::get('reports/sales/download', [ReportController::class, 'downloadSales'])
             ->name('reports.sales.download');
+    });
+
+    Route::middleware('role:'.User::ADMINISTRATOR.','.User::PRESIDENT.','.User::TREASURER.','.User::INVENTORY_CLERK.','.User::STORE_SUPERVISOR)->group(function () {
+        Route::get('exports', [ExportController::class, 'index'])->name('exports.index');
+        Route::get('exports/{dataset}', [ExportController::class, 'download'])->name('exports.download');
+        Route::post('exports-all', [ExportController::class, 'all'])->name('exports.all');
+    });
+
+    Route::middleware('role:'.User::ADMINISTRATOR)->group(function () {
+        Route::get('exports-backup', [ExportController::class, 'backup'])->name('exports.backup');
     });
 });

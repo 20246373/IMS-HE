@@ -4,22 +4,89 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Customer;
+use App\Mail\ResetPasswordEmail;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
+use Throwable;
 
 // One login for everybody, like an online shop: the email (or username) decides whether it is a staff or a customer account.
-// Employees sign up with email + password too, but get the role "Pending" until the President assigns a real one.
+// Employees sign up with email + password too, but get the role "Pending" until the Administrator assigns a real one.
 class AuthController extends Controller
 {
     private const INVALID = 'Invalid email/username or password.';
-    private const LOCKED = 'Account locked after 3 failed attempts. Contact the President.';
+    private const LOCKED = 'Account locked after 3 failed attempts. Contact the administrator.';
 
     public function showLogin()
     {
         return view('auth.login');
+    }
+
+    public function showForgotPassword()
+    {
+        return view('auth.forgot-password');
+    }
+
+    public function sendPasswordResetLink(Request $request)
+    {
+        $data = $request->validate(['email' => ['required', 'email', 'max:100']]);
+        $email = mb_strtolower(trim($data['email']));
+        $customer = Customer::where('email', $email)->first();
+        $user = $customer ? null : User::where('email', $email)->first();
+
+        if ($customer || $user) {
+            $guard = $customer ? 'customer' : 'web';
+            $id = $customer ? $customer->customer_id : $user->user_id;
+            $passwordHash = $customer ? $customer->password : $user->password;
+            $url = URL::temporarySignedRoute('password.reset', now()->addMinutes(60), [
+                'guard' => $guard,
+                'id' => $id,
+                'hash' => hash('sha256', $passwordHash),
+            ]);
+
+            try {
+                Mail::to($email)->send(new ResetPasswordEmail($url));
+            } catch (Throwable $e) {
+                report($e);
+            }
+        }
+
+        return back()->with('status', 'If that email exists, we sent a link.');
+    }
+
+    public function showResetPassword(Request $request, string $guard, int $id, string $hash)
+    {
+        $account = $this->validResetAccount($request, $guard, $id, $hash);
+        if (!$account) {
+            return redirect()->route('password.forgot')
+                ->withErrors(['email' => 'This password reset link is invalid or has expired.']);
+        }
+
+        return view('auth.reset-password', compact('guard', 'id', 'hash'));
+    }
+
+    public function resetPassword(Request $request, string $guard, int $id, string $hash)
+    {
+        $account = $this->validResetAccount($request, $guard, $id, $hash);
+        if (!$account) {
+            return redirect()->route('password.forgot')
+                ->withErrors(['email' => 'This password reset link is invalid or has expired.']);
+        }
+
+        $data = $request->validate([
+            'password' => ['required', 'string', 'min:8', 'max:72', 'confirmed'],
+        ]);
+        $account->update(['password' => $data['password']]);
+
+        if ($guard === 'web') {
+            AuditLog::record('Password Reset', 'users', $account->user_id, $account->user_id);
+        }
+
+        return redirect()->route('login')->with('status', 'Your password has been reset. You can now log in.');
     }
 
     public function login(Request $request)
@@ -138,5 +205,22 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('login');
+    }
+
+    private function validResetAccount(Request $request, string $guard, int $id, string $hash)
+    {
+        if (!$request->hasValidSignature() || !in_array($guard, ['customer', 'web'], true)) {
+            return null;
+        }
+
+        $account = $guard === 'customer'
+            ? Customer::find($id)
+            : User::find($id);
+
+        if (!$account || !hash_equals(hash('sha256', $account->password), $hash)) {
+            return null;
+        }
+
+        return $account;
     }
 }

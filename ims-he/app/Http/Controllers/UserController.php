@@ -11,72 +11,56 @@ use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
-    private const MESSAGES = ['email.unique' => 'This email is already registered.'];
-
     public function index()
     {
         return view('users.index', [
             // Employees who signed up themselves and are waiting for a role come first.
             'pending'   => User::where('role', User::PENDING)->orderBy('created_at')->get(),
             'users'     => User::with('employee')->where('role', '!=', User::PENDING)->orderBy('username')->orderBy('email')->get(),
-            'roles'     => User::ROLES,
+            'roles'     => User::roleChoices(),
             'employees' => $this->employeeOptions(null),
         ]);
     }
 
-    public function create()
-    {
-        return view('users.create', ['employees' => $this->employeeOptions(null), 'roles' => User::ROLES]);
-    }
-
-    public function store(Request $request)
-    {
-        $data = $request->validate([
-            'email'       => ['nullable', 'email', 'max:100', 'required_without:username', 'unique:users,email', 'unique:customers,email'],
-            'username'    => 'nullable|alpha_num|max:50|required_without:email|unique:users,username',
-            'password'    => 'required|string|min:8|confirmed',
-            'role'        => ['required', Rule::in(User::ROLES)],
-            'employee_id' => 'nullable|exists:employees,employee_id|unique:users,employee_id',
-        ], self::MESSAGES);
-
-        $user = User::create([
-            'email'       => isset($data['email']) ? mb_strtolower($data['email']) : null,
-            'username'    => $data['username'] ?? null,
-            'password'    => $data['password'],            // hashed by the model cast
-            'role'        => $data['role'],
-            'employee_id' => $data['employee_id'] ?? null,
-            'status'      => User::STATUS_ACTIVE,
-        ]);
-
-        AuditLog::record('Created', 'users', $user->user_id);
-
-        return redirect()->route('users.index')->with('status', "Account {$user->label()} created.");
-    }
-
     public function edit(User $user)
     {
-        return view('users.edit', ['user' => $user, 'employees' => $this->employeeOptions($user), 'roles' => User::roleChoices()]);
+        return view('users.edit', [
+            'user' => $user,
+            'employees' => $this->employeeOptions($user),
+            'roles' => User::roleChoices(),
+            'statuses' => [User::STATUS_ACTIVE, User::STATUS_LOCKED],
+        ]);
     }
 
     public function update(Request $request, User $user)
     {
         $data = $request->validate([
-            'email'       => ['nullable', 'email', 'max:100', 'required_without:username', Rule::unique('users', 'email')->ignore($user->user_id, 'user_id'), 'unique:customers,email'],
-            'username'    => ['nullable', 'alpha_num', 'max:50', 'required_without:email', Rule::unique('users', 'username')->ignore($user->user_id, 'user_id')],
-            'role'        => ['required', Rule::in(User::roleChoices())],
+            'role'        => ['required', Rule::in($user->hasRole(User::ADMINISTRATOR)
+                ? [...User::roleChoices(), $user->role]
+                : User::roleChoices())],
+            'status'      => ['required', Rule::in([User::STATUS_ACTIVE, User::STATUS_LOCKED])],
             'employee_id' => ['nullable', 'exists:employees,employee_id', Rule::unique('users', 'employee_id')->ignore($user->user_id, 'user_id')],
-        ], self::MESSAGES);
+        ]);
 
         if ($user->is($request->user()) && $data['role'] !== $user->role) {
             return back()->withErrors(['role' => 'You cannot change your own role.'])->withInput();
         }
 
-        $user->update([
-            'email'       => isset($data['email']) ? mb_strtolower($data['email']) : null,
-            'username'    => $data['username'] ?? null,
+        if ($user->is($request->user()) && $data['status'] === User::STATUS_LOCKED) {
+            return back()->withErrors(['status' => 'You cannot lock your own account.'])->withInput();
+        }
+
+        $updates = [
             'role'        => $data['role'],
+            'status'      => $data['status'],
             'employee_id' => $data['employee_id'] ?? null,
-        ]);
+        ];
+
+        if ($user->isLocked() && $data['status'] === User::STATUS_ACTIVE) {
+            $updates['login_attempt_count'] = 0;
+        }
+
+        $user->update($updates);
 
         AuditLog::record('Updated', 'users', $user->user_id);
 
@@ -87,7 +71,7 @@ class UserController extends Controller
     public function assignRole(Request $request, User $user)
     {
         $data = $request->validate([
-            'role'        => ['required', Rule::in(User::ROLES)],
+            'role'        => ['required', Rule::in(User::roleChoices())],
             'employee_id' => ['nullable', 'exists:employees,employee_id', Rule::unique('users', 'employee_id')->ignore($user->user_id, 'user_id')],
         ]);
 

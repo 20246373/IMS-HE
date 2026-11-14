@@ -32,6 +32,18 @@ class DatabaseSeeder extends Seeder
     {
         // DEV ONLY - sample data and shared passwords. Remove before any real deployment.
 
+        User::updateOrCreate(
+            ['username' => 'admin'],
+            [
+                'email' => 'admin@example.com',
+                'employee_id' => null,
+                'role' => User::ADMINISTRATOR,
+                'password' => 'password123',
+                'status' => User::STATUS_ACTIVE,
+                'login_attempt_count' => 0,
+            ]
+        );
+
         // Staff: [username, role, first, last, position, daily_rate]
         foreach ([
             ['president',  User::PRESIDENT,        'Pedro',  'Reyes',   'President',        1000],
@@ -51,7 +63,7 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        // An employee who signed up and is waiting for the President to give a role (try it under User Accounts).
+        // An employee who signed up and is waiting for the Administrator to give a role (try it under User Accounts).
         User::updateOrCreate(
             ['email' => 'newhire@example.com'],
             ['role' => User::PENDING, 'password' => 'password123', 'status' => User::STATUS_ACTIVE, 'login_attempt_count' => 0]

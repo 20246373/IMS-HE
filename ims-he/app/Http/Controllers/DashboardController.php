@@ -11,7 +11,8 @@ use Illuminate\View\View;
 class DashboardController extends Controller
 {
     private const WIDGETS = [
-        User::PRESIDENT => ['accounts', 'sales', 'low-stock', 'pending-pos'],
+        User::ADMINISTRATOR => ['accounts'],
+        User::PRESIDENT => ['sales', 'low-stock', 'pending-pos'],
         User::TREASURER => ['sales'],
         User::INVENTORY_CLERK => ['low-stock', 'pending-pos'],
         User::STORE_SUPERVISOR => ['sales', 'low-stock', 'pending-pos'],

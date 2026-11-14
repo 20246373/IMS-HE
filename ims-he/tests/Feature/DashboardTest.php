@@ -20,15 +20,26 @@ class DashboardTest extends TestCase
         ]));
     }
 
-    public function test_president_sees_every_widget(): void
+    public function test_administrator_sees_account_widgets_only(): void
+    {
+        $this->signInAs(User::ADMINISTRATOR);
+
+        $this->get(route('dashboard'))->assertOk()
+            ->assertSee('User accounts')
+            ->assertDontSee('Revenue this month')
+            ->assertDontSee('Low-stock products')
+            ->assertDontSee('Pending Purchase Orders');
+    }
+
+    public function test_president_sees_business_widgets_only(): void
     {
         $this->signInAs(User::PRESIDENT);
 
         $this->get(route('dashboard'))->assertOk()
-            ->assertSee('User accounts')
             ->assertSee('Revenue this month')
             ->assertSee('Low-stock products')
-            ->assertSee('Pending Purchase Orders');
+            ->assertSee('Pending Purchase Orders')
+            ->assertDontSee('User accounts');
     }
 
     public function test_treasurer_only_sees_sales(): void

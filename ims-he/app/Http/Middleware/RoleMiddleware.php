@@ -26,7 +26,7 @@ class RoleMiddleware
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('login')->withErrors(['login' => 'Your account is locked. Contact the President.']);
+            return redirect()->route('login')->withErrors(['login' => 'Your account is locked. Contact the administrator.']);
         }
 
         // Self-registered employees have no role yet: send them to the waiting page instead of a 403.
