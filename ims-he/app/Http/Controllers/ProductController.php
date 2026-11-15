@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\InventoryTransaction;
 use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\PurchaseOrderItem;
+use App\Models\Supplier;
 use App\Services\InventoryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,17 +33,49 @@ class ProductController extends Controller
     {
         return view('products.index', [
             'products' => Product::with('category')
-                ->when($request->query('q'), fn ($q, $s) => $q->where('product_name', 'like', "%{$s}%"))
+                ->when($request->query('q'), fn ($q, $s) => $q->where(function ($query) use ($s) {
+                    $query->where('product_name', 'like', "%{$s}%")
+                        ->orWhere('brand', 'like', "%{$s}%");
+                }))
                 ->when($request->query('category'), fn ($q, $c) => $q->where('category_id', $c))
-                ->orderByDesc('is_active')->orderBy('product_name')
+                ->orderBy('product_name')
                 ->paginate(15)->withQueryString(),
             'categories' => Category::orderBy('category_name')->get(),
         ]);
     }
 
+    public function stockHistory(Product $product): View
+    {
+        $transactions = InventoryTransaction::where('product_id', $product->product_id)
+            ->orderByDesc('transaction_id')
+            ->paginate(20);
+
+        if ($transactions->isNotEmpty()) {
+            $newerNet = (int) InventoryTransaction::where('product_id', $product->product_id)
+                ->where('transaction_id', '>', $transactions->first()->transaction_id)
+                ->selectRaw("COALESCE(SUM(CASE WHEN transaction_type = 'IN' THEN quantity ELSE -quantity END), 0) AS net")
+                ->value('net');
+
+            $balance = (int) $product->stock_quantity - $newerNet;
+
+            foreach ($transactions as $transaction) {
+                $transaction->setAttribute('resulting_stock', $balance);
+                $effect = $transaction->transaction_type === 'IN'
+                    ? (int) $transaction->quantity
+                    : -(int) $transaction->quantity;
+                $balance -= $effect;
+            }
+        }
+
+        return view('products.stock-history', compact('product', 'transactions'));
+    }
+
     public function create(): View
     {
-        return view('products.create', ['categories' => Category::orderBy('category_name')->get()]);
+        return view('products.create', [
+            'categories' => Category::orderBy('category_name')->get(),
+            'suppliers' => Supplier::orderBy('supplier_name')->get(),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -53,7 +87,6 @@ class ProductController extends Controller
             // Create at 0, then let InventoryService add the opening stock so the movement is logged (UC12 includes UC05).
             $product = Product::create(Arr::except($data, ['stock_quantity', 'image']) + [
                 'stock_quantity' => 0,
-                'is_active' => true,
                 'image_path' => $request->hasFile('image') ? $request->file('image')->store('products', 'public') : null,
             ]);
 
@@ -71,53 +104,37 @@ class ProductController extends Controller
 
     public function edit(Product $product): View
     {
-        return view('products.edit', ['product' => $product, 'categories' => Category::orderBy('category_name')->get()]);
+        return view('products.edit', [
+            'product' => $product,
+            'categories' => Category::orderBy('category_name')->get(),
+            'suppliers' => Supplier::orderBy('supplier_name')->get(),
+        ]);
     }
 
     public function update(Request $request, Product $product): RedirectResponse
     {
+        // Product ID and stock quantity are not editable. Only validated fields are returned,
+        // and the explicit exclusion keeps a tampered request from changing them.
         $data = $request->validate($this->rules($product), self::MESSAGES);
-        $target = (int) $data['stock_quantity'];
+        $attributes = Arr::except($data, ['image', 'stock_quantity', 'product_id']);
 
-        DB::transaction(function () use ($request, $product, $data, $target) {
-            $attributes = Arr::except($data, ['stock_quantity', 'image']);
-            if ($request->hasFile('image')) {
-                $attributes['image_path'] = $request->file('image')->store('products', 'public');
-            }
-            $product->update($attributes);
+        if ($request->hasFile('image')) {
+            $attributes['image_path'] = $request->file('image')->store('products', 'public');
+        }
 
-            // Manual stock correction goes through InventoryService so inventory_transactions stays accurate.
-            $diff = $target - (int) $product->refresh()->stock_quantity;
-            if ($diff > 0) {
-                $this->inventory->add($product->product_id, $diff, 'Adjustment', $product->product_id);
-            } elseif ($diff < 0) {
-                $this->inventory->deduct($product->product_id, abs($diff), 'Adjustment', $product->product_id);
-            }
-        });
+        $product->update($attributes);
 
         AuditLog::record('Updated', 'products', $product->product_id);
 
         return redirect()->route('products.index')->with('status', 'Product updated.');
     }
 
-    /** Hide / show a product (is_active) without deleting it. */
-    public function toggle(Product $product): RedirectResponse
-    {
-        $product->update(['is_active' => ! $product->is_active]);
-        AuditLog::record($product->is_active ? 'Activated' : 'Deactivated', 'products', $product->product_id);
-
-        return back()->with('status', $product->is_active ? 'Product is visible again.' : 'Product hidden from the catalog.');
-    }
-
     public function destroy(Product $product): RedirectResponse
     {
-        // Referential integrity (UC14): sales lines, purchase order lines and non-adjustment stock movements block deletion.
-        $linked = InvoiceItem::where('product_id', $product->product_id)->exists()
-            || PurchaseOrderItem::where('product_id', $product->product_id)->exists()
-            || InventoryTransaction::where('product_id', $product->product_id)->where('reference_type', '!=', 'Adjustment')->exists();
-
-        if ($linked) {
-            return back()->withErrors(['product' => 'Cannot delete — this product is linked to existing transactions.']);
+        // Referential integrity (UC14): keep the product while any record still points at it,
+        // and tell the user which kind of record is in the way.
+        if ($blockedBy = $this->deletionBlocker($product)) {
+            return back()->withErrors(['product' => "Cannot delete — this product is {$blockedBy}."]);
         }
 
         $id = $product->product_id;
@@ -138,16 +155,46 @@ class ProductController extends Controller
         return redirect()->route('products.index')->with('status', 'Product deleted.');
     }
 
+    /** Returns what still references the product, or null when it is safe to delete. */
+    private function deletionBlocker(Product $product): ?string
+    {
+        if (InvoiceItem::where('product_id', $product->product_id)->exists()) {
+            return 'used in existing invoice items';
+        }
+
+        if (CartItem::where('product_id', $product->product_id)->exists()) {
+            return 'in a customer cart';
+        }
+
+        if (PurchaseOrderItem::where('product_id', $product->product_id)->exists()) {
+            return 'used in existing purchase order items';
+        }
+
+        if (InventoryTransaction::where('product_id', $product->product_id)->where('reference_type', '!=', 'Adjustment')->exists()) {
+            return 'linked to existing stock movements from sales, purchases or deliveries';
+        }
+
+        return null;
+    }
+
     private function rules(?Product $product = null): array
     {
-        return [
-            'product_name'   => ['required', 'string', 'max:100', Rule::unique('products', 'product_name')->ignore($product?->product_id, 'product_id')],
-            'category_id'    => ['required', 'integer', 'exists:categories,category_id'],
-            'description'    => ['nullable', 'string', 'max:255'],
-            'unit_price'     => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
-            'stock_quantity' => ['required', 'integer', 'min:0', 'max:4294967295'],
-            'reorder_level'  => ['required', 'integer', 'min:0', 'max:4294967295'],
-            'image'          => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+        $rules = [
+            'product_name' => ['required', 'string', 'max:100', Rule::unique('products', 'product_name')->ignore($product?->product_id, 'product_id')],
+            'brand' => ['required', 'string', 'max:50'],
+            'category_id' => ['required', 'integer', 'exists:categories,category_id'],
+            'description' => ['nullable', 'string', 'max:255'],
+            'unit_price' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
+            'reorder_level' => ['required', 'integer', 'min:0', 'max:4294967295'],
+            'supplier_id' => ['nullable', 'integer', 'exists:suppliers,supplier_id'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ];
+
+        // Opening stock is only entered when the product is created. On edit it is read-only.
+        if ($product === null) {
+            $rules['stock_quantity'] = ['required', 'integer', 'min:0', 'max:4294967295'];
+        }
+
+        return $rules;
     }
 }

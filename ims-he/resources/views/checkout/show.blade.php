@@ -12,8 +12,7 @@
    <tr>
     <td>
      {{ $p->product_name }}
-     @if(! $p->is_active)<div class="low">No longer available</div>
-     @elseif($item->quantity > $p->stock_quantity)<div class="low">Only {{ $p->stock_quantity }} in stock</div>@endif
+     @if($item->quantity > $p->stock_quantity)<div class="low">Only {{ $p->stock_quantity }} in stock</div>@endif
     </td>
     <td>&#8369;{{ number_format($p->unit_price, 2) }}</td>
     <td>{{ $item->quantity }}</td>

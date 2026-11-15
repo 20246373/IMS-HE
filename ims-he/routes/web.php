@@ -9,16 +9,16 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryController;
+use App\Http\Controllers\ExportController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\StockController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UserController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\StockController;
-use App\Http\Controllers\ReportController;
-use App\Http\Controllers\ExportController;
 
 Route::get('/', [CatalogController::class, 'home'])->name('home');
 Route::get('/shop', [CatalogController::class, 'index'])->name('catalog.index');
@@ -96,14 +96,17 @@ Route::middleware(['auth', "role:$allRoles"])->group(function () {
 
     Route::middleware('role:'.User::PRESIDENT.','.User::INVENTORY_CLERK.','.User::STORE_SUPERVISOR)->group(function () {
         Route::resource('categories', CategoryController::class)->except(['show', 'create']);
+        Route::get('products/{product}/stock-history', [ProductController::class, 'stockHistory'])
+            ->name('products.stock-history');
         Route::resource('products', ProductController::class)->except(['show']);
-        Route::patch('products/{product}/toggle', [ProductController::class, 'toggle'])->name('products.toggle');
 
         Route::get('stock', [StockController::class, 'index'])->name('stock.index');
     });
 
     Route::middleware('role:'.User::PRESIDENT.','.User::INVENTORY_CLERK.','.User::STORE_SUPERVISOR)->group(function () {
         Route::resource('purchase-orders', PurchaseOrderController::class)->only(['index', 'create', 'store', 'show']);
+        Route::patch('purchase-orders/{purchase_order}/cancel', [PurchaseOrderController::class, 'cancel'])
+            ->name('purchase-orders.cancel');
         Route::get('deliveries/create', [DeliveryController::class, 'create'])->name('deliveries.create');
         Route::post('deliveries', [DeliveryController::class, 'store'])->name('deliveries.store');
     });
@@ -121,6 +124,12 @@ Route::middleware(['auth', "role:$allRoles"])->group(function () {
         Route::get('reports/inventory', [ReportController::class, 'inventory'])->name('reports.inventory');
         Route::get('reports/inventory/download', [ReportController::class, 'downloadInventory'])
             ->name('reports.inventory.download');
+    });
+
+    Route::middleware('role:'.User::PRESIDENT.','.User::INVENTORY_CLERK)->group(function () {
+        Route::get('reports/procurement', [ReportController::class, 'procurement'])->name('reports.procurement');
+        Route::get('reports/procurement/download', [ReportController::class, 'downloadProcurement'])
+            ->name('reports.procurement.download');
     });
 
     Route::middleware('role:'.User::PRESIDENT.','.User::TREASURER.','.User::STORE_SUPERVISOR)->group(function () {

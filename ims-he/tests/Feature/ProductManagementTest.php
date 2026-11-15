@@ -2,13 +2,19 @@
 
 namespace Tests\Feature;
 
+use App\Models\Cart;
+use App\Models\CartItem;
 use App\Models\Category;
+use App\Models\Customer;
+use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 // UC12 Add / UC13 Edit / UC14 Delete for products, and the supplier role rules.
@@ -24,7 +30,7 @@ class ProductManagementTest extends TestCase
         $this->cat = Category::create(['category_name' => 'Hand Tools']);
     }
 
-    private function staff(string $role, string $username = null): User
+    private function staff(string $role, ?string $username = null): User
     {
         return User::create([
             'username' => $username ?? strtolower(str_replace(' ', '', $role)),
@@ -38,6 +44,7 @@ class ProductManagementTest extends TestCase
     {
         return array_merge([
             'product_name' => 'Claw Hammer',
+            'brand' => 'Stanley',
             'category_id' => $this->cat->category_id,
             'description' => '16oz claw hammer',
             'unit_price' => '350.00',
@@ -49,12 +56,12 @@ class ProductManagementTest extends TestCase
     private function product(string $name = 'Claw Hammer', int $stock = 10): Product
     {
         return Product::create([
-            'category_id' => $this->cat->category_id, 'product_name' => $name, 'unit_price' => 350,
+            'category_id' => $this->cat->category_id, 'product_name' => $name, 'brand' => 'Stanley', 'unit_price' => 350,
             'stock_quantity' => $stock, 'reorder_level' => 0, 'is_active' => true,
         ]);
     }
 
-    public function test_clerk_can_add_a_product_with_opening_stock_logged(): void
+    public function test_clerk_can_add_a_product_with_brand_and_opening_stock_logged(): void
     {
         $clerk = $this->staff(User::INVENTORY_CLERK);
 
@@ -62,12 +69,61 @@ class ProductManagementTest extends TestCase
             ->assertRedirect(route('products.index'));
 
         $product = Product::where('product_name', 'Claw Hammer')->firstOrFail();
+        $this->assertSame('Stanley', $product->brand);
         $this->assertSame(20, (int) $product->stock_quantity);
         $this->assertTrue((bool) $product->is_active);
         $this->assertDatabaseHas('inventory_transactions', [
             'product_id' => $product->product_id, 'transaction_type' => 'IN', 'quantity' => 20, 'reference_type' => 'Adjustment',
         ]);
         $this->assertDatabaseHas('audit_logs', ['action' => 'Created', 'table_name' => 'products', 'record_id' => $product->product_id]);
+    }
+
+    public function test_brand_is_required_for_product_creation(): void
+    {
+        $clerk = $this->staff(User::INVENTORY_CLERK);
+
+        $this->actingAs($clerk)->post(route('products.store'), $this->payload(['brand' => '']))
+            ->assertSessionHasErrors(['brand']);
+    }
+
+    public function test_admin_search_matches_product_name_or_brand(): void
+    {
+        $clerk = $this->staff(User::INVENTORY_CLERK);
+        $this->product('Claw Hammer');
+        $target = Product::create([
+            'category_id' => $this->cat->category_id,
+            'product_name' => 'Screwdriver Set',
+            'brand' => 'Bosch',
+            'unit_price' => 450,
+            'stock_quantity' => 12,
+            'reorder_level' => 2,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($clerk)->get(route('products.index', ['q' => 'Bosch']))
+            ->assertOk()
+            ->assertSee($target->product_name)
+            ->assertSee('Bosch');
+    }
+
+    public function test_product_forms_and_list_show_the_brand(): void
+    {
+        $clerk = $this->staff(User::INVENTORY_CLERK);
+        $this->product('Claw Hammer');
+
+        $this->actingAs($clerk)->get(route('products.create'))
+            ->assertOk()
+            ->assertSee('name="brand"', false)
+            ->assertSee('All fields are required unless marked');
+
+        $this->actingAs($clerk)->get(route('products.edit', Product::firstOrFail()))
+            ->assertOk()
+            ->assertSee('name="brand"', false);
+
+        $this->actingAs($clerk)->get(route('products.index'))
+            ->assertOk()
+            ->assertSee('<th>Brand</th>', false)
+            ->assertSee('Stanley');
     }
 
     public function test_duplicate_name_and_invalid_data_are_rejected(): void
@@ -84,21 +140,50 @@ class ProductManagementTest extends TestCase
         $this->assertDatabaseCount('products', 1);
     }
 
-    public function test_edit_updates_fields_and_logs_a_stock_adjustment(): void
+    public function test_edit_updates_only_editable_fields_and_ignores_stock_and_product_id(): void
     {
         $supervisor = $this->staff(User::STORE_SUPERVISOR);
+        $supplier = Supplier::create(['supplier_name' => 'Sample Supply', 'contact_number' => '09170000000', 'address' => 'Baguio City']);
         $product = $this->product('Claw Hammer', stock: 10);
+        $productId = $product->product_id;
+        $other = $this->product('Other Product', stock: 3);
 
         $this->actingAs($supervisor)->put(route('products.update', $product), $this->payload([
-            'product_name' => 'Claw Hammer Pro', 'unit_price' => '400.00', 'stock_quantity' => 7,
-        ]))->assertRedirect(route('products.index'));
+            'product_name' => 'Claw Hammer Pro',
+            'brand' => 'Milwaukee',
+            'unit_price' => '400.00',
+            'reorder_level' => 8,
+            'supplier_id' => $supplier->supplier_id,
+            // These two are not editable and must be ignored even when tampered with.
+            'stock_quantity' => 7,
+            'product_id' => $other->product_id,
+        ]))->assertRedirect(route('products.index'))->assertSessionHasNoErrors();
 
         $product->refresh();
         $this->assertSame('Claw Hammer Pro', $product->product_name);
-        $this->assertSame(7, (int) $product->stock_quantity);
-        $this->assertDatabaseHas('inventory_transactions', [
-            'product_id' => $product->product_id, 'transaction_type' => 'OUT', 'quantity' => 3, 'reference_type' => 'Adjustment',
-        ]);
+        $this->assertSame('Milwaukee', $product->brand);
+        $this->assertSame('400.00', $product->unit_price);
+        $this->assertSame(8, (int) $product->reorder_level);
+        $this->assertSame($supplier->supplier_id, (int) $product->supplier_id);
+
+        $this->assertSame(10, (int) $product->stock_quantity);
+        $this->assertSame($productId, (int) $product->product_id);
+        $this->assertSame($other->product_id, (int) $other->fresh()->product_id);
+        $this->assertSame(3, (int) $other->fresh()->stock_quantity);
+        $this->assertDatabaseCount('inventory_transactions', 0);
+    }
+
+    public function test_product_edit_shows_product_id_and_stock_as_read_only(): void
+    {
+        $clerk = $this->staff(User::INVENTORY_CLERK);
+        $product = $this->product('Claw Hammer', stock: 10);
+
+        $this->actingAs($clerk)->get(route('products.edit', $product))
+            ->assertOk()
+            ->assertSee('Product ID')
+            ->assertSee('value="'.$product->product_id.'"', false)
+            ->assertSee('value="10"', false)
+            ->assertDontSee('name="stock_quantity"', false);
     }
 
     public function test_product_without_history_can_be_deleted(): void
@@ -123,21 +208,54 @@ class ProductManagementTest extends TestCase
         PurchaseOrderItem::create(['po_id' => $po->po_id, 'product_id' => $product->product_id, 'quantity' => 1, 'unit_cost' => 10, 'subtotal' => 10]);
 
         $this->actingAs($clerk)->delete(route('products.destroy', $product))
-            ->assertSessionHasErrors(['product' => 'Cannot delete — this product is linked to existing transactions.']);
+            ->assertSessionHasErrors(['product' => 'Cannot delete — this product is used in existing purchase order items.']);
 
         $this->assertDatabaseHas('products', ['product_id' => $product->product_id]);
     }
 
-    public function test_toggle_hides_and_shows_a_product(): void
+    public function test_product_linked_to_an_invoice_cannot_be_deleted(): void
     {
         $clerk = $this->staff(User::INVENTORY_CLERK);
         $product = $this->product();
+        $invoice = Invoice::create(['invoice_date' => today(), 'channel' => 'Walk-in', 'status' => 'Pending', 'total_amount' => 350]);
+        InvoiceItem::create([
+            'invoice_id' => $invoice->invoice_id, 'product_id' => $product->product_id,
+            'quantity' => 1, 'price' => 350, 'subtotal' => 350,
+        ]);
 
-        $this->actingAs($clerk)->patch(route('products.toggle', $product));
-        $this->assertFalse((bool) $product->fresh()->is_active);
+        $this->actingAs($clerk)->delete(route('products.destroy', $product))
+            ->assertSessionHasErrors(['product' => 'Cannot delete — this product is used in existing invoice items.']);
 
-        $this->actingAs($clerk)->patch(route('products.toggle', $product));
-        $this->assertTrue((bool) $product->fresh()->is_active);
+        $this->assertDatabaseHas('products', ['product_id' => $product->product_id]);
+    }
+
+    public function test_product_in_a_customer_cart_cannot_be_deleted(): void
+    {
+        $clerk = $this->staff(User::INVENTORY_CLERK);
+        $product = $this->product();
+        $customer = Customer::create(['email' => 'cart@example.com', 'password' => 'secret123']);
+        $cart = Cart::create(['customer_id' => $customer->customer_id]);
+        CartItem::create(['cart_id' => $cart->cart_id, 'product_id' => $product->product_id, 'quantity' => 2]);
+
+        $this->actingAs($clerk)->delete(route('products.destroy', $product))
+            ->assertSessionHasErrors(['product' => 'Cannot delete — this product is in a customer cart.']);
+
+        $this->assertDatabaseHas('products', ['product_id' => $product->product_id]);
+        $this->assertDatabaseHas('cart_items', ['product_id' => $product->product_id]);
+    }
+
+    public function test_the_product_list_has_no_hide_or_show_controls(): void
+    {
+        $clerk = $this->staff(User::INVENTORY_CLERK);
+        $this->product();
+
+        $this->actingAs($clerk)->get(route('products.index'))
+            ->assertOk()
+            ->assertDontSee('Hide')
+            ->assertDontSee('Hidden')
+            ->assertDontSee('<th>Status</th>', false);
+
+        $this->assertFalse(Route::has('products.toggle'));
     }
 
     public function test_only_clerk_and_supervisor_can_manage_products(): void

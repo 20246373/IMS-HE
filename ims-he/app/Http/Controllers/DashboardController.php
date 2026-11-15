@@ -59,7 +59,7 @@ class DashboardController extends Controller
     private function lowStock(): array
     {
         return [
-            'lowStockCount' => Product::active()->whereColumn('stock_quantity', '<=', 'reorder_level')->count(),
+            'lowStockCount' => Product::whereColumn('stock_quantity', '<=', 'reorder_level')->count(),
         ];
     }
 

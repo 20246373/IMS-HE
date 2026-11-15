@@ -37,8 +37,8 @@
       </select>
      </td>
      <td><input type="number" name="items[{{ $lineIndex }}][quantity]" min="1" step="1" value="{{ $line['quantity'] ?? 1 }}" required></td>
-     <td><input type="number" name="items[{{ $lineIndex }}][unit_cost]" min="0" max="99999999.99" step="0.01" value="{{ $line['unit_cost'] ?? '0.00' }}" required></td>
-     <td class="line-subtotal">&#8369;0.00</td>
+     <td><div class="input-with-prefix"><span>₱</span><input type="number" name="items[{{ $lineIndex }}][unit_cost]" min="0" max="99999999.99" step="0.01" value="{{ $line['unit_cost'] ?? '0.00' }}" required></div></td>
+     <td class="line-subtotal">{{ money(0) }}</td>
      <td><button type="button" class="danger remove-line">Remove</button></td>
     </tr>
     @php($lineIndex++)
@@ -46,7 +46,7 @@
    </tbody>
   </table>
   <p><button type="button" id="add-line">Add product line</button></p>
-  <p><strong>PO total: <span id="purchase-order-total">&#8369;0.00</span></strong></p>
+  <p><strong>PO total: <span id="purchase-order-total">{{ money(0) }}</span></strong></p>
   <button>Create purchase order</button>
   <a class="btn" href="{{ route('purchase-orders.index') }}">Cancel</a>
  </form>
@@ -61,8 +61,8 @@
     </select>
    </td>
    <td><input type="number" min="1" step="1" value="1" required></td>
-   <td><input type="number" min="0" max="99999999.99" step="0.01" value="0.00" required></td>
-   <td class="line-subtotal">&#8369;0.00</td>
+   <td><div class="input-with-prefix"><span>₱</span><input type="number" min="0" max="99999999.99" step="0.01" value="0.00" required></div></td>
+   <td class="line-subtotal">{{ money(0) }}</td>
    <td><button type="button" class="danger remove-line">Remove</button></td>
   </tr>
  </template>
@@ -79,9 +79,9 @@
      const unitCost = Number(line.querySelector('[name$="[unit_cost]"]').value) || 0;
      const subtotal = quantity * unitCost;
      total += subtotal;
-     line.querySelector('.line-subtotal').textContent = '\u20b9' + subtotal.toFixed(2);
+     line.querySelector('.line-subtotal').textContent = '₱' + subtotal.toFixed(2);
     });
-    document.getElementById('purchase-order-total').textContent = '\u20b9' + total.toFixed(2);
+    document.getElementById('purchase-order-total').textContent = '₱' + total.toFixed(2);
    };
 
    document.getElementById('add-line').addEventListener('click', () => {

@@ -20,12 +20,12 @@ class DatabaseSeeder extends Seeder
      *   'Claw Hammer 16oz' => 'hammer.jpg',
      */
     private array $photoFiles = [
-        'Claw Hammer 16oz'       => 'clawhammer.jpg',
-        'Cordless Drill 12V'     => 'cordlessdrill.jpg',
-        'PVC Pipe 1/2" x 3m'     => 'pvcpipe.jpg',
-        'THHN Wire #12 (per m)'  => 'thhnwire.jpg',
-        'Latex Paint White 4L'   => 'latexpaint.jpg',
-        'Common Nails 3" (kg)'   => 'commonnail.jpg',
+        'Claw Hammer 16oz' => 'clawhammer.jpg',
+        'Cordless Drill 12V' => 'cordlessdrill.jpg',
+        'PVC Pipe 1/2" x 3m' => 'pvcpipe.jpg',
+        'THHN Wire #12 (per m)' => 'thhnwire.jpg',
+        'Latex Paint White 4L' => 'latexpaint.jpg',
+        'Common Nails 3" (kg)' => 'commonnail.jpg',
     ];
 
     public function run(): void
@@ -82,17 +82,23 @@ class DatabaseSeeder extends Seeder
         }
 
         foreach ([
-            ['Claw Hammer 16oz',       'Hand Tools',  350,   40, 10],
-            ['Cordless Drill 12V',     'Power Tools', 3200,   8,  3],
-            ['PVC Pipe 1/2" x 3m',     'Plumbing',    120,  100, 20],
-            ['THHN Wire #12 (per m)',  'Electrical',   38,  300, 50],
-            ['Latex Paint White 4L',   'Paint',       780,    5,  6],   // starts below reorder level
-            ['Common Nails 3" (kg)',   'Fasteners',    85,   60, 15],
-        ] as [$name, $cat, $price, $stock, $reorder]) {
+            ['Claw Hammer 16oz',       'Hand Tools',  350,   40, 10, 'Stanley'],
+            ['Cordless Drill 12V',     'Power Tools', 3200,   8,  3, 'Bosch'],
+            ['PVC Pipe 1/2" x 3m',     'Plumbing',    120,  100, 20, 'Apex'],
+            ['THHN Wire #12 (per m)',  'Electrical',   38,  300, 50, 'Philflex'],
+            ['Latex Paint White 4L',   'Paint',       780,    5,  6, 'Boysen'],
+            ['Common Nails 3" (kg)',   'Fasteners',    85,   60, 15, 'Prime'],
+        ] as [$name, $cat, $price, $stock, $reorder, $brand]) {
             $product = Product::firstOrCreate(['product_name' => $name], [
-                'category_id' => $cats[$cat], 'description' => $name, 'unit_price' => $price,
+                'category_id' => $cats[$cat], 'description' => $name, 'brand' => $brand,
+                'unit_price' => $price,
                 'stock_quantity' => $stock, 'reorder_level' => $reorder, 'is_active' => true,
             ]);
+
+            // Backfill the brand on rows seeded before products.brand existed, without touching stock or price.
+            if (! $product->brand) {
+                $product->update(['brand' => $brand]);
+            }
 
             // Fill a missing photo path without touching stock or price, so `php artisan db:seed` is safe to re-run.
             if (! $product->image_path) {
@@ -101,7 +107,7 @@ class DatabaseSeeder extends Seeder
                 if ($photo) {
                     $product->update(['image_path' => $photo]);
                 } else {
-                    $this->command?->warn("No photo found for \"{$name}\" - expected storage/app/public/products/" . Str::slug($name) . '.jpg');
+                    $this->command?->warn("No photo found for \"{$name}\" - expected storage/app/public/products/".Str::slug($name).'.jpg');
                 }
             }
         }
@@ -126,8 +132,8 @@ class DatabaseSeeder extends Seeder
     {
         $dir = storage_path('app/public/products');
 
-        if (isset($this->photoFiles[$productName]) && is_file($dir . '/' . $this->photoFiles[$productName])) {
-            return 'products/' . $this->photoFiles[$productName];
+        if (isset($this->photoFiles[$productName]) && is_file($dir.'/'.$this->photoFiles[$productName])) {
+            return 'products/'.$this->photoFiles[$productName];
         }
 
         $slug = Str::slug($productName);

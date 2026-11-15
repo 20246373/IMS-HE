@@ -35,9 +35,7 @@ class CheckoutService
             foreach ($items as $item) {
                 $product = $item->product;
 
-                if (! $product->is_active) {
-                    $problems[] = "{$product->product_name} is no longer available.";
-                } elseif ($item->quantity > $product->stock_quantity) {
+                if ($item->quantity > $product->stock_quantity) {
                     $problems[] = $product->isInStock()
                         ? "Only {$product->stock_quantity} of {$product->product_name} in stock."
                         : "{$product->product_name} is out of stock.";

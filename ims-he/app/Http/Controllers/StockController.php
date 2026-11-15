@@ -10,7 +10,7 @@ class StockController extends Controller
 {
     public function index(Request $request)
     {
-        $products = Product::active()->with('category')
+        $products = Product::with('category')
             ->when($request->boolean('low'), fn ($q) => $q->whereColumn('stock_quantity', '<=', 'reorder_level'))
             ->orderByRaw('(stock_quantity <= reorder_level) desc')->orderBy('product_name')
             ->get();

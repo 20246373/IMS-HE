@@ -192,10 +192,18 @@ class CustomerAuthTest extends TestCase
         $this->customer();
         $this->customer(['email' => 'maria@example.com', 'email_verified_at' => now()]);
 
-        $this->post(route('customer.verification.resend'), ['email' => 'juan@example.com'])->assertSessionHas('status');
-        $this->post(route('customer.verification.resend'), ['email' => 'maria@example.com'])->assertSessionHas('status');
+        $this->from('/login')
+            ->withServerVariables(['REMOTE_ADDR' => '203.0.113.10'])
+            ->post(route('customer.verification.resend'), ['email' => 'juan@example.com'])
+            ->assertRedirect('/login');
+
+        $this->from('/login')
+            ->withServerVariables(['REMOTE_ADDR' => '203.0.113.11'])
+            ->post(route('customer.verification.resend'), ['email' => 'maria@example.com'])
+            ->assertRedirect('/login');
 
         Mail::assertSent(VerifyCustomerEmail::class, 1);
         Mail::assertSent(VerifyCustomerEmail::class, fn ($mail) => $mail->hasTo('juan@example.com'));
     }
 }
+

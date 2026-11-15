@@ -34,12 +34,12 @@ class CatalogTest extends TestCase
     {
         $this->product('Claw Hammer', $this->tools);
         $this->product('Empty Shelf Item', $this->tools, stock: 0);
-        $this->product('Hidden Item', $this->tools, active: false);
+        $this->product('Inactive Item', $this->tools, active: false);
 
         $this->get('/')->assertOk()
             ->assertSee('Claw Hammer')
-            ->assertDontSee('Empty Shelf Item')
-            ->assertDontSee('Hidden Item');
+            ->assertSee('Inactive Item')
+            ->assertDontSee('Empty Shelf Item');
     }
 
     public function test_catalog_searches_by_name_and_filters_by_category(): void
@@ -55,14 +55,15 @@ class CatalogTest extends TestCase
             ->assertSee('Latex Paint')->assertDontSee('Claw Hammer');
     }
 
-    public function test_catalog_shows_stock_status_and_hides_inactive(): void
+    public function test_catalog_shows_every_product_with_its_stock_status(): void
     {
         $this->product('Claw Hammer', $this->tools);
         $this->product('Latex Paint', $this->paint, stock: 0);
-        $this->product('Hidden Item', $this->tools, active: false);
+        $this->product('Inactive Item', $this->tools, active: false);
 
         $this->get('/shop')->assertOk()
-            ->assertSee('In stock')->assertSee('Out of stock')->assertDontSee('Hidden Item');
+            ->assertSee('In stock')->assertSee('Out of stock')
+            ->assertSee('Inactive Item');
     }
 
     public function test_product_details_page(): void
@@ -73,11 +74,11 @@ class CatalogTest extends TestCase
             ->assertSee('Claw Hammer')->assertSee('Hand Tools')->assertSee('Out of stock');
     }
 
-    public function test_inactive_or_missing_product_is_404(): void
+    public function test_a_product_marked_inactive_still_has_a_details_page(): void
     {
-        $hidden = $this->product('Hidden Item', $this->tools, active: false);
+        $inactive = $this->product('Inactive Item', $this->tools, active: false);
 
-        $this->get('/shop/' . $hidden->product_id)->assertNotFound();
+        $this->get('/shop/' . $inactive->product_id)->assertOk()->assertSee('Inactive Item');
         $this->get('/shop/999999')->assertNotFound();
     }
 }

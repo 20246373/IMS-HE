@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Category;
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -62,6 +64,29 @@ class DashboardTest extends TestCase
             ->assertSee('Pending Purchase Orders')
             ->assertDontSee('Revenue this month')
             ->assertDontSee('User accounts');
+    }
+
+    public function test_low_stock_widget_uses_the_shared_warning_alert_and_links_to_the_low_stock_list(): void
+    {
+        $this->signInAs(User::INVENTORY_CLERK);
+        $category = Category::create(['category_name' => 'Hardware']);
+        Product::create([
+            'category_id' => $category->category_id,
+            'product_name' => 'Low stock item',
+            'brand' => 'Stanley',
+            'unit_price' => 100,
+            'stock_quantity' => 2,
+            'reorder_level' => 2,
+            'is_active' => true,
+        ]);
+
+        $this->get(route('dashboard'))->assertOk()
+            ->assertSee('alert-warning', false)
+            ->assertSee('alert-icon', false)
+            ->assertSee('Low-stock products (1)')
+            ->assertSee('1 product is at or below the reorder level.')
+            ->assertSee('View low-stock list')
+            ->assertSee(route('stock.index', ['low' => 1]), false);
     }
 
     public function test_store_supervisor_sees_sales_stock_and_procurement_but_not_accounts(): void

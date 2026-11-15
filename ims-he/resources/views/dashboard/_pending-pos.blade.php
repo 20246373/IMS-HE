@@ -10,7 +10,7 @@
     <td><a href="{{ route('purchase-orders.show', $purchaseOrder) }}">PO #{{ $purchaseOrder->po_id }}</a></td>
     <td>{{ $purchaseOrder->supplier->supplier_name }}</td>
     <td>{{ $purchaseOrder->order_date->format('M d, Y') }}</td>
-    <td>&#8369;{{ number_format($purchaseOrder->items->sum('subtotal'), 2) }}</td>
+    <td>{{ money($purchaseOrder->items->sum('subtotal')) }}</td>
    </tr>
    @endforeach
   </table>

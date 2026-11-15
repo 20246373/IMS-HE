@@ -164,15 +164,16 @@ class CheckoutTest extends TestCase
         $this->assertSame(1, $customer->cart->items()->count());
     }
 
-    public function test_a_product_that_was_hidden_blocks_the_order(): void
+    public function test_a_product_marked_inactive_can_still_be_ordered(): void
     {
         $customer = $this->customer();
         $product = $this->product();
         $this->inCart($customer, $product, 1);
         $product->update(['is_active' => false]);
 
-        $this->actingAs($customer, 'customer')->post(route('customer.checkout.store'), $this->details())->assertSessionHasErrors('cart');
-        $this->assertDatabaseCount('invoices', 0);
+        $this->actingAs($customer, 'customer')->post(route('customer.checkout.store'), $this->details())
+            ->assertRedirect(route('customer.orders.show', Invoice::firstOrFail()));
+        $this->assertDatabaseCount('invoices', 1);
     }
 
     public function test_a_failure_while_deducting_stock_rolls_everything_back(): void

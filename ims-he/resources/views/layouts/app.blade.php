@@ -54,6 +54,9 @@
  .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem 1rem}
  .field{min-width:0}.field label{margin:0 0 .25rem}.field input,.field select,.field textarea{box-sizing:border-box;width:100%;height:2.35rem;margin:0}
  .field textarea{height:auto;min-height:5rem}.required:after{content:" *";color:#b42318}.optional{color:#555}.optional:after{content:" (optional)";color:#777;font-weight:400}
+ .input-with-prefix{display:flex;align-items:center;box-sizing:border-box;border:1px solid #767676;border-radius:3px;background:#fff}
+ .input-with-prefix > span{padding:0 .45rem;color:#555;font-size:.9rem}
+ .input-with-prefix input{box-sizing:border-box;width:100%;min-width:0;height:2.35rem;margin:0;border:0;background:transparent}
  input[readonly],textarea[readonly]{background:#eef0f3;color:#666}.field-error{margin-top:.25rem;color:#b42318;font-size:.82rem}
  .required-note{margin:.2rem 0 1rem;color:#555;font-size:.88rem}.required-note span{font-weight:600}
  .alert{display:flex;align-items:flex-start;gap:.7rem;padding:.75rem 1rem;margin-bottom:1rem;border:1px solid;border-radius:7px}.alert-success{background:#e8f7ed;border-color:#98d5aa;color:#176b35}.alert-error{background:#fcedeb;border-color:#e7a39c;color:#8a1f17}.alert-warning{background:#fff5d8;border-color:#e8c66d;color:#785b00}.alert-icon svg{display:block;width:1.2rem;height:1.2rem}.alert-body{flex:1}.alert-body strong{display:block;margin-bottom:.15rem}.alert-body ul{margin:.25rem 0 0;padding-left:1.2rem}.alert-dismiss{padding:0;background:transparent;color:currentColor;font-size:1.2rem;line-height:1;border:0}
@@ -129,6 +132,9 @@
             $canViewInventoryReports =
                 $isPresident || $isInventoryClerk || $isSupervisor;
 
+            $canViewProcurementReports =
+                $isPresident || $isInventoryClerk;
+
             $canExport =
                 $isAdministrator || $isPresident || $isTreasurer || $isInventoryClerk || $isSupervisor;
         @endphp
@@ -188,7 +194,7 @@
         @endif
 
         {{-- REPORTS --}}
-        @if($canViewSalesReports || $canViewInventoryReports)
+        @if($canViewSalesReports || $canViewInventoryReports || $canViewProcurementReports)
             <details class="nav-dropdown"
                 {{ request()->routeIs('reports.*') ? 'open' : '' }}>
                 <summary>Reports</summary>
@@ -204,6 +210,13 @@
                         <a class="{{ request()->routeIs('reports.inventory*') ? 'nav-link-active' : '' }}"
                            href="{{ route('reports.inventory') }}">
                             Inventory Report
+                        </a>
+                    @endif
+
+                    @if($canViewProcurementReports)
+                        <a class="{{ request()->routeIs('reports.procurement*') ? 'nav-link-active' : '' }}"
+                           href="{{ route('reports.procurement') }}">
+                            Procurement Report
                         </a>
                     @endif
 

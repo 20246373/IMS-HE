@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\Supplier;
+use App\Models\AuditLog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -86,5 +87,20 @@ class PurchaseOrderController extends Controller
         $purchaseOrder->load(['supplier', 'items.product']);
 
         return view('purchase-orders.show', ['purchaseOrder' => $purchaseOrder]);
+    }
+
+    public function cancel(PurchaseOrder $purchaseOrder): RedirectResponse
+    {
+        if ($purchaseOrder->status !== 'Pending') {
+            return back()->withErrors([
+                'purchase_order' => 'Only Pending purchase orders can be cancelled.',
+            ]);
+        }
+
+        $purchaseOrder->update(['status' => 'Cancelled']);
+        AuditLog::record('Cancelled', 'purchase_orders', $purchaseOrder->po_id);
+
+        return redirect()->route('purchase-orders.show', $purchaseOrder)
+            ->with('status', 'Purchase order cancelled.');
     }
 }

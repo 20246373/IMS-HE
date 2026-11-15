@@ -74,16 +74,16 @@ class CartTest extends TestCase
         $this->assertSame(3, (int) CartItem::first()->quantity);
     }
 
-    public function test_out_of_stock_and_inactive_products_cannot_be_added(): void
+    public function test_out_of_stock_products_cannot_be_added_but_inactive_ones_can(): void
     {
         $customer = $this->customer();
 
         $this->actingAs($customer, 'customer')->post(route('customer.cart.add', $this->product('Empty', stock: 0)), ['quantity' => 1])
             ->assertSessionHasErrors('quantity');
-        $this->actingAs($customer, 'customer')->post(route('customer.cart.add', $this->product('Hidden', active: false)), ['quantity' => 1])
-            ->assertSessionHasErrors('quantity');
+        $this->actingAs($customer, 'customer')->post(route('customer.cart.add', $this->product('Inactive', active: false)), ['quantity' => 1])
+            ->assertRedirect(route('customer.cart.index'));
 
-        $this->assertDatabaseCount('cart_items', 0);
+        $this->assertDatabaseCount('cart_items', 1);
     }
 
     public function test_update_and_remove_items_and_totals_are_recalculated(): void

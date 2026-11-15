@@ -54,10 +54,6 @@ class CartService
     // Quantity must not exceed available stock (SDD 7.2.17).
     private function assertSellable(Product $product, int $quantity): void
     {
-        if (! $product->is_active) {
-            throw ValidationException::withMessages(['quantity' => "{$product->product_name} is no longer available."]);
-        }
-
         if ($quantity > $product->stock_quantity) {
             throw ValidationException::withMessages(['quantity' => $product->isInStock()
                 ? "Only {$product->stock_quantity} of {$product->product_name} in stock."

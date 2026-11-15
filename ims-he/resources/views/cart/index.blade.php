@@ -14,9 +14,8 @@
     <tr data-price="{{ $p->unit_price }}">
      <td>
       <a href="{{ route('catalog.show', $p) }}">{{ $p->product_name }}</a>
-      {{-- Stock or availability may have changed since the item was added --}}
-      @if(! $p->is_active)<div class="low">No longer available</div>
-      @elseif($item->quantity > $p->stock_quantity)<div class="low">Only {{ $p->stock_quantity }} in stock</div>@endif
+      {{-- Stock may have changed since the item was added --}}
+      @if($item->quantity > $p->stock_quantity)<div class="low">Only {{ $p->stock_quantity }} in stock</div>@endif
       <div class="low line-error" hidden></div>
      </td>
      <td>&#8369;{{ number_format($p->unit_price, 2) }}</td>

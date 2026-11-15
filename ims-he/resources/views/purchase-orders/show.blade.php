@@ -7,7 +7,13 @@
  <p>Order date: {{ $purchaseOrder->order_date->format('M d, Y') }}</p>
  <p>Status: <strong>{{ $purchaseOrder->status }}</strong></p>
  @if($purchaseOrder->status === 'Pending')
-  <p><a class="btn" href="{{ route('deliveries.create', ['purchase_order_id' => $purchaseOrder->po_id]) }}">Record delivery</a></p>
+  <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin:1rem 0">
+   <a class="btn" href="{{ route('deliveries.create', ['purchase_order_id' => $purchaseOrder->po_id]) }}">Record delivery</a>
+   <form method="POST" action="{{ route('purchase-orders.cancel', $purchaseOrder) }}" class="inline" onsubmit="return confirm('Cancel this purchase order?')">
+    @csrf @method('PATCH')
+    <button class="danger">Cancel purchase order</button>
+   </form>
+  </div>
  @endif
  <table>
   <tr><th>Product</th><th>Ordered</th><th>Received</th><th>Remaining</th><th>Unit cost</th><th>Subtotal</th></tr>
@@ -17,11 +23,11 @@
    <td>{{ $item->quantity }}</td>
    <td>{{ $item->quantity_received }}</td>
    <td>{{ max(0, $item->quantity - $item->quantity_received) }}</td>
-   <td>&#8369;{{ number_format($item->unit_cost, 2) }}</td>
-   <td>&#8369;{{ number_format($item->subtotal, 2) }}</td>
+   <td>{{ money($item->unit_cost) }}</td>
+   <td>{{ money($item->subtotal) }}</td>
   </tr>
   @endforeach
-  <tr><th colspan="5" style="text-align:right">Total</th><th>&#8369;{{ number_format($purchaseOrder->items->sum('subtotal'), 2) }}</th></tr>
+  <tr><th colspan="5" style="text-align:right">Total</th><th>{{ money($purchaseOrder->items->sum('subtotal')) }}</th></tr>
  </table>
  <p><a class="btn" href="{{ route('purchase-orders.index') }}">Back to purchase orders</a></p>
 </div>

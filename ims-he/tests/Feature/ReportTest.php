@@ -3,9 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\Category;
+use App\Models\InventoryTransaction;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
+use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -14,12 +18,15 @@ class ReportTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function staff(): User
+    private function staff(string $role = User::STORE_SUPERVISOR): User
     {
+        static $number = 0;
+        $number++;
+
         return User::create([
-            'username' => 'report-user',
+            'username' => "report-user-{$number}",
             'password' => 'secret123',
-            'role' => User::EMPLOYEE,
+            'role' => $role,
             'status' => User::STATUS_ACTIVE,
         ]);
     }
@@ -110,6 +117,199 @@ class ReportTest extends TestCase
             ->assertSee('Low stock')
             ->assertSee('Save as PDF')
             ->assertSee(route('reports.inventory.download'));
+    }
+
+    public function test_inventory_report_filters_the_table_and_totals_by_category(): void
+    {
+        $tools = Category::create(['category_name' => 'Tools']);
+        $hardware = Category::create(['category_name' => 'Hardware']);
+
+        Product::create([
+            'category_id' => $tools->category_id,
+            'product_name' => 'Hammer',
+            'unit_price' => 100,
+            'stock_quantity' => 3,
+            'reorder_level' => 3,
+            'is_active' => true,
+        ]);
+        Product::create([
+            'category_id' => $hardware->category_id,
+            'product_name' => 'Drill',
+            'unit_price' => 250,
+            'stock_quantity' => 2,
+            'reorder_level' => 1,
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($this->staff())
+            ->get(route('reports.inventory', ['category_id' => $tools->category_id]))
+            ->assertOk()
+            ->assertSee('Hammer')
+            ->assertDontSee('Drill')
+            ->assertSee('300.00')
+            ->assertDontSee('800.00')
+            ->assertSee(route('reports.inventory.download', ['category_id' => $tools->category_id]));
+
+        $this->get(route('reports.inventory.download', ['category_id' => $tools->category_id]))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_procurement_report_filters_purchase_orders_by_date_supplier_and_category(): void
+    {
+        $tools = Category::create(['category_name' => 'Tools']);
+        $hardware = Category::create(['category_name' => 'Hardware']);
+        $preferredSupplier = Supplier::create([
+            'supplier_name' => 'Preferred Supplier',
+            'contact_number' => '09170000001',
+            'address' => 'Main Street',
+        ]);
+        $otherSupplier = Supplier::create([
+            'supplier_name' => 'Other Supplier',
+            'contact_number' => '09170000002',
+            'address' => 'Side Street',
+        ]);
+
+        $hammer = Product::create([
+            'category_id' => $tools->category_id,
+            'supplier_id' => $preferredSupplier->supplier_id,
+            'product_name' => 'Hammer',
+            'unit_price' => 100,
+            'stock_quantity' => 5,
+            'reorder_level' => 2,
+            'is_active' => true,
+        ]);
+        $saw = Product::create([
+            'category_id' => $tools->category_id,
+            'supplier_id' => $otherSupplier->supplier_id,
+            'product_name' => 'Saw',
+            'unit_price' => 70,
+            'stock_quantity' => 5,
+            'reorder_level' => 2,
+            'is_active' => true,
+        ]);
+        $drill = Product::create([
+            'category_id' => $hardware->category_id,
+            'supplier_id' => $preferredSupplier->supplier_id,
+            'product_name' => 'Drill',
+            'unit_price' => 200,
+            'stock_quantity' => 5,
+            'reorder_level' => 2,
+            'is_active' => true,
+        ]);
+        $wrench = Product::create([
+            'category_id' => $tools->category_id,
+            'supplier_id' => $preferredSupplier->supplier_id,
+            'product_name' => 'Wrench',
+            'unit_price' => 50,
+            'stock_quantity' => 5,
+            'reorder_level' => 2,
+            'is_active' => true,
+        ]);
+
+        $matchingOrder = PurchaseOrder::create([
+            'supplier_id' => $preferredSupplier->supplier_id,
+            'order_date' => '2026-11-10',
+            'status' => 'Pending',
+        ]);
+        PurchaseOrderItem::create([
+            'po_id' => $matchingOrder->po_id,
+            'product_id' => $hammer->product_id,
+            'quantity' => 10,
+            'quantity_received' => 4,
+            'unit_cost' => 100,
+            'subtotal' => 1000,
+        ]);
+        InventoryTransaction::create([
+            'product_id' => $hammer->product_id,
+            'transaction_type' => 'IN',
+            'quantity' => 4,
+            'transaction_date' => '2026-11-12',
+            'reference_type' => 'PO',
+            'reference_id' => $matchingOrder->po_id,
+        ]);
+
+        $otherSupplierOrder = PurchaseOrder::create([
+            'supplier_id' => $otherSupplier->supplier_id,
+            'order_date' => '2026-11-11',
+            'status' => 'Pending',
+        ]);
+        PurchaseOrderItem::create([
+            'po_id' => $otherSupplierOrder->po_id,
+            'product_id' => $saw->product_id,
+            'quantity' => 10,
+            'quantity_received' => 0,
+            'unit_cost' => 70,
+            'subtotal' => 700,
+        ]);
+
+        $otherCategoryOrder = PurchaseOrder::create([
+            'supplier_id' => $preferredSupplier->supplier_id,
+            'order_date' => '2026-11-12',
+            'status' => 'Pending',
+        ]);
+        PurchaseOrderItem::create([
+            'po_id' => $otherCategoryOrder->po_id,
+            'product_id' => $drill->product_id,
+            'quantity' => 10,
+            'quantity_received' => 0,
+            'unit_cost' => 200,
+            'subtotal' => 2000,
+        ]);
+
+        $outsideRangeOrder = PurchaseOrder::create([
+            'supplier_id' => $preferredSupplier->supplier_id,
+            'order_date' => '2026-10-31',
+            'status' => 'Pending',
+        ]);
+        PurchaseOrderItem::create([
+            'po_id' => $outsideRangeOrder->po_id,
+            'product_id' => $wrench->product_id,
+            'quantity' => 10,
+            'quantity_received' => 0,
+            'unit_cost' => 50,
+            'subtotal' => 500,
+        ]);
+
+        $filters = [
+            'start_date' => '2026-11-01',
+            'end_date' => '2026-11-30',
+            'supplier_id' => $preferredSupplier->supplier_id,
+            'category_id' => $tools->category_id,
+        ];
+
+        $this->actingAs($this->staff(User::INVENTORY_CLERK))
+            ->get(route('reports.procurement', $filters))
+            ->assertOk()
+            ->assertSee('Procurement report')
+            ->assertSee('Hammer')
+            ->assertDontSee('Saw')
+            ->assertDontSee('Drill')
+            ->assertDontSee('Wrench')
+            ->assertSee('1,000.00')
+            ->assertDontSee('2,000.00')
+            ->assertDontSee('700.00')
+            ->assertDontSee('500.00')
+            ->assertSee(route('reports.procurement.download', $filters));
+
+        $this->get(route('reports.procurement.download', $filters))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf')
+            ->assertHeader(
+                'content-disposition',
+                'attachment; filename=procurement-report-2026-11-01-to-2026-11-30.pdf'
+            );
+    }
+
+    public function test_procurement_report_is_restricted_to_president_and_inventory_clerk(): void
+    {
+        $this->actingAs($this->staff(User::STORE_SUPERVISOR))
+            ->get(route('reports.procurement'))
+            ->assertForbidden();
+
+        $this->actingAs($this->staff(User::PRESIDENT))
+            ->get(route('reports.procurement'))
+            ->assertOk();
     }
 
     public function test_inventory_report_downloads_a_pdf(): void
