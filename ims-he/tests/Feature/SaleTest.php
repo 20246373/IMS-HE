@@ -74,7 +74,7 @@ class SaleTest extends TestCase
             'invoice_date' => today(), 'channel' => 'In-store', 'status' => 'Completed',
         ]);
 
-        foreach ([User::PRESIDENT, User::TREASURER, User::INVENTORY_CLERK, 'Administrator', 'Pending'] as $role) {
+        foreach ([User::PRESIDENT, User::TREASURER, User::INVENTORY_CLERK, 'Administrator'] as $role) {
             $user = $this->staff($role);
 
             $this->actingAs($user)->get('/sales/create')->assertForbidden();
@@ -82,6 +82,10 @@ class SaleTest extends TestCase
             $this->actingAs($user)->get('/sales/' . $invoice->invoice_id)->assertForbidden();
             $this->actingAs($user)->post('/sales', [])->assertForbidden();
         }
+
+        // A self-registered employee with no role yet is sent to the waiting page instead of getting a 403.
+        $pending = $this->staff(User::PENDING);
+        $this->actingAs($pending)->get('/sales/create')->assertRedirect(route('staff.pending'));
     }
 
     public function test_guests_are_redirected_to_login(): void
@@ -90,11 +94,11 @@ class SaleTest extends TestCase
             'invoice_date' => today(), 'channel' => 'In-store', 'status' => 'Completed',
         ]);
 
-        // Staff-area guests are sent to the staff login page (redirectGuestsTo).
-        $this->get('/sales/create')->assertRedirect(route('staff.login'));
-        $this->get('/sales')->assertRedirect(route('staff.login'));
-        $this->get('/sales/' . $invoice->invoice_id)->assertRedirect(route('staff.login'));
-        $this->post('/sales', [])->assertRedirect(route('staff.login'));
+        // Staff-area guests are sent to the single login page (redirectGuestsTo).
+        $this->get('/sales/create')->assertRedirect(route('login'));
+        $this->get('/sales')->assertRedirect(route('login'));
+        $this->get('/sales/' . $invoice->invoice_id)->assertRedirect(route('login'));
+        $this->post('/sales', [])->assertRedirect(route('login'));
     }
 
     public function test_cash_sale_saves_invoice_items_payment_and_deducts_stock(): void

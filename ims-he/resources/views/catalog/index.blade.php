@@ -23,9 +23,9 @@
  <div class="grid">@foreach($products as $product)@include('catalog._card')@endforeach</div>
  @if($products->hasPages())
   <p class="pager">
-   @if($products->onFirstPage())<span>&laquo; Previous</span>@else<a href="{{ $products->previousPageUrl() }}">&laquo; Previous</a>@endif
+   @if($products->onFirstPage())<span>Previous</span>@else<a href="{{ $products->previousPageUrl() }}">Previous</a>@endif
    <span>Page {{ $products->currentPage() }} of {{ $products->lastPage() }}</span>
-   @if($products->hasMorePages())<a href="{{ $products->nextPageUrl() }}">Next &raquo;</a>@else<span>Next &raquo;</span>@endif
+   @if($products->hasMorePages())<a href="{{ $products->nextPageUrl() }}">Next</a>@else<span>Next</span>@endif
   </p>
  @endif
 @endif

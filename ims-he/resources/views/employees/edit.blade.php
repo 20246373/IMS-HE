@@ -4,7 +4,7 @@
 <div class="card" style="max-width:520px">
  <h3>Edit {{ $employee->full_name }}</h3>
  <p class="muted-text">Current daily rate: <strong>@peso($employee->daily_rate)</strong>
-  &middot; Account: {{ $employee->user?->username ?? 'not linked' }}</p>
+  &middot; Account: {{ $employee->user?->label() ?? 'not linked' }}</p>
  <x-form-note />
  <p class="muted-text">Name, date hired and status are fixed after the record is created and cannot be edited here.</p>
  <form method="POST" action="{{ route('employees.update', $employee->employee_id) }}">@csrf @method('PUT')

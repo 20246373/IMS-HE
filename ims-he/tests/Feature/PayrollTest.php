@@ -117,7 +117,7 @@ class PayrollTest extends TestCase
     {
         $draft = $this->draft();
 
-        foreach ([User::PRESIDENT, User::EMPLOYEE, User::STORE_SUPERVISOR, User::INVENTORY_CLERK, 'Administrator', 'Pending'] as $role) {
+        foreach ([User::PRESIDENT, User::EMPLOYEE, User::STORE_SUPERVISOR, User::INVENTORY_CLERK, 'Administrator'] as $role) {
             $user = $this->staff($role);
 
             $this->actingAs($user)->get('/payrolls/create')->assertForbidden();
@@ -128,6 +128,7 @@ class PayrollTest extends TestCase
 
         $this->assertSame('Draft', $draft->refresh()->status);
         $this->assertSame(0, LedgerEntry::count());
+        $this->assertPendingIsSentToWaitingPage('/payrolls/create');
     }
 
     public function test_president_and_treasurer_can_view_but_others_cannot(): void
@@ -140,7 +141,7 @@ class PayrollTest extends TestCase
             $this->actingAs($user)->get("/payrolls/{$draft->payroll_id}")->assertOk();
         }
 
-        foreach ([User::EMPLOYEE, User::STORE_SUPERVISOR, User::INVENTORY_CLERK, 'Administrator', 'Pending'] as $role) {
+        foreach ([User::EMPLOYEE, User::STORE_SUPERVISOR, User::INVENTORY_CLERK, 'Administrator'] as $role) {
             $user = $this->staff($role);
             $this->actingAs($user)->get('/payrolls')->assertForbidden();
             $this->actingAs($user)->get("/payrolls/{$draft->payroll_id}")->assertForbidden();
@@ -149,7 +150,7 @@ class PayrollTest extends TestCase
 
     public function test_guests_are_sent_to_login(): void
     {
-        $this->get('/payrolls')->assertRedirect(route('staff.login'));
+        $this->get('/payrolls')->assertRedirect(route('login'));
     }
 
     // ---- overlapping periods ---------------------------------------------------------------
@@ -292,6 +293,6 @@ class PayrollTest extends TestCase
         $this->draft();
         $this->actingAs($this->treasurer)->from('/payrolls/create')->followingRedirects()
             ->post('/payrolls', ['period_start' => '2026-11-05', 'period_end' => '2026-11-06'])
-            ->assertSee('role="alert"', false)->assertSee('class="err"', false)->assertSee('overlaps payroll #');
+            ->assertSee('role="alert"', false)->assertSee('alert-error', false)->assertSee('overlaps payroll #');
     }
 }

@@ -18,7 +18,7 @@ class RoleMiddleware
         $user = $request->user();
 
         if (! $user) {
-            return redirect()->route('staff.login');
+            return redirect()->route('login');
         }
 
         if ($user->status !== User::STATUS_ACTIVE) {
@@ -26,7 +26,12 @@ class RoleMiddleware
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('staff.login')->withErrors(['username' => 'Your account is locked. Contact the President.']);
+            return redirect()->route('login')->withErrors(['login' => 'Your account is locked. Contact the administrator.']);
+        }
+
+        // Self-registered employees have no role yet: send them to the waiting page instead of a 403.
+        if ($user->isPending()) {
+            return redirect()->route('staff.pending');
         }
 
         abort_unless(in_array($user->role, $roles, true), 403, 'You do not have access to this module.');

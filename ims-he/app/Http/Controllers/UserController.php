@@ -13,46 +13,32 @@ class UserController extends Controller
 {
     public function index()
     {
-        return view('users.index', ['users' => User::with('employee')->orderBy('username')->get()]);
-    }
-
-    public function create()
-    {
-        return view('users.create', ['employees' => $this->employeeOptions(null)]);
-    }
-
-    public function store(Request $request)
-    {
-        $data = $request->validate([
-            'username'    => 'required|alpha_num|max:50|unique:users,username',
-            'password'    => 'required|string|min:8|confirmed',
-            'role'        => ['required', Rule::in(User::ROLES)],
-            'employee_id' => 'nullable|exists:employees,employee_id|unique:users,employee_id',
+        return view('users.index', [
+            // Employees who signed up themselves and are waiting for a role come first.
+            'pending'   => User::where('role', User::PENDING)->orderBy('created_at')->get(),
+            'users'     => User::with('employee')->where('role', '!=', User::PENDING)->orderBy('username')->orderBy('email')->get(),
+            'roles'     => User::roleChoices(),
+            'employees' => $this->employeeOptions(null),
         ]);
-
-        $user = User::create([
-            'username'    => $data['username'],
-            'password'    => $data['password'],            // hashed by the model cast
-            'role'        => $data['role'],
-            'employee_id' => $data['employee_id'] ?? null,
-            'status'      => User::STATUS_ACTIVE,
-        ]);
-
-        AuditLog::record('Created', 'users', $user->user_id);
-
-        return redirect()->route('users.index')->with('status', "Account {$user->username} created.");
     }
 
     public function edit(User $user)
     {
-        return view('users.edit', ['user' => $user, 'employees' => $this->employeeOptions($user)]);
+        return view('users.edit', [
+            'user' => $user,
+            'employees' => $this->employeeOptions($user),
+            'roles' => User::roleChoices(),
+            'statuses' => [User::STATUS_ACTIVE, User::STATUS_LOCKED],
+        ]);
     }
 
     public function update(Request $request, User $user)
     {
         $data = $request->validate([
-            'username'    => ['required', 'alpha_num', 'max:50', Rule::unique('users', 'username')->ignore($user->user_id, 'user_id')],
-            'role'        => ['required', Rule::in(User::ROLES)],
+            'role'        => ['required', Rule::in($user->hasRole(User::ADMINISTRATOR)
+                ? [...User::roleChoices(), $user->role]
+                : User::roleChoices())],
+            'status'      => ['required', Rule::in([User::STATUS_ACTIVE, User::STATUS_LOCKED])],
             'employee_id' => ['nullable', 'exists:employees,employee_id', Rule::unique('users', 'employee_id')->ignore($user->user_id, 'user_id')],
         ]);
 
@@ -60,15 +46,43 @@ class UserController extends Controller
             return back()->withErrors(['role' => 'You cannot change your own role.'])->withInput();
         }
 
-        $user->update([
-            'username'    => $data['username'],
+        if ($user->is($request->user()) && $data['status'] === User::STATUS_LOCKED) {
+            return back()->withErrors(['status' => 'You cannot lock your own account.'])->withInput();
+        }
+
+        $updates = [
             'role'        => $data['role'],
+            'status'      => $data['status'],
             'employee_id' => $data['employee_id'] ?? null,
-        ]);
+        ];
+
+        if ($user->isLocked() && $data['status'] === User::STATUS_ACTIVE) {
+            $updates['login_attempt_count'] = 0;
+        }
+
+        $user->update($updates);
 
         AuditLog::record('Updated', 'users', $user->user_id);
 
         return redirect()->route('users.index')->with('status', 'Account updated.');
+    }
+
+    /** Gives a role to an employee who signed up and is waiting (role "Pending"). */
+    public function assignRole(Request $request, User $user)
+    {
+        $data = $request->validate([
+            'role'        => ['required', Rule::in(User::roleChoices())],
+            'employee_id' => ['nullable', 'exists:employees,employee_id', Rule::unique('users', 'employee_id')->ignore($user->user_id, 'user_id')],
+        ]);
+
+        if ($user->is($request->user())) {
+            return back()->withErrors(['role' => 'You cannot change your own role.']);
+        }
+
+        $user->update(['role' => $data['role'], 'employee_id' => $data['employee_id'] ?? null]);
+        AuditLog::record('Role Assigned', 'users', $user->user_id);
+
+        return back()->with('status', "{$user->label()} is now {$data['role']}.");
     }
 
     public function lock(Request $request, User $user)
@@ -80,7 +94,7 @@ class UserController extends Controller
         $user->update(['status' => User::STATUS_LOCKED]);
         AuditLog::record('Locked', 'users', $user->user_id);
 
-        return back()->with('status', "{$user->username} locked.");
+        return back()->with('status', "{$user->label()} locked.");
     }
 
     public function unlock(User $user)
@@ -88,7 +102,7 @@ class UserController extends Controller
         $user->update(['status' => User::STATUS_ACTIVE, 'login_attempt_count' => 0]);
         AuditLog::record('Unlocked', 'users', $user->user_id);
 
-        return back()->with('status', "{$user->username} unlocked.");
+        return back()->with('status', "{$user->label()} unlocked.");
     }
 
     public function resetPassword(Request $request, User $user)
@@ -98,7 +112,7 @@ class UserController extends Controller
         $user->update(['password' => $data['password'], 'login_attempt_count' => 0]);
         AuditLog::record('Password Reset', 'users', $user->user_id);
 
-        return back()->with('status', "Password reset for {$user->username}.");
+        return back()->with('status', "Password reset for {$user->label()}.");
     }
 
     public function destroy(Request $request, User $user)
@@ -115,7 +129,7 @@ class UserController extends Controller
         }
 
         $id = $user->user_id;
-        $name = $user->username;
+        $name = $user->label();
         $user->delete();
         AuditLog::record('Deleted', 'users', $id);
 

@@ -2,7 +2,7 @@
  <h1>{{ config('payroll.company_name') }}</h1>
  <div class="sub">PAYROLL REPORT &middot; {{ $payroll->period_start->format('M d, Y') }} &ndash; {{ $payroll->period_end->format('M d, Y') }}
   &middot; <span class="{{ $payroll->isFinal() ? 'final' : 'draft' }}">{{ $payroll->isFinal() ? 'FINAL' : 'DRAFT - not yet final' }}</span></div>
- <div class="sub">Payroll #{{ $payroll->payroll_id }} &middot; run by {{ $payroll->processor?->employee?->full_name ?? $payroll->processor?->username }}</div>
+ <div class="sub">Payroll #{{ $payroll->payroll_id }} &middot; run by {{ $payroll->processor?->employee?->full_name ?? $payroll->processor?->label() }}</div>
 
  <h2>Period totals</h2>
  <table>

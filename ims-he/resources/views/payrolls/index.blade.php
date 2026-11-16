@@ -18,7 +18,7 @@
    <td class="num">@peso($p->total_gross)</td>
    <td class="num">@peso($p->total_deductions)</td>
    <td class="num">@peso($p->total_net)</td>
-   <td>{{ $p->processor?->employee?->full_name ?? $p->processor?->username }}</td>
+   <td>{{ $p->processor?->employee?->full_name ?? $p->processor?->label() }}</td>
    <td><a class="btn" href="{{ route('payrolls.show', $p->payroll_id) }}">Open</a></td>
   </tr>
   @empty <tr><td colspan="9">No payroll runs yet.</td></tr> @endforelse

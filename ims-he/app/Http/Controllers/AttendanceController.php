@@ -112,7 +112,7 @@ class AttendanceController extends Controller
         $employee = $request->user()->employee;
 
         if (! $employee) {
-            throw ValidationException::withMessages(['attendance' => 'Your account is not linked to an employee record. Ask the President to link it.']);
+            throw ValidationException::withMessages(['attendance' => 'Your account is not linked to an employee record. Ask the Administrator to link it.']);
         }
 
         return $employee;

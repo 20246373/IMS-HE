@@ -56,18 +56,20 @@ class PayslipReportTest extends TestCase
 
     public function test_other_roles_are_forbidden_and_guests_sent_to_login(): void
     {
-        foreach ([User::EMPLOYEE, User::STORE_SUPERVISOR, User::INVENTORY_CLERK, 'Administrator', 'Pending'] as $role) {
+        foreach ([User::EMPLOYEE, User::STORE_SUPERVISOR, User::INVENTORY_CLERK, 'Administrator'] as $role) {
             $user = $this->staff($role);
             foreach ($this->urls() as $url) {
                 $this->actingAs($user)->get($url)->assertForbidden();
             }
         }
+
+        $this->assertPendingIsSentToWaitingPage($this->urls()[0]);
     }
 
     public function test_guests_are_sent_to_login(): void
     {
         foreach ($this->urls() as $url) {
-            $this->get($url)->assertRedirect(route('staff.login'));
+            $this->get($url)->assertRedirect(route('login'));
         }
     }
 

@@ -11,7 +11,7 @@ use Illuminate\Validation\ValidationException;
 
 /**
  * Employee management (Task B1). President and Treasurer only (routes/web.php).
- * Account linking lives on the Accounts screen (users.employee_id); this screen shows who is linked.
+ * Account linking is done by the Administrator on the Accounts screen (users.employee_id); this screen shows who is linked.
  * On edit only position, daily rate and the government numbers can change (comment 7).
  */
 class EmployeeController extends Controller

@@ -1,0 +1,13 @@
+You are helping me with ONE member's part of a student project called IMS-HE (Information Management System for Hardware Enterprise). Stack: Laravel 13 (composer.json requires laravel/framework ^13.17 and PHP ^8.3), Blade views, SQLite in development (MySQL in production), plain inline CSS in resources/views/layouts/app.blade.php (there is NO Vite build, do not add npm or Vite), PHPUnit feature tests.
+
+Project conventions you must follow: thin controllers, business logic in app/Services, DB::transaction for changes to several tables, role checks with the RoleMiddleware aliased as role in routes/web.php (example: role:Inventory Clerk,Store Supervisor), models in app/Models with primary keys named like product_id (always pass the key names to relationships), customers use a separate auth guard called customer, staff use the web guard. Roles: Administrator, President, Treasurer, Inventory Clerk, Store Supervisor, Employee, and Pending (no access yet). Audit trail: use the existing App\Models\AuditLog::record(action, table, recordId, userId) helper, never create a second one.
+
+HARD RULES:
+1. DATABASE: do not edit any existing migration file. Do not drop, rename or alter any existing table or column, do not change existing seeded data. The only schema change allowed in this whole job is the single new migration described in Task 1. If any other task seems to need a new table or column, STOP and ask me.
+2. SCOPE: do only the task I give you. Do not change files that belong to other members: ProductController, CategoryController, SupplierController, PurchaseOrderController, DeliveryController, StockController, SaleService, CheckoutService, CartService, InventoryService, PayrollService, CatalogController, ReportController and their views. If a shared file (routes/web.php, layouts/app.blade.php, DatabaseSeeder.php, app/Models/User.php, DashboardController.php) needs a change, change only the lines the task requires.
+3. No new composer packages and no npm packages. Use plain PHP and vanilla JavaScript only.
+4. Do not delete, move or rename files unless the task names them. Never touch .env, vendor, storage or database/database.sqlite.
+5. Read the existing code first and follow its style. Do not rewrite working code to "improve" it.
+6. Every task ends with: a PHPUnit feature test for each behavior in the task, the result of php artisan test (all green), and a list of every file you created or changed with one line each saying why. You may run php artisan migrate:fresh --seed on the local SQLite database only.
+7. If something in the task is unclear, or contradicts the code, ask me before guessing.
+8. After finishing a task, STOP and wait for me. Do not start the next task.

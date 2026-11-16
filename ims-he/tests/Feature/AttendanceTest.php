@@ -34,14 +34,16 @@ class AttendanceTest extends TestCase
 
     public function test_other_roles_are_forbidden_and_guests_redirected(): void
     {
-        foreach ([User::PRESIDENT, User::INVENTORY_CLERK, 'Administrator', 'Pending'] as $role) {
+        foreach ([User::PRESIDENT, User::INVENTORY_CLERK, 'Administrator'] as $role) {
             $this->actingAs($this->staff($role))->get('/attendance')->assertForbidden();
         }
+
+        $this->assertPendingIsSentToWaitingPage('/attendance');
     }
 
     public function test_guests_are_sent_to_login(): void
     {
-        $this->get('/attendance')->assertRedirect(route('staff.login'));
+        $this->get('/attendance')->assertRedirect(route('login'));
     }
 
     public function test_only_the_employee_role_can_clock_and_only_managers_can_correct(): void

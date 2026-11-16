@@ -2,7 +2,7 @@
 @section('title','Attendance')
 @section('content')
 @unless($linked)
- <x-alert type="error">Your account is not linked to an employee record, so you cannot clock in. Ask the President to link it on the Accounts screen.</x-alert>
+ <x-alert type="error">Your account is not linked to an employee record, so you cannot clock in. Ask the Administrator to link it on the Accounts screen.</x-alert>
 @endunless
 
 @if(! $isManager && $linked)

@@ -11,7 +11,7 @@
   </span>
  </div>
  <p>{{ $payroll->period_start->format('M d, Y') }} &ndash; {{ $payroll->period_end->format('M d, Y') }}
-  &middot; run by {{ $payroll->processor?->employee?->full_name ?? $payroll->processor?->username }}
+  &middot; run by {{ $payroll->processor?->employee?->full_name ?? $payroll->processor?->label() }}
   on {{ $payroll->processed_date?->format('M d, Y g:i A') }}</p>
 
  @if($payroll->isDraft())

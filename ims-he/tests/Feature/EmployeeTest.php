@@ -23,6 +23,12 @@ class EmployeeTest extends TestCase
         ]);
     }
 
+    /** A self-registered employee with no role yet is sent to the waiting page, not shown a 403. */
+    private function assertPendingIsSentToWaitingPage(string $url): void
+    {
+        $this->actingAs($this->staff(User::PENDING))->get($url)->assertRedirect(route('staff.pending'));
+    }
+
     private function employee(array $overrides = []): Employee
     {
         return Employee::create($overrides + [
@@ -70,7 +76,7 @@ class EmployeeTest extends TestCase
     {
         $employee = $this->employee();
 
-        foreach ([User::EMPLOYEE, User::STORE_SUPERVISOR, User::INVENTORY_CLERK, 'Administrator', 'Pending'] as $role) {
+        foreach ([User::EMPLOYEE, User::STORE_SUPERVISOR, User::INVENTORY_CLERK, 'Administrator'] as $role) {
             $user = $this->staff($role);
 
             $this->actingAs($user)->get('/employees')->assertForbidden();
@@ -79,12 +85,13 @@ class EmployeeTest extends TestCase
         }
 
         $this->assertDatabaseCount('employees', 1);
+        $this->assertPendingIsSentToWaitingPage('/employees');
     }
 
     public function test_guests_are_sent_to_login(): void
     {
-        $this->get('/employees')->assertRedirect(route('staff.login'));
-        $this->post('/employees', $this->payload())->assertRedirect(route('staff.login'));
+        $this->get('/employees')->assertRedirect(route('login'));
+        $this->post('/employees', $this->payload())->assertRedirect(route('login'));
     }
 
     // ---- create ----------------------------------------------------------------------------
@@ -224,7 +231,7 @@ class EmployeeTest extends TestCase
         $create->assertSee('<span class="req">*</span> Required field', false);
         $create->assertSee('(optional)', false);
         // SSS, PhilHealth, Pag-IBIG, TIN and date hired are optional, plus one mention in the form note.
-        $this->assertSame(6, substr_count($create->getContent(), '(optional)'));
+        $this->assertSame(6, substr_count($create->getContent(), '<span class="opt">(optional)</span>'));
 
         $edit = $this->actingAs($president)->get("/employees/{$employee->employee_id}/edit")->assertOk();
         $edit->assertSee('<span class="req">*</span> Required field', false);
@@ -250,11 +257,11 @@ class EmployeeTest extends TestCase
 
         $this->actingAs($president)->followingRedirects()->post('/employees', $this->payload())
             ->assertSee('role="alert"', false)
-            ->assertSee('class="ok"', false)
+            ->assertSee('alert-success', false)
             ->assertSee('Employee Juan Dela Cruz added.');
 
         $this->actingAs($president)->followingRedirects()->post('/employees', $this->payload(['daily_rate' => '0']))
-            ->assertSee('class="err"', false);
+            ->assertSee('alert-error', false);
     }
 
     // ---- account link ----------------------------------------------------------------------
@@ -266,16 +273,16 @@ class EmployeeTest extends TestCase
 
         $this->actingAs($president)->get('/employees')->assertSee('Not linked');
 
-        // Linking is done on the Accounts screen (existing UserController, users.employee_id).
+        // Linking is done by the Administrator on the Accounts screen (UserController, users.employee_id).
         $account = $this->staff(User::EMPLOYEE);
-        $this->actingAs($president)->put("/users/{$account->user_id}", [
-            'username' => $account->username,
+        $this->actingAs($this->staff('Administrator'))->put("/users/{$account->user_id}", [
             'role' => User::EMPLOYEE,
+            'status' => User::STATUS_ACTIVE,
             'employee_id' => $employee->employee_id,
         ])->assertRedirect('/users');
 
         $this->assertSame($employee->employee_id, $account->refresh()->employee_id);
         $this->assertSame($account->user_id, $employee->refresh()->user->user_id);
-        $this->actingAs($president)->get('/employees')->assertSee($account->username)->assertDontSee('Not linked');
+        $this->actingAs($president)->get('/employees')->assertSee($account->label())->assertDontSee('Not linked');
     }
 }

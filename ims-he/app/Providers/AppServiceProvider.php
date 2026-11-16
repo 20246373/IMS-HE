@@ -3,7 +3,10 @@
 namespace App\Providers;
 
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\RateLimiter;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -12,7 +15,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        require_once app_path('Support/helpers.php');
     }
 
     /**
@@ -22,5 +25,8 @@ class AppServiceProvider extends ServiceProvider
     {
         // @peso($amount) prints money as ₱1,234.50 (HTML-escaped).
         Blade::directive('peso', fn (string $expression) => "<?php echo e(\\App\\Support\\Money::peso({$expression})); ?>");
+
+        RateLimiter::for('password-reset', fn (Request $request) => Limit::perMinute(3)
+            ->by('password-reset|'.$request->ip()));
     }
 }

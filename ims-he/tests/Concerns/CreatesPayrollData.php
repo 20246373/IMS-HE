@@ -20,6 +20,12 @@ trait CreatesPayrollData
         ]);
     }
 
+    /** A self-registered employee with no role yet is sent to the waiting page, not shown a 403. */
+    protected function assertPendingIsSentToWaitingPage(string $url): void
+    {
+        $this->actingAs($this->staff(User::PENDING))->get($url)->assertRedirect(route('staff.pending'));
+    }
+
     protected function employee(array $overrides = []): Employee
     {
         return Employee::create($overrides + [
