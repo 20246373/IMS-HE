@@ -16,6 +16,8 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         require_once app_path('Support/helpers.php');
+        config(['app.timezone' => 'Asia/Manila']);
+        date_default_timezone_set('Asia/Manila');
     }
 
     /**
