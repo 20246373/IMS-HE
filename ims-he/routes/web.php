@@ -1,10 +1,15 @@
 <?php
 
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\PayrollController;
+use App\Http\Controllers\PayrollReportController;
+use App\Http\Controllers\PayslipController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\UserController;
 use App\Models\User;
@@ -50,6 +55,45 @@ Route::middleware(['auth', "role:$allRoles"])->group(function () {
         Route::post('sales', [SaleController::class, 'store'])->name('sales.store');
         Route::get('sales', [SaleController::class, 'index'])->name('sales.index');
         Route::get('sales/{invoice}', [SaleController::class, 'show'])->name('sales.show');
+    });
+
+    // Attendance (Task B2): the Employee role clocks in and out; Store Supervisor and Treasurer view and correct.
+    Route::middleware('role:' . implode(',', [User::EMPLOYEE, User::STORE_SUPERVISOR, User::TREASURER]))->group(function () {
+        Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+    });
+    Route::middleware('role:' . User::EMPLOYEE)->group(function () {
+        Route::post('attendance/clock-in', [AttendanceController::class, 'clockIn'])->name('attendance.clock-in');
+        Route::post('attendance/clock-out', [AttendanceController::class, 'clockOut'])->name('attendance.clock-out');
+    });
+    Route::middleware('role:' . implode(',', [User::STORE_SUPERVISOR, User::TREASURER]))->group(function () {
+        Route::get('attendance/create', [AttendanceController::class, 'create'])->name('attendance.create');
+        Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
+        Route::get('attendance/{attendance}/edit', [AttendanceController::class, 'edit'])->name('attendance.edit');
+        Route::put('attendance/{attendance}', [AttendanceController::class, 'update'])->name('attendance.update');
+    });
+
+    // Employee management: President and Treasurer (Task B1)
+    Route::middleware('role:' . implode(',', [User::PRESIDENT, User::TREASURER]))->group(function () {
+        Route::resource('employees', EmployeeController::class)->except(['show', 'destroy']);
+    });
+
+    // Payroll (Task B3): only the Treasurer runs, finalizes or discards a payroll.
+    // Keep these above the {payroll} routes so /payrolls/create is not read as an id.
+    Route::middleware('role:' . User::TREASURER)->group(function () {
+        Route::get('payrolls/create', [PayrollController::class, 'create'])->name('payrolls.create');
+        Route::post('payrolls', [PayrollController::class, 'store'])->name('payrolls.store');
+        Route::post('payrolls/{payroll}/finalize', [PayrollController::class, 'finalize'])->name('payrolls.finalize');
+        Route::delete('payrolls/{payroll}', [PayrollController::class, 'destroy'])->name('payrolls.destroy');
+    });
+
+    // Viewing payroll, payslips and the payroll report (Tasks B3 and B5): President and Treasurer.
+    Route::middleware('role:' . implode(',', [User::PRESIDENT, User::TREASURER]))->group(function () {
+        Route::get('payrolls', [PayrollController::class, 'index'])->name('payrolls.index');
+        Route::get('payrolls/{payroll}', [PayrollController::class, 'show'])->name('payrolls.show');
+        Route::get('payrolls/{payroll}/report', [PayrollReportController::class, 'show'])->name('payrolls.report');
+        Route::get('payrolls/{payroll}/report/pdf', [PayrollReportController::class, 'pdf'])->name('payrolls.report.pdf');
+        Route::get('payslips/{payslip}', [PayslipController::class, 'show'])->name('payslips.show');
+        Route::get('payslips/{payslip}/pdf', [PayslipController::class, 'pdf'])->name('payslips.pdf');
     });
 
     // User account management + audit log: President only (SRS 4.3.b)

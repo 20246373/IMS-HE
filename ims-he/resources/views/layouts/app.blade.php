@@ -17,6 +17,16 @@
  .err{background:#fdecea;padding:.6rem;border-radius:5px;margin-bottom:1rem;color:#8a1f17}
  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem}.low{color:#a33;font-weight:600}
  .inline{display:inline;margin:0}
+ /* Forms: required marker and note (all forms), read-only fields, numbers and print */
+ .req{color:#c00;font-weight:700} .opt{color:#666;font-size:.85em} .form-note{font-size:.85rem;color:#444;margin:.2rem 0 .6rem}
+ input[readonly]{background:#eef0f3;color:#555;border:1px solid #ccd}
+ td.num,th.num{text-align:right;white-space:nowrap} .muted-text{color:#666;font-size:.9rem}
+ .badge{font-size:.8rem;font-weight:600;padding:.1rem .5rem;border-radius:999px;background:#eef0f3}
+ .badge.draft{background:#fff4d6;color:#7a5b00} .badge.final{background:#e6f4ea;color:#1e6b34}
+ .note{background:#fff4d6;padding:.6rem;border-radius:5px;margin:.6rem 0}
+ .row{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+ .btn.muted{background:#6b7280}
+ @media print{nav,.noprint{display:none!important} body{background:#fff} .card{box-shadow:none;padding:0}}
  /* Login: access chooser + forms, built on .card */
  .auth{max-width:400px;margin:auto} .auth h2{margin-top:0}
  .auth-top{display:flex;justify-content:space-between;font-size:.9rem;color:#666;margin-bottom:.4rem}
@@ -46,6 +56,13 @@
  @auth
   <a href="{{ route('dashboard') }}">Dashboard</a>
   {{-- Teammates: add your module links here, wrapped in the matching role check --}}
+  @if(auth()->user()->hasRole('President', 'Treasurer'))
+   <a href="{{ route('employees.index') }}">Employees</a>
+   <a href="{{ route('payrolls.index') }}">Payroll</a>
+  @endif
+  @if(auth()->user()->hasRole('Employee', 'Store Supervisor', 'Treasurer'))
+   <a href="{{ route('attendance.index') }}">Attendance</a>
+  @endif
   @if(auth()->user()->hasRole('President'))
    <a href="{{ route('users.index') }}">Accounts</a>
    <a href="{{ route('audit.index') }}">Audit log</a>
@@ -69,8 +86,8 @@
 </nav>
 @yield('hero')
 <main>
- @if(session('status'))<div class="ok">{{ session('status') }}</div>@endif
- @if($errors->any())<div class="err">@foreach($errors->all() as $e)<div>{{ $e }}</div>@endforeach</div>@endif
+ @if(session('status'))<x-alert type="success">{{ session('status') }}</x-alert>@endif
+ @if($errors->any())<x-alert type="error">@foreach($errors->all() as $e)<div>{{ $e }}</div>@endforeach</x-alert>@endif
  @yield('content')
 </main>
 </body>

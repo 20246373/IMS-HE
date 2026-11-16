@@ -11,6 +11,11 @@ class Employee extends Model
     public $timestamps = false;
     protected $guarded = [];
 
+    public const STATUS_ACTIVE = 'Active';
+    public const STATUS_RESIGNED = 'Resigned';
+
+    protected $casts = ['date_hired' => 'date:Y-m-d'];
+
     public function user() { return $this->hasOne(User::class, 'employee_id', 'employee_id'); }
     public function attendance() { return $this->hasMany(Attendance::class, 'employee_id', 'employee_id'); }
     public function payslips() { return $this->hasMany(Payslip::class, 'employee_id', 'employee_id'); }
