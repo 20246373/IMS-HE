@@ -15,10 +15,14 @@ class CheckoutService
 {
     public const PAYMENT_METHODS = ['Cash', 'GCash'];     // SDD 7.2.14. No online payment gateway yet (SDD 1.2).
 
-    public function __construct(private CartService $carts, private InventoryService $inventory) {}
+    public function __construct(
+        private CartService $carts,
+        private InventoryService $inventory,
+        private FinancialService $financial,
+    ) {}
 
     /**
-     * @param array{first_name:string,last_name:string,contact_number:string,address:string} $details
+     * @param  array{first_name:string,last_name:string,contact_number:string,address:string}  $details
      */
     public function placeOrder(Customer $customer, array $details, string $paymentMethod): Invoice
     {
@@ -84,6 +88,16 @@ class CheckoutService
                 'change_amount' => 0,
                 'payment_method' => $paymentMethod,
             ]);
+
+            // Financial Recording (SDD 7.2.18): payment was taken at checkout, so the
+            // Income entry is written here inside the same transaction. recorded_by
+            // stays null because the buyer is a customer, not a staff user.
+            $this->financial->recordIncome(
+                'Invoice',
+                (int) $invoice->invoice_id,
+                $total,
+                "Online order - Invoice #{$invoice->invoice_id}",
+            );
 
             $cart->items()->delete();
             $cart->touch();

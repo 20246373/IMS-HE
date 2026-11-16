@@ -12,7 +12,10 @@ use Illuminate\Validation\ValidationException;
 
 class ProcurementService
 {
-    public function __construct(private InventoryService $inventory) {}
+    public function __construct(
+        private InventoryService $inventory,
+        private FinancialService $financial,
+    ) {}
 
     /**
      * Creates a Pending, auto-generated PO when a deduction leaves a product at or below
@@ -135,6 +138,8 @@ class ProcurementService
                 throw ValidationException::withMessages($validationErrors);
             }
 
+            $deliveryValue = 0.0;
+
             foreach ($quantities as $poItemId => $entry) {
                 $purchaseOrderItem = $itemsById->get((int) $poItemId);
                 $newReceivedQuantity = $entry['quantity'];
@@ -146,6 +151,8 @@ class ProcurementService
                         'PO',
                         (int) $po->po_id,
                     );
+
+                    $deliveryValue += $newReceivedQuantity * (float) $purchaseOrderItem->unit_cost;
                 }
 
                 $purchaseOrderItem->quantity_received += $newReceivedQuantity;
@@ -154,6 +161,18 @@ class ProcurementService
 
             if ($items->every(fn (PurchaseOrderItem $item) => (int) $item->quantity_received >= (int) $item->quantity)) {
                 $po->update(['status' => 'Delivered']);
+            }
+
+            // Financial Recording (SDD 7.2.18): goods received are an Expense,
+            // written inside the same transaction as the stock update.
+            if ($deliveryValue > 0) {
+                $this->financial->recordExpense(
+                    'PO',
+                    (int) $po->po_id,
+                    round($deliveryValue, 2),
+                    "Delivery received - PO #{$po->po_id}",
+                    Auth::guard('web')->id(),
+                );
             }
 
             $po->setRelation('items', $items);

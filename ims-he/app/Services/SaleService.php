@@ -12,15 +12,15 @@ use Illuminate\Validation\ValidationException;
 
 class SaleService
 {
-    public function __construct(private InventoryService $inventory) {}
+    public function __construct(private InventoryService $inventory, private ?FinancialService $financial = null) {}
 
     /**
      * In-store POS sale (UC11 counterpart of CheckoutService::placeOrder).
      *
      * @param  array<int, array{product_id:int, quantity:int}>  $items
-     * Verifies stock for every line before any row is written, then saves the
-     * invoice, its items, the stock deduction and the payment in one transaction,
-     * so a failure rolls the whole sale back (SRS 4.3.d).
+     *                                                                  Verifies stock for every line before any row is written, then saves the
+     *                                                                  invoice, its items, the stock deduction and the payment in one transaction,
+     *                                                                  so a failure rolls the whole sale back (SRS 4.3.d).
      */
     public function checkout(array $items, float $amountPaid, string $method, ?int $customerId, ?int $userId): Invoice
     {
@@ -37,7 +37,7 @@ class SaleService
 
         $employeeId = $userId ? User::find($userId)?->employee_id : null;
 
-        return DB::transaction(function () use ($lines, $amountPaid, $method, $customerId, $employeeId) {
+        return DB::transaction(function () use ($lines, $amountPaid, $method, $customerId, $employeeId, $userId) {
             // Lock every product and verify stock + compute the total before any row is written.
             $products = Product::whereIn('product_id', array_keys($lines))->lockForUpdate()->get()->keyBy('product_id');
 
@@ -68,19 +68,19 @@ class SaleService
 
             $invoice = Invoice::create([
                 'invoice_date' => today(),
-                'customer_id'  => $customerId,
-                'employee_id'  => $employeeId,
-                'channel'      => 'In-store',
-                'status'       => 'Completed',
+                'customer_id' => $customerId,
+                'employee_id' => $employeeId,
+                'channel' => 'In-store',
+                'status' => 'Completed',
                 'total_amount' => $total,
             ]);
 
             foreach ($verified as $line) {
                 $invoice->items()->create([
                     'product_id' => $line['product']->product_id,
-                    'quantity'   => $line['quantity'],
-                    'price'      => $line['price'],
-                    'subtotal'   => $line['subtotal'],
+                    'quantity' => $line['quantity'],
+                    'price' => $line['price'],
+                    'subtotal' => $line['subtotal'],
                 ]);
 
                 // Locks the product row again, re-checks stock, writes the OUT
@@ -89,12 +89,22 @@ class SaleService
             }
 
             Payment::create([
-                'invoice_id'     => $invoice->invoice_id,
-                'payment_date'   => today(),
-                'amount_paid'    => $amountPaid,
-                'change_amount'  => round($amountPaid - $total, 2),
+                'invoice_id' => $invoice->invoice_id,
+                'payment_date' => today(),
+                'amount_paid' => $amountPaid,
+                'change_amount' => round($amountPaid - $total, 2),
                 'payment_method' => $method,
             ]);
+
+            // Financial Recording (SDD 7.2.18): the Income ledger entry is written
+            // inside this same transaction, so a rolled-back sale leaves no ledger row.
+            ($this->financial ??= app(FinancialService::class))->recordIncome(
+                'Invoice',
+                (int) $invoice->invoice_id,
+                $total,
+                "POS sale - Invoice #{$invoice->invoice_id}",
+                $userId,
+            );
 
             AuditLog::record('Completed', 'invoices', $invoice->invoice_id);
 

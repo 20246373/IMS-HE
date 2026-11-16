@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
@@ -9,8 +10,11 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryController;
+use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ExportController;
+use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\ReportController;
@@ -145,6 +149,57 @@ Route::middleware(['auth', "role:$allRoles"])->group(function () {
         Route::get('reports/sales', [ReportController::class, 'sales'])->name('reports.sales');
         Route::get('reports/sales/download', [ReportController::class, 'downloadSales'])
             ->name('reports.sales.download');
+    });
+
+    // Payroll and financial reports are restricted to President + Treasurer (SDD Section 5).
+    Route::middleware('role:'.User::PRESIDENT.','.User::TREASURER)->group(function () {
+        Route::get('reports/payroll', [ReportController::class, 'payroll'])->name('reports.payroll');
+        Route::get('reports/payroll/download', [ReportController::class, 'downloadPayroll'])
+            ->name('reports.payroll.download');
+        Route::get('reports/financial', [ReportController::class, 'financial'])->name('reports.financial');
+        Route::get('reports/financial/download', [ReportController::class, 'downloadFinancial'])
+            ->name('reports.financial.download');
+        Route::get('reports/attendance', [ReportController::class, 'attendance'])->name('reports.attendance');
+        Route::get('reports/attendance/download', [ReportController::class, 'downloadAttendance'])
+            ->name('reports.attendance.download');
+    });
+
+    // Financial Recording module: ledger list/reconciliation for President,
+    // Treasurer and Store Supervisor; manual entries for President + Treasurer.
+    Route::middleware('role:'.User::PRESIDENT.','.User::TREASURER.','.User::STORE_SUPERVISOR)->group(function () {
+        Route::get('ledger', [LedgerController::class, 'index'])->name('ledger.index');
+        Route::get('ledger/reconcile', [LedgerController::class, 'reconcile'])->name('ledger.reconcile');
+    });
+
+    Route::middleware('role:'.User::PRESIDENT.','.User::TREASURER)->group(function () {
+        Route::get('ledger/create', [LedgerController::class, 'create'])->name('ledger.create');
+        Route::post('ledger', [LedgerController::class, 'store'])->name('ledger.store');
+    });
+
+    // Payroll module (SDD 7.2.8-7.2.11): employees and viewing for President +
+    // Treasurer; attendance for Treasurer + Store Supervisor; computing and
+    // finalizing payroll for the Treasurer only (SDD Section 5).
+    Route::middleware('role:'.User::PRESIDENT.','.User::TREASURER)->group(function () {
+        Route::resource('employees', EmployeeController::class)->only(['index', 'create', 'store', 'edit', 'update']);
+        Route::get('payroll', [PayrollController::class, 'index'])->name('payroll.index');
+        Route::get('payroll/{payroll}', [PayrollController::class, 'show'])->name('payroll.show')->whereNumber('payroll');
+        Route::get('payroll/{payroll}/payslips/{payslip}', [PayrollController::class, 'payslip'])->name('payroll.payslip')->whereNumber(['payroll', 'payslip'])->scopeBindings();
+        Route::get('payroll/{payroll}/payslips/{payslip}/pdf', [PayrollController::class, 'payslipPdf'])->name('payroll.payslip.pdf')->whereNumber(['payroll', 'payslip'])->scopeBindings();
+    });
+
+    Route::middleware('role:'.User::TREASURER)->group(function () {
+        Route::get('payroll/create', [PayrollController::class, 'create'])->name('payroll.create');
+        Route::post('payroll', [PayrollController::class, 'store'])->name('payroll.store');
+        Route::post('payroll/{payroll}/finalize', [PayrollController::class, 'finalize'])->name('payroll.finalize')->whereNumber('payroll');
+        Route::patch('payroll/payslips/{payslip}', [PayrollController::class, 'updatePayslip'])->name('payroll.payslips.update');
+    });
+
+    Route::middleware('role:'.User::TREASURER.','.User::STORE_SUPERVISOR)->group(function () {
+        Route::get('attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+        Route::post('attendance/clock-in', [AttendanceController::class, 'clockIn'])->name('attendance.clock-in');
+        Route::post('attendance', [AttendanceController::class, 'store'])->name('attendance.store');
+        Route::post('attendance/{attendance}/clock-out', [AttendanceController::class, 'clockOut'])->name('attendance.clock-out');
+        Route::patch('attendance/{attendance}', [AttendanceController::class, 'update'])->name('attendance.update');
     });
 
     Route::middleware('role:'.User::ADMINISTRATOR.','.User::PRESIDENT.','.User::TREASURER.','.User::INVENTORY_CLERK.','.User::STORE_SUPERVISOR)->group(function () {
