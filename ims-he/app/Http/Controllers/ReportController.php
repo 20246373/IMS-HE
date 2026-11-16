@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\LedgerEntry;
+use App\Models\Payroll;
 use App\Models\Supplier;
+use App\Services\FinancialService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -134,6 +137,139 @@ class ReportController extends Controller
             'categoryId' => $categoryId,
         ])->setPaper('a4', 'landscape')
             ->download("procurement-report-{$filters['start_date']}-to-{$filters['end_date']}.pdf");
+    }
+
+    /**
+     * Payroll report (SDD Module 4.1 Report Generation): one batch's payslips
+     * with totals, or every batch when no payroll is selected.
+     */
+    public function payroll(Request $request)
+    {
+        $payroll = $this->resolvePayroll($request);
+
+        return view('reports.payroll', [
+            'payroll' => $payroll?->load('processor', 'payslips.employee'),
+            'payrolls' => Payroll::orderByDesc('period_start')->get(),
+        ]);
+    }
+
+    public function downloadPayroll(Request $request)
+    {
+        $payroll = $this->resolvePayroll($request);
+
+        abort_if($payroll === null, 404);
+
+        return Pdf::loadView('reports.pdf.payroll', [
+            'payroll' => $payroll->load('processor', 'payslips.employee'),
+        ])->setPaper('a4', 'landscape')->download("payroll-report-{$payroll->payroll_id}.pdf");
+    }
+
+    private function resolvePayroll(Request $request): ?Payroll
+    {
+        $data = $request->validate([
+            'payroll_id' => ['nullable', 'integer', 'exists:payrolls,payroll_id'],
+        ]);
+
+        if (! empty($data['payroll_id'])) {
+            return Payroll::findOrFail((int) $data['payroll_id']);
+        }
+
+        return Payroll::orderByDesc('period_start')->orderByDesc('payroll_id')->first();
+    }
+
+    /** Financial report (SDD 5): ledger entries plus the cash-flow summary for the range. */
+    public function financial(Request $request)
+    {
+        $filters = $this->validateFinancialFilters($request);
+        $financial = app(FinancialService::class);
+
+        return view('reports.financial', [
+            'filters' => $filters,
+            'entries' => LedgerEntry::with('recorder')
+                ->whereBetween('entry_date', [$filters['start_date'], $filters['end_date']])
+                ->orderBy('entry_date')->orderBy('ledger_id')->get(),
+            'cashFlow' => $financial->cashFlow($filters['start_date'], $filters['end_date']),
+        ]);
+    }
+
+    public function downloadFinancial(Request $request)
+    {
+        $filters = $this->validateFinancialFilters($request);
+        $financial = app(FinancialService::class);
+
+        return Pdf::loadView('reports.pdf.financial', [
+            'filters' => $filters,
+            'entries' => LedgerEntry::with('recorder')
+                ->whereBetween('entry_date', [$filters['start_date'], $filters['end_date']])
+                ->orderBy('entry_date')->orderBy('ledger_id')->get(),
+            'cashFlow' => $financial->cashFlow($filters['start_date'], $filters['end_date']),
+        ])->setPaper('a4', 'landscape')
+            ->download("financial-report-{$filters['start_date']}-to-{$filters['end_date']}.pdf");
+    }
+
+    /** Attendance report (SRS report list): days and overtime per employee for the range. */
+    public function attendance(Request $request)
+    {
+        $filters = $this->validateFinancialFilters($request);
+
+        return view('reports.attendance', [
+            'filters' => $filters,
+            'report' => $this->getAttendanceReport($filters['start_date'], $filters['end_date']),
+        ]);
+    }
+
+    public function downloadAttendance(Request $request)
+    {
+        $filters = $this->validateFinancialFilters($request);
+
+        return Pdf::loadView('reports.pdf.attendance', [
+            'filters' => $filters,
+            'report' => $this->getAttendanceReport($filters['start_date'], $filters['end_date']),
+        ])->setPaper('a4', 'landscape')
+            ->download("attendance-report-{$filters['start_date']}-to-{$filters['end_date']}.pdf");
+    }
+
+    /**
+     * @return array{rows: Collection, totalDays: float, totalOvertime: float}
+     */
+    public function getAttendanceReport(string $startDate, string $endDate): array
+    {
+        $rows = DB::table('attendance')
+            ->join('employees', 'employees.employee_id', '=', 'attendance.employee_id')
+            ->whereBetween('attendance.work_date', [$startDate, $endDate])
+            ->select([
+                'employees.employee_id',
+                'employees.first_name',
+                'employees.last_name',
+                'employees.position',
+            ])
+            ->selectRaw('COUNT(attendance.attendance_id) as days_worked')
+            ->selectRaw('COALESCE(SUM(attendance.overtime_hours),0) as overtime_hours')
+            ->selectRaw('COUNT(attendance.time_out) as days_clocked_out')
+            ->groupBy(['employees.employee_id', 'employees.first_name', 'employees.last_name', 'employees.position'])
+            ->orderBy('employees.last_name')
+            ->orderBy('employees.first_name')
+            ->get();
+
+        return [
+            'rows' => $rows,
+            'totalDays' => (float) $rows->sum('days_worked'),
+            'totalOvertime' => round((float) $rows->sum('overtime_hours'), 2),
+        ];
+    }
+
+    /** @return array{start_date: string, end_date: string} */
+    private function validateFinancialFilters(Request $request): array
+    {
+        $request->merge([
+            'start_date' => $request->input('start_date', now()->startOfMonth()->toDateString()),
+            'end_date' => $request->input('end_date', now()->toDateString()),
+        ]);
+
+        return $request->validate([
+            'start_date' => ['required', 'date_format:Y-m-d'],
+            'end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:start_date'],
+        ]);
     }
 
     /**

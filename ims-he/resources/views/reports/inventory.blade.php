@@ -4,10 +4,13 @@
 <div class="card">
  <div class="report-heading">
   <h2>Inventory / stock summary</h2>
-  <a class="btn no-print"
+  <span class="no-print">
+   <button type="button" onclick="window.print()">Print</button>
+   <a class="btn"
      href="{{ route('reports.inventory.download', array_filter(['category_id' => $categoryId])) }}">
-   Save as PDF
-  </a>
+    Save as PDF
+   </a>
+  </span>
  </div>
  <form method="GET" action="{{ route('reports.inventory') }}" class="no-print report-filter">
   <label>Category

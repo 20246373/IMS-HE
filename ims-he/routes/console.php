@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('db:backup')->daily()->withoutOverlapping();
+Schedule::command('payroll:compute-weekly')->weeklyOn(1, '06:00')->withoutOverlapping();

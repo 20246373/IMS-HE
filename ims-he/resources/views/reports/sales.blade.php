@@ -4,7 +4,10 @@
 <div class="card">
  <div class="report-heading">
   <h2>Sales report</h2>
-  <a class="btn no-print" href="{{ route('reports.sales.download', ['start_date' => $startDate, 'end_date' => $endDate]) }}">Save as PDF</a>
+  <span class="no-print">
+   <button type="button" onclick="window.print()">Print</button>
+   <a class="btn" href="{{ route('reports.sales.download', ['start_date' => $startDate, 'end_date' => $endDate]) }}">Save as PDF</a>
+  </span>
  </div>
  <form method="GET" action="{{ route('reports.sales') }}" class="no-print report-filter">
   <label>From <input type="date" name="start_date" value="{{ $startDate }}" required></label>

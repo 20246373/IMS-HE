@@ -4,15 +4,18 @@
 <div class="card">
  <div class="report-heading">
   <h2>Procurement report</h2>
-  <a class="btn no-print"
+  <span class="no-print">
+   <button type="button" onclick="window.print()">Print</button>
+   <a class="btn"
      href="{{ route('reports.procurement.download', array_filter([
          'start_date' => $startDate,
          'end_date' => $endDate,
          'supplier_id' => $supplierId,
          'category_id' => $categoryId,
      ])) }}">
-   Save as PDF
-  </a>
+    Save as PDF
+   </a>
+  </span>
  </div>
 
  <form method="GET" action="{{ route('reports.procurement') }}" class="no-print report-filter">
