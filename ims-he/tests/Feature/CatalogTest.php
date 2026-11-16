@@ -81,4 +81,72 @@ class CatalogTest extends TestCase
         $this->get('/shop/' . $inactive->product_id)->assertOk()->assertSee('Inactive Item');
         $this->get('/shop/999999')->assertNotFound();
     }
+
+    // Task J5: brand (defense comment 6), money format, and the three-level stock badge.
+    private function branded(string $name, ?string $brand, Category $cat, float $price = 100, int $stock = 10, int $reorder = 0): Product
+    {
+        return Product::create([
+            'category_id' => $cat->category_id, 'product_name' => $name, 'brand' => $brand, 'unit_price' => $price,
+            'stock_quantity' => $stock, 'reorder_level' => $reorder,
+        ]);
+    }
+
+    public function test_card_and_details_show_brand_and_money_format(): void
+    {
+        $p = $this->branded('Claw Hammer 16oz', 'Stanley', $this->tools, 1234.5);
+
+        $this->get('/shop')->assertOk()->assertSee('Stanley')->assertSee('₱1,234.50');
+        $this->get('/')->assertSee('Stanley')->assertSee('₱1,234.50');
+        $this->get('/shop/'.$p->product_id)->assertOk()->assertSee('Brand:')->assertSee('Stanley')->assertSee('₱1,234.50');
+    }
+
+    public function test_search_matches_brand_as_well_as_name(): void
+    {
+        $this->branded('Claw Hammer', 'Stanley', $this->tools);
+        $this->branded('Cordless Drill', 'Makita', $this->tools);
+        $this->branded('Latex Paint', 'Boysen', $this->paint);
+
+        $this->get('/shop?q=makita')->assertSee('Cordless Drill')->assertDontSee('Claw Hammer');
+        $this->get('/shop?q=hammer')->assertSee('Claw Hammer')->assertDontSee('Cordless Drill');
+    }
+
+    public function test_brand_filter_lists_brands_and_combines_with_category(): void
+    {
+        $this->branded('Claw Hammer', 'Stanley', $this->tools);
+        $this->branded('Tape Measure', 'Stanley', $this->tools);
+        $this->branded('Stanley Paint Brush', 'Stanley', $this->paint);
+        $this->branded('Cordless Drill', 'Makita', $this->tools);
+        $this->branded('No Brand Nails', null, $this->tools);
+
+        $this->get('/shop')->assertSee('<option value="Makita"', false)->assertSee('<option value="Stanley"', false);
+
+        $this->get('/shop?brand=Stanley')
+            ->assertSee('Claw Hammer')->assertSee('Tape Measure')->assertSee('Stanley Paint Brush')
+            ->assertDontSee('Cordless Drill')->assertDontSee('No Brand Nails');
+
+        $this->get('/shop?brand=Stanley&category='.$this->tools->category_id)
+            ->assertSee('Claw Hammer')->assertDontSee('Stanley Paint Brush');
+    }
+
+    public function test_stock_badge_reads_in_low_or_out_of_stock(): void
+    {
+        $in = $this->branded('Plenty', null, $this->tools, stock: 50, reorder: 10);
+        $low = $this->branded('Running Low', null, $this->tools, stock: 3, reorder: 10);
+        $out = $this->branded('Sold Out', null, $this->tools, stock: 0, reorder: 10);
+
+        $this->get('/shop/'.$in->product_id)->assertSee('In stock')->assertDontSee('Low stock');
+        $this->get('/shop/'.$low->product_id)->assertSee('Low stock')->assertSee('Add to cart');
+        $this->get('/shop/'.$out->product_id)->assertSee('Out of stock')->assertDontSee('Add to cart');
+        $this->get('/shop')->assertSee('In stock')->assertSee('Low stock')->assertSee('Out of stock');
+    }
+
+    public function test_pagination_keeps_the_filters(): void
+    {
+        foreach (range(1, 14) as $i) {
+            $this->branded(sprintf('Stanley Item %02d', $i), 'Stanley', $this->tools);
+        }
+
+        $this->get('/shop?brand=Stanley')->assertSee('Page 1 of 2')->assertSee('brand=Stanley&amp;page=2', false);
+        $this->get('/shop?brand=Stanley&page=2')->assertSee('Stanley Item 14');
+    }
 }

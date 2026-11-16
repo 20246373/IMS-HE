@@ -81,7 +81,18 @@
  .noimg{background:#eef0f3;color:#888;display:flex;align-items:center;justify-content:center;font-size:.85rem}
  .product small,.detail small{color:#666}
  .stock{font-size:.8rem;font-weight:600;padding:.1rem .5rem;border-radius:999px;align-self:flex-start}
- .stock.in{background:#e6f4ea;color:#1e6b34} .stock.out{background:#fdecea;color:#8a1f17}
+ .stock.in{background:#e6f4ea;color:#1e6b34} .stock.out{background:#fdecea;color:#8a1f17} .stock.low{background:#fff5d8;color:#785b00}
+ .brand{margin:.2rem 0;color:#555}
+ /* Storefront on phones: two product columns, filters stacked full width, wide tables scroll sideways */
+ @media (max-width:520px){
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
+  .product img,.product .noimg{height:110px}
+  .search > *{flex:1 1 100%} .search input{min-width:0}
+  .cart-table{display:block;overflow-x:auto}
+ }
+ /* Order status badges (orders/_status) */
+ .status{display:inline-block;font-size:.8rem;font-weight:600;padding:.1rem .55rem;border-radius:999px;background:#eef0f3;color:#333}
+ .status-pending{background:#fff5d8;color:#785b00} .status-completed{background:#e6f4ea;color:#1e6b34} .status-cancelled{background:#fdecea;color:#8a1f17}
  .detail{display:grid;grid-template-columns:minmax(0,320px) 1fr;gap:1.2rem} .detail img,.detail .noimg{width:100%;height:280px;object-fit:cover;border-radius:5px}
  .detail h2{margin:.2rem 0} .price{font-size:1.3rem;font-weight:600;margin:.3rem 0}
  @media (max-width:600px){.detail{grid-template-columns:1fr}}
@@ -148,6 +159,14 @@
             Dashboard
         </a>
         @endunless
+
+        {{-- ONLINE ORDERS (task J4) --}}
+        @if($user->hasRole(\App\Models\User::PRESIDENT, \App\Models\User::STORE_SUPERVISOR, \App\Models\User::EMPLOYEE))
+            <a class="{{ request()->routeIs('online-orders.*') ? 'nav-link-active' : '' }}"
+               href="{{ route('online-orders.index') }}">
+                Online Orders
+            </a>
+        @endif
 
         {{-- INVENTORY --}}
         @if($canManageInventory)

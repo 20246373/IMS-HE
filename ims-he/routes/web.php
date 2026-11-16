@@ -11,6 +11,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\OrderManagementController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\ReportController;
@@ -78,6 +79,7 @@ Route::name('customer.')->group(function () {
         Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:10,1')->name('checkout.store');
         Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/{invoice}', [OrderController::class, 'show'])->name('orders.show');
+        Route::get('/orders/{invoice}/confirmation', [OrderController::class, 'confirmation'])->name('orders.confirmation');
     });
 });
 
@@ -109,6 +111,14 @@ Route::middleware(['auth', "role:$allRoles"])->group(function () {
             ->name('purchase-orders.cancel');
         Route::get('deliveries/create', [DeliveryController::class, 'create'])->name('deliveries.create');
         Route::post('deliveries', [DeliveryController::class, 'store'])->name('deliveries.store');
+    });
+
+    // Online order management (task J4): list online orders, complete or cancel Pending ones.
+    Route::middleware('role:'.User::PRESIDENT.','.User::STORE_SUPERVISOR.','.User::EMPLOYEE)->group(function () {
+        Route::get('online-orders', [OrderManagementController::class, 'index'])->name('online-orders.index');
+        Route::get('online-orders/{invoice}', [OrderManagementController::class, 'show'])->name('online-orders.show');
+        Route::patch('online-orders/{invoice}/complete', [OrderManagementController::class, 'complete'])->name('online-orders.complete');
+        Route::patch('online-orders/{invoice}/cancel', [OrderManagementController::class, 'cancel'])->name('online-orders.cancel');
     });
 
     Route::middleware('role:'.User::ADMINISTRATOR)->group(function () {

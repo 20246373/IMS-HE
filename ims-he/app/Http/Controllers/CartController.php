@@ -14,13 +14,16 @@ class CartController extends Controller
 
     public function index(Request $request)
     {
-        $cart = $this->carts->cartFor($request->user('customer'))->load('items.product');
+        $cart = $this->carts->cartFor($request->user('customer'));
+
+        // Clamp quantities to current stock and flag price changes before showing the cart.
+        $warnings = $this->carts->reconcile($cart);
 
         // Totals are recalculated from current prices on every view.
-        $items = $cart->items->sortBy('product.product_name');
+        $items = $cart->load('items.product')->items->sortBy('product.product_name');
         $total = $items->sum(fn (CartItem $i) => $i->quantity * $i->product->unit_price);
 
-        return view('cart.index', ['items' => $items, 'total' => $total]);
+        return view('cart.index', ['items' => $items, 'total' => $total, 'warnings' => $warnings]);
     }
 
     public function store(Request $request, Product $product)
