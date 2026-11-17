@@ -30,12 +30,16 @@ class UiKitTest extends TestCase
             ->assertSee('The login field is required.');
     }
 
-    public function test_login_page_has_the_required_note_and_required_field_marker(): void
+    public function test_required_note_and_required_field_marker_render(): void
     {
-        $response = $this->get(route('login'))->assertOk();
+        $this->withViewErrors([])
+            ->blade('<x-required-note /><x-field label="Name" name="name" />')
+            ->assertSee('All fields are required unless marked <span>(optional)</span>.', false)
+            ->assertSee('class="required"', false);
+    }
 
-        $content = $response->getContent();
-        $this->assertStringContainsString('All fields are required unless marked <span>(optional)</span>.', $content);
-        $this->assertStringContainsString('class="required"', $content);
+    public function test_short_login_form_skips_the_required_note(): void
+    {
+        $this->get(route('login'))->assertOk()->assertDontSee('All fields are required');
     }
 }

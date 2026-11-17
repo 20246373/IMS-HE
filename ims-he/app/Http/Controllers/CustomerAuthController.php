@@ -37,20 +37,20 @@ class CustomerAuthController extends Controller
         $sent = $this->sendVerification($customer);
 
         // UC02 includes UC01: registration finishes by sending the customer to the login page.
-        return redirect()->route('login')->with('status', $sent
+        return redirect()->route('login', ['as' => 'customer'])->with('status', $sent
             ? 'Account created. We sent a verification link to '.$customer->email.'. Verify your email, then log in.'
-            : 'Account created, but the verification email could not be sent. Use "Resend verification email" below.');
+            : 'Account created, but the verification email could not be sent. Log in to resend it.');
     }
 
     public function verify(Request $request, Customer $customer, string $hash)
     {
         // A bad, tampered or expired link gets a clear message and a way to ask for a new one.
         if (! $request->hasValidSignature() || ! hash_equals(sha1($customer->email), $hash)) {
-            return redirect()->route('login')->withErrors(['login' => 'This verification link is invalid or has expired. Enter your email below to get a new one.']);
+            return redirect()->route('login', ['as' => 'customer'])->withErrors(['login' => 'This verification link is invalid or has expired. Log in to get a new one.']);
         }
 
         if ($customer->hasVerifiedEmail()) {
-            return redirect()->route('login')->with('status', 'Your email is already verified. Please log in.');
+            return redirect()->route('login', ['as' => 'customer'])->with('status', 'Your email is already verified. Please log in.');
         }
 
         $customer->markEmailAsVerified();

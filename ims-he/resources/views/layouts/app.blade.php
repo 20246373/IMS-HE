@@ -73,6 +73,19 @@
  .auth input{display:block;width:100%;box-sizing:border-box}
  .auth .btn{display:block;text-align:center;margin-bottom:.5rem}
  .btn-alt{background:#fff;color:#1f3a5f;border:1px solid #1f3a5f}
+ .auth .form-grid{grid-template-columns:1fr} .auth .required:after{content:none}
+ .auth form > p > button{width:100%;padding:.55rem}
+ .auth-back{display:inline-block;margin-bottom:.6rem;color:#1f3a5f;text-decoration:none;font-size:.9rem}
+ .auth-links{margin:.9rem 0 0;font-size:.9rem;display:grid;gap:.35rem}
+ .choice-label{margin:.2rem 0 .5rem;color:#555;font-weight:600;font-size:.9rem}
+ .choice-list{display:grid;gap:.5rem}
+ .choice-list a{display:block;padding:.7rem;text-align:center;border:1px solid #ccd3dc;border-radius:5px;color:#1f3a5f;font-weight:600;text-decoration:none;background:#fff}
+ .choice-list a:hover{border-color:#1f3a5f;background:#f4f7fb}
+ .field-hint{margin-top:.25rem;color:#777;font-size:.82rem}
+ .password-wrap{position:relative} .password-wrap input{padding-right:2.4rem}
+ .password-toggle{position:absolute;top:0;right:0;height:100%;width:2.4rem;padding:0;background:transparent;border:0;color:#666;display:flex;align-items:center;justify-content:center}
+ .password-toggle:hover{color:#1f3a5f} .password-toggle svg{width:1.1rem;height:1.1rem;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+ .password-toggle .eye-off,.password-toggle.shown .eye{display:none} .password-toggle.shown .eye-off{display:block}
  /* Storefront (Product Catalog Module) */
  .search{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center} .search input{flex:1;min-width:180px}
  .cats a{display:inline-block;margin:.2rem .4rem .2rem 0;padding:.2rem .6rem;border:1px solid #1f3a5f;border-radius:999px;color:#1f3a5f;text-decoration:none;font-size:.85rem}
@@ -356,7 +369,7 @@
 
         <span class="sp"></span>
 
-        <a href="{{ route('customer.register') }}">Sign Up</a>
+        <a href="{{ route('register') }}">Sign Up</a>
         <a href="{{ route('login') }}">Log In</a>
 
     @endauth

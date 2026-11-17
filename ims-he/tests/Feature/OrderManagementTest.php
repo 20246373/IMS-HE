@@ -73,7 +73,7 @@ class OrderManagementTest extends TestCase
 
     public function test_guests_and_customers_cannot_reach_it(): void
     {
-        $this->get(route('online-orders.index'))->assertRedirect(route('login'));
+        $this->get(route('online-orders.index'))->assertRedirect(route('login', ['as' => 'employee']));
     }
 
     public function test_list_shows_online_orders_filtered_by_status_and_hides_in_store_sales(): void

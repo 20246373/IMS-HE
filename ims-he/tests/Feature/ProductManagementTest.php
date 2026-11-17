@@ -260,7 +260,7 @@ class ProductManagementTest extends TestCase
 
     public function test_only_clerk_and_supervisor_can_manage_products(): void
     {
-        $this->get(route('products.index'))->assertRedirect(route('login'));
+        $this->get(route('products.index'))->assertRedirect(route('login', ['as' => 'employee']));
 
         foreach ([User::EMPLOYEE, User::TREASURER] as $role) {
             $this->actingAs($this->staff($role))->get(route('products.index'))->assertForbidden();

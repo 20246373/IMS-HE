@@ -57,8 +57,8 @@ class CheckoutTest extends TestCase
 
     public function test_guests_must_log_in_first(): void
     {
-        $this->get(route('customer.checkout.show'))->assertRedirect(route('login'));
-        $this->post(route('customer.checkout.store'), $this->details())->assertRedirect(route('login'));
+        $this->get(route('customer.checkout.show'))->assertRedirect(route('login', ['as' => 'customer']));
+        $this->post(route('customer.checkout.store'), $this->details())->assertRedirect(route('login', ['as' => 'customer']));
     }
 
     public function test_an_empty_cart_cannot_check_out(): void
@@ -252,8 +252,8 @@ class CheckoutTest extends TestCase
     {
         $invoice = Invoice::create(['invoice_date' => today(), 'customer_id' => $this->customer()->customer_id, 'channel' => 'Online', 'status' => 'Pending', 'total_amount' => 10]);
 
-        $this->get(route('customer.orders.show', $invoice))->assertRedirect(route('login'));
-        $this->get(route('customer.orders.index'))->assertRedirect(route('login'));
+        $this->get(route('customer.orders.show', $invoice))->assertRedirect(route('login', ['as' => 'customer']));
+        $this->get(route('customer.orders.index'))->assertRedirect(route('login', ['as' => 'customer']));
     }
 
     public function test_order_history_lists_only_my_orders(): void
@@ -325,7 +325,7 @@ class CheckoutTest extends TestCase
         $customer = $this->customer();
         $this->inCart($customer, $this->product(), 1);
 
-        $this->get(route('customer.checkout.show'))->assertRedirect(route('login'));
+        $this->get(route('customer.checkout.show'))->assertRedirect(route('login', ['as' => 'customer']));
         $this->post(route('login'), ['login' => 'juan@example.com', 'password' => 'secret123'])
             ->assertRedirect(route('customer.checkout.show'));
     }
@@ -361,7 +361,7 @@ class CheckoutTest extends TestCase
         $other = $this->customer('other@example.com');
         $invoice = Invoice::create(['invoice_date' => today(), 'customer_id' => $owner->customer_id, 'channel' => 'Online', 'status' => 'Pending', 'total_amount' => 10]);
 
-        $this->get(route('customer.orders.confirmation', $invoice))->assertRedirect(route('login'));   // guest first: actingAs() stays logged in
+        $this->get(route('customer.orders.confirmation', $invoice))->assertRedirect(route('login', ['as' => 'customer']));   // guest first: actingAs() stays logged in
         $this->actingAs($other, 'customer')->get(route('customer.orders.confirmation', $invoice))->assertNotFound();
         $this->actingAs($owner, 'customer')->get(route('customer.orders.confirmation', $invoice))->assertOk();
     }

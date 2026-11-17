@@ -30,7 +30,7 @@ class CustomerAuthTest extends TestCase
     {
         Mail::fake();
 
-        $this->post('/register', $this->signup())->assertRedirect(route('login'));
+        $this->post(route('customer.register'), $this->signup())->assertRedirect(route('login', ['as' => 'customer']));
 
         $customer = Customer::where('email', 'juan@example.com')->firstOrFail();
         $this->assertNull($customer->first_name);
@@ -44,7 +44,7 @@ class CustomerAuthTest extends TestCase
 
     public function test_signup_rejects_a_bad_email_and_a_short_password(): void
     {
-        $this->post('/register', $this->signup(['email' => 'not-an-email', 'password' => 'short']))
+        $this->post(route('customer.register'), $this->signup(['email' => 'not-an-email', 'password' => 'short']))
             ->assertSessionHasErrors(['email', 'password']);
 
         $this->assertDatabaseCount('customers', 0);
@@ -54,7 +54,7 @@ class CustomerAuthTest extends TestCase
     {
         $this->customer();
 
-        $this->post('/register', $this->signup(['email' => 'JUAN@Example.com']))
+        $this->post(route('customer.register'), $this->signup(['email' => 'JUAN@Example.com']))
             ->assertSessionHasErrors(['email' => 'This email is already registered.']);
         $this->assertDatabaseCount('customers', 1);
     }
@@ -63,7 +63,7 @@ class CustomerAuthTest extends TestCase
     {
         User::create(['email' => 'juan@example.com', 'password' => 'secret123', 'role' => User::EMPLOYEE, 'status' => User::STATUS_ACTIVE]);
 
-        $this->post('/register', $this->signup())->assertSessionHasErrors('email');
+        $this->post(route('customer.register'), $this->signup())->assertSessionHasErrors('email');
         $this->assertDatabaseCount('customers', 0);
     }
 
@@ -73,6 +73,18 @@ class CustomerAuthTest extends TestCase
 
         $this->post('/login', ['login' => 'juan@example.com', 'password' => 'secret123'])->assertSessionHasErrors('login');
         $this->assertGuest('customer');
+    }
+
+    public function test_resend_button_only_shows_after_an_unverified_login(): void
+    {
+        $this->customer();
+
+        $this->get('/login?as=customer')->assertDontSee('Resend verification email');
+
+        $this->from('/login?as=customer')->followingRedirects()
+            ->post('/login', ['login' => 'juan@example.com', 'password' => 'secret123'])
+            ->assertSee('Resend verification email')
+            ->assertSee('value="juan@example.com"', false);
     }
 
     public function test_verified_customer_logs_in_with_email_on_the_customer_guard(): void
@@ -98,22 +110,36 @@ class CustomerAuthTest extends TestCase
         $this->assertGuest('customer');
     }
 
-    public function test_login_page_links_to_sign_up_and_employee_access(): void
+    public function test_login_and_sign_up_first_ask_customer_or_employee(): void
     {
         $this->get('/login')->assertOk()
+            ->assertSee(route('login', ['as' => 'customer']), false)
+            ->assertSee(route('login', ['as' => 'employee']), false)
+            ->assertDontSee('name="password"', false);
+
+        $this->get('/register')->assertOk()
             ->assertSee(route('customer.register'))
             ->assertSee(route('staff.register'));
     }
 
-    public function test_old_login_urls_redirect_to_the_shared_login(): void
+    public function test_each_login_form_links_to_its_own_sign_up_and_back_to_the_chooser(): void
     {
-        $this->get('/login/customer')->assertRedirect('/login');
-        $this->get('/login/staff')->assertRedirect('/login');
+        $this->get('/login?as=customer')->assertOk()->assertSee('name="password"', false)
+            ->assertSee(route('customer.register'))->assertDontSee(route('staff.register'));
+
+        $this->get('/login?as=employee')->assertOk()->assertSee('name="password"', false)
+            ->assertSee(route('staff.register'))->assertDontSee(route('customer.register'));
+    }
+
+    public function test_old_login_urls_open_the_matching_form(): void
+    {
+        $this->get('/login/customer')->assertRedirect('/login?as=customer');
+        $this->get('/login/staff')->assertRedirect('/login?as=employee');
     }
 
     public function test_account_page_requires_customer_login(): void
     {
-        $this->get('/account')->assertRedirect(route('login'));
+        $this->get('/account')->assertRedirect(route('login', ['as' => 'customer']));
     }
 
     public function test_customer_can_complete_the_profile_later(): void
@@ -161,7 +187,7 @@ class CustomerAuthTest extends TestCase
         $this->assertGuest('customer');
 
         // Same link again: the email stays verified, but nobody is logged in by it.
-        $this->get($url)->assertRedirect(route('login'));
+        $this->get($url)->assertRedirect(route('login', ['as' => 'customer']));
         $this->assertGuest('customer');
     }
 
@@ -172,15 +198,15 @@ class CustomerAuthTest extends TestCase
 
         // no signature
         $this->get(route('customer.verification.verify', $params))
-            ->assertRedirect(route('login'))->assertSessionHasErrors('login');
+            ->assertRedirect(route('login', ['as' => 'customer']))->assertSessionHasErrors('login');
 
         // valid signature, wrong hash
         $tampered = URL::temporarySignedRoute('customer.verification.verify', now()->addHour(), ['customer' => $customer->customer_id, 'hash' => 'wrong']);
-        $this->get($tampered)->assertRedirect(route('login'))->assertSessionHasErrors('login');
+        $this->get($tampered)->assertRedirect(route('login', ['as' => 'customer']))->assertSessionHasErrors('login');
 
         // expired
         $expired = URL::temporarySignedRoute('customer.verification.verify', now()->subMinute(), $params);
-        $this->get($expired)->assertRedirect(route('login'))->assertSessionHasErrors('login');
+        $this->get($expired)->assertRedirect(route('login', ['as' => 'customer']))->assertSessionHasErrors('login');
 
         $this->assertNull($customer->fresh()->email_verified_at);
         $this->assertGuest('customer');

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\RoleMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,7 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'role' => RoleMiddleware::class,
         ]);
 
         // Send each guard to its own login / home page instead of the staff defaults.
@@ -22,7 +23,8 @@ return Application::configure(basePath: dirname(__DIR__))
                 session()->flash('status', 'Please log in or sign up to use your cart.');
             }
 
-            return route('login');
+            // Skip the "log in as" chooser: customer pages open the customer form, staff pages the employee form.
+            return route('login', ['as' => $request->routeIs('customer.*') ? 'customer' : 'employee']);
         });
         $middleware->redirectUsersTo(fn (Request $request) => auth('customer')->check()
             ? route('home') : route('dashboard'));

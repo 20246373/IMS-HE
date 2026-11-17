@@ -41,13 +41,16 @@ Route::middleware('guest:web,customer')->group(function () {
     Route::get('/reset-password/{guard}/{id}/{hash}', [AuthController::class, 'showResetPassword'])->name('password.reset');
     Route::post('/reset-password/{guard}/{id}/{hash}', [AuthController::class, 'resetPassword']);
 
+    // Sign up starts by choosing Customer or Employee.
+    Route::get('/register', [AuthController::class, 'chooseRegister'])->name('register');
+
     // Employees sign up the same way, then wait for the Administrator to give them a role.
     Route::get('/register/employee', [AuthController::class, 'showRegister'])->name('staff.register');
     Route::post('/register/employee', [AuthController::class, 'register'])->middleware('throttle:5,1');
 
     // Old login URLs still work (bookmarks, old links).
-    Route::redirect('/login/staff', '/login')->name('staff.login');
-    Route::redirect('/login/customer', '/login')->name('customer.login');
+    Route::redirect('/login/staff', '/login?as=employee')->name('staff.login');
+    Route::redirect('/login/customer', '/login?as=customer')->name('customer.login');
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])
@@ -61,8 +64,8 @@ Route::get('/pending', [AuthController::class, 'pending'])
 
 Route::name('customer.')->group(function () {
     Route::middleware('guest:customer')->group(function () {
-        Route::get('/register', [CustomerAuthController::class, 'showRegister'])->name('register');
-        Route::post('/register', [CustomerAuthController::class, 'register']);
+        Route::get('/register/customer', [CustomerAuthController::class, 'showRegister'])->name('register');
+        Route::post('/register/customer', [CustomerAuthController::class, 'register']);
         Route::post('/email/resend', [CustomerAuthController::class, 'resend'])
             ->middleware('throttle:3,1')
             ->name('verification.resend');

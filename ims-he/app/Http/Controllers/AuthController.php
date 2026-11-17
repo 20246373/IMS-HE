@@ -22,9 +22,21 @@ class AuthController extends Controller
 
     private const LOCKED = 'Account locked after 3 failed attempts. Contact the administrator.';
 
-    public function showLogin()
+    /**
+     * Without ?as= the page asks who is logging in; with ?as=customer or ?as=employee it shows the form.
+     * Both forms post to the same login(), which finds the account by email or username.
+     */
+    public function showLogin(Request $request)
     {
-        return view('auth.login');
+        $as = in_array($request->query('as'), ['customer', 'employee'], true) ? $request->query('as') : null;
+
+        return view('auth.login', ['as' => $as]);
+    }
+
+    /** Asks whether the visitor is signing up as a customer or as an employee. */
+    public function chooseRegister()
+    {
+        return view('auth.register-choose');
     }
 
     public function showForgotPassword()
@@ -150,7 +162,10 @@ class AuthController extends Controller
         }
 
         if (! $customer->hasVerifiedEmail()) {
-            return back()->withErrors(['login' => 'Please verify your email address first. Check your inbox for the link, or resend it below.'])->onlyInput('login');
+            return back()
+                ->withErrors(['login' => 'Please verify your email address first. Check your inbox for the link, or resend it below.'])
+                ->with('unverified_email', $customer->email)
+                ->onlyInput('login');
         }
 
         Auth::guard('customer')->login($customer);

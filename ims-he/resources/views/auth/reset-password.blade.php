@@ -5,9 +5,10 @@
  <h2>Reset password</h2>
  <form method="POST" action="{{ route('password.reset', compact('guard', 'id', 'hash')) }}">
   @csrf
-  <x-required-note />
-  <x-field label="New password" name="password" type="password" autocomplete="new-password" />
-  <x-field label="Confirm new password" name="password_confirmation" type="password" autocomplete="new-password" />
+  <div class="form-grid">
+   <x-password label="New password" hint="Must be at least 8 characters." minlength="8" maxlength="72" autocomplete="new-password" />
+   <x-password label="Confirm new password" name="password_confirmation" autocomplete="new-password" />
+  </div>
   <p><button>Reset password</button></p>
  </form>
 </div>
