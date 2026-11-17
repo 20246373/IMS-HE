@@ -12,6 +12,7 @@ class CatalogTest extends TestCase
     use RefreshDatabase;
 
     private Category $tools;
+
     private Category $paint;
 
     protected function setUp(): void
@@ -51,7 +52,7 @@ class CatalogTest extends TestCase
         $this->get('/shop?q=hammer')->assertOk()
             ->assertSee('Claw Hammer')->assertDontSee('Rubber Mallet')->assertDontSee('Latex Paint');
 
-        $this->get('/shop?category=' . $this->paint->category_id)->assertOk()
+        $this->get('/shop?category='.$this->paint->category_id)->assertOk()
             ->assertSee('Latex Paint')->assertDontSee('Claw Hammer');
     }
 
@@ -70,7 +71,7 @@ class CatalogTest extends TestCase
     {
         $product = $this->product('Claw Hammer', $this->tools, stock: 0);
 
-        $this->get('/shop/' . $product->product_id)->assertOk()
+        $this->get('/shop/'.$product->product_id)->assertOk()
             ->assertSee('Claw Hammer')->assertSee('Hand Tools')->assertSee('Out of stock');
     }
 
@@ -78,7 +79,7 @@ class CatalogTest extends TestCase
     {
         $inactive = $this->product('Inactive Item', $this->tools, active: false);
 
-        $this->get('/shop/' . $inactive->product_id)->assertOk()->assertSee('Inactive Item');
+        $this->get('/shop/'.$inactive->product_id)->assertOk()->assertSee('Inactive Item');
         $this->get('/shop/999999')->assertNotFound();
     }
 

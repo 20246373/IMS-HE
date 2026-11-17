@@ -46,6 +46,7 @@ class CartService
                         $item->delete();
                         $warnings[] = "{$product->product_name} is out of stock and was removed from your cart.";
                         unset($seen[$product->product_id]);
+
                         continue;
                     }
                 }

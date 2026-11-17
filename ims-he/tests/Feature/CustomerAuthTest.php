@@ -206,4 +206,3 @@ class CustomerAuthTest extends TestCase
         Mail::assertSent(VerifyCustomerEmail::class, fn ($mail) => $mail->hasTo('juan@example.com'));
     }
 }
-

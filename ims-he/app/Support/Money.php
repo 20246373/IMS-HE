@@ -9,7 +9,7 @@ class Money
         $value = (float) ($amount ?? 0);
         $negative = $value < 0;
 
-        return ($negative ? '-' : '') . '₱' . number_format(abs($value), 2, '.', ',');
+        return ($negative ? '-' : '').'₱'.number_format(abs($value), 2, '.', ',');
     }
 
     public static function parse(?string $input): ?string

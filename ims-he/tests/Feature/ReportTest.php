@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\InventoryTransaction;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
@@ -71,6 +72,59 @@ class ReportTest extends TestCase
             ->assertDontSee('900.00');
     }
 
+    public function test_sales_report_filters_completed_sales_by_category_and_shows_category_totals(): void
+    {
+        $tools = Category::create(['category_name' => 'Report Tools']);
+        $hardware = Category::create(['category_name' => 'Report Hardware']);
+        $hammer = Product::create([
+            'category_id' => $tools->category_id,
+            'product_name' => 'Report Hammer',
+            'unit_price' => 100,
+            'stock_quantity' => 10,
+            'reorder_level' => 0,
+        ]);
+        $drill = Product::create([
+            'category_id' => $hardware->category_id,
+            'product_name' => 'Report Drill',
+            'unit_price' => 250,
+            'stock_quantity' => 10,
+            'reorder_level' => 0,
+        ]);
+        $invoice = $this->invoice('2026-05-10', 350, true);
+        InvoiceItem::create([
+            'invoice_id' => $invoice->invoice_id,
+            'product_id' => $hammer->product_id,
+            'quantity' => 1,
+            'price' => 100,
+            'subtotal' => 100,
+        ]);
+        InvoiceItem::create([
+            'invoice_id' => $invoice->invoice_id,
+            'product_id' => $drill->product_id,
+            'quantity' => 1,
+            'price' => 250,
+            'subtotal' => 250,
+        ]);
+        $pending = $this->invoice('2026-05-11', 400, false);
+        Payment::create([
+            'invoice_id' => $pending->invoice_id,
+            'payment_date' => '2026-05-11',
+            'amount_paid' => 400,
+            'change_amount' => 0,
+            'payment_method' => 'Cash',
+        ]);
+
+        $this->actingAs($this->staff())->get(route('reports.sales', [
+            'start_date' => '2026-05-01',
+            'end_date' => '2026-05-31',
+            'category_id' => $tools->category_id,
+        ]))->assertOk()
+            ->assertSee('₱100.00')
+            ->assertSee('Report Tools')
+            ->assertDontSee('₱250.00')
+            ->assertDontSee('₱400.00');
+    }
+
     public function test_sales_report_downloads_a_pdf_for_the_selected_date_range(): void
     {
         $this->actingAs($this->staff())
@@ -78,6 +132,20 @@ class ReportTest extends TestCase
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf')
             ->assertHeader('content-disposition', 'attachment; filename=sales-report-2026-05-01-to-2026-05-31.pdf');
+    }
+
+    public function test_sales_report_pdf_keeps_the_category_filter(): void
+    {
+        $category = Category::create(['category_name' => 'PDF Tools']);
+
+        $this->actingAs($this->staff())
+            ->get(route('reports.sales.download', [
+                'start_date' => '2026-05-01',
+                'end_date' => '2026-05-31',
+                'category_id' => $category->category_id,
+            ]))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
     }
 
     public function test_sales_report_rejects_end_date_before_start_date(): void

@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\ResetPasswordEmail;
 use App\Models\AuditLog;
 use App\Models\Customer;
-use App\Mail\ResetPasswordEmail;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,6 +19,7 @@ use Throwable;
 class AuthController extends Controller
 {
     private const INVALID = 'Invalid email/username or password.';
+
     private const LOCKED = 'Account locked after 3 failed attempts. Contact the administrator.';
 
     public function showLogin()
@@ -61,7 +62,7 @@ class AuthController extends Controller
     public function showResetPassword(Request $request, string $guard, int $id, string $hash)
     {
         $account = $this->validResetAccount($request, $guard, $id, $hash);
-        if (!$account) {
+        if (! $account) {
             return redirect()->route('password.forgot')
                 ->withErrors(['email' => 'This password reset link is invalid or has expired.']);
         }
@@ -72,7 +73,7 @@ class AuthController extends Controller
     public function resetPassword(Request $request, string $guard, int $id, string $hash)
     {
         $account = $this->validResetAccount($request, $guard, $id, $hash);
-        if (!$account) {
+        if (! $account) {
             return redirect()->route('password.forgot')
                 ->withErrors(['email' => 'This password reset link is invalid or has expired.']);
         }
@@ -209,7 +210,7 @@ class AuthController extends Controller
 
     private function validResetAccount(Request $request, string $guard, int $id, string $hash)
     {
-        if (!$request->hasValidSignature() || !in_array($guard, ['customer', 'web'], true)) {
+        if (! $request->hasValidSignature() || ! in_array($guard, ['customer', 'web'], true)) {
             return null;
         }
 
@@ -217,7 +218,7 @@ class AuthController extends Controller
             ? Customer::find($id)
             : User::find($id);
 
-        if (!$account || !hash_equals(hash('sha256', $account->password), $hash)) {
+        if (! $account || ! hash_equals(hash('sha256', $account->password), $hash)) {
             return null;
         }
 

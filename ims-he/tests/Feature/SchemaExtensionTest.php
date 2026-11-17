@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\LedgerEntry;
 use App\Models\Category;
+use App\Models\LedgerEntry;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;

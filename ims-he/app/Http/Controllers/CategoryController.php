@@ -42,14 +42,4 @@ class CategoryController extends Controller
 
         return redirect()->route('categories.index')->with('status', 'Category updated.');
     }
-
-    public function toggle(Category $category)
-    {
-        $category->update(['is_active' => ! $category->is_active]);
-
-        return redirect()->route('categories.index')->with(
-            'status',
-            $category->is_active ? 'Category activated.' : 'Category hidden.'
-        );
-    }
 }

@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 class ProcurementService
 {
-    public function __construct(private InventoryService $inventory) {}
+    public function __construct(private InventoryService $inventory, private LedgerService $ledger) {}
 
     /**
      * Creates a Pending, auto-generated PO when a deduction leaves a product at or below
@@ -135,6 +135,7 @@ class ProcurementService
                 throw ValidationException::withMessages($validationErrors);
             }
 
+            $deliveryAmount = 0.0;
             foreach ($quantities as $poItemId => $entry) {
                 $purchaseOrderItem = $itemsById->get((int) $poItemId);
                 $newReceivedQuantity = $entry['quantity'];
@@ -150,6 +151,17 @@ class ProcurementService
 
                 $purchaseOrderItem->quantity_received += $newReceivedQuantity;
                 $purchaseOrderItem->save();
+                $deliveryAmount += $newReceivedQuantity * (float) $purchaseOrderItem->unit_cost;
+            }
+
+            if ($deliveryAmount > 0) {
+                $this->ledger->record(
+                    'Expense',
+                    $deliveryAmount,
+                    "Delivery - PO #{$po->po_id}",
+                    'PO',
+                    $po->po_id,
+                );
             }
 
             if ($items->every(fn (PurchaseOrderItem $item) => (int) $item->quantity_received >= (int) $item->quantity)) {

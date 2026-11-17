@@ -26,7 +26,7 @@ class ExportController extends Controller
         AuditLog::record('Exported', $dataset);
 
         return CsvExporter::download(
-            $dataset . '-' . now()->format('Ymd-His') . '.csv',
+            $dataset.'-'.now()->format('Ymd-His').'.csv',
             $definition['headers'],
             $definition['rows']($request)
         );
@@ -34,15 +34,15 @@ class ExportController extends Controller
 
     public function all()
     {
-        if (!class_exists(ZipArchive::class)) {
+        if (! class_exists(ZipArchive::class)) {
             return back()->with('warning', 'Enable the zip extension in php.ini to download all exports.');
         }
 
         $role = auth()->user()->role;
         $datasets = ExportRegistry::forRole($role);
-        $filename = 'ims-he-exports-' . now()->format('Ymd-His') . '.zip';
-        $path = storage_path('app' . DIRECTORY_SEPARATOR . $filename);
-        $zip = new ZipArchive();
+        $filename = 'ims-he-exports-'.now()->format('Ymd-His').'.zip';
+        $path = storage_path('app'.DIRECTORY_SEPARATOR.$filename);
+        $zip = new ZipArchive;
 
         if ($zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             return back()->with('warning', 'The export ZIP could not be created.');
@@ -55,7 +55,7 @@ class ExportController extends Controller
             $out = fopen($temporary, 'wb');
             CsvExporter::write($out, $definition['headers'], $definition['rows'](request()));
             fclose($out);
-            $zip->addFile($temporary, $definition['key'] . '.csv');
+            $zip->addFile($temporary, $definition['key'].'.csv');
         }
 
         $zip->close();
@@ -76,11 +76,11 @@ class ExportController extends Controller
         }
 
         $path = database_path('database.sqlite');
-        if (!is_file($path)) {
+        if (! is_file($path)) {
             return back()->with('warning', 'The SQLite database file could not be found.');
         }
 
-        $filename = 'ims-he-backup-' . now()->format('Ymd-His') . '.sqlite';
+        $filename = 'ims-he-backup-'.now()->format('Ymd-His').'.sqlite';
         AuditLog::record('Exported', 'database');
 
         return response()->download($path, $filename, ['Content-Type' => 'application/vnd.sqlite3']);
@@ -89,7 +89,7 @@ class ExportController extends Controller
     private function allowedDataset(string $key): array
     {
         $definition = ExportRegistry::find($key);
-        if (!$definition || !in_array(auth()->user()->role, $definition['roles'], true)) {
+        if (! $definition || ! in_array(auth()->user()->role, $definition['roles'], true)) {
             abort(404);
         }
 

@@ -18,7 +18,7 @@ class CheckoutService
     public function __construct(private CartService $carts, private InventoryService $inventory) {}
 
     /**
-     * @param array{first_name:string,last_name:string,contact_number:string,address:string} $details
+     * @param  array{first_name:string,last_name:string,contact_number:string,address:string}  $details
      */
     public function placeOrder(Customer $customer, array $details, string $paymentMethod): Invoice
     {

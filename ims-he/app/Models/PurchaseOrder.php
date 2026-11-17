@@ -7,12 +7,22 @@ use Illuminate\Database\Eloquent\Model;
 class PurchaseOrder extends Model
 {
     protected $table = 'purchase_orders';
+
     protected $primaryKey = 'po_id';
+
     public $timestamps = false;
+
     protected $guarded = [];
 
     protected $casts = ['order_date' => 'date', 'is_auto' => 'boolean'];
 
-    public function supplier() { return $this->belongsTo(Supplier::class, 'supplier_id', 'supplier_id'); }
-    public function items() { return $this->hasMany(PurchaseOrderItem::class, 'po_id', 'po_id'); }
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class, 'supplier_id', 'supplier_id');
+    }
+
+    public function items()
+    {
+        return $this->hasMany(PurchaseOrderItem::class, 'po_id', 'po_id');
+    }
 }

@@ -198,7 +198,8 @@ class CheckoutTest extends TestCase
         $this->inCart($customer, $b, 1);
 
         // The second stock deduction fails, after the first one already went through.
-        $this->app->bind(InventoryService::class, fn () => new class extends InventoryService {
+        $this->app->bind(InventoryService::class, fn () => new class extends InventoryService
+        {
             private int $calls = 0;
 
             public function deduct(int $productId, int $qty, string $referenceType, int $referenceId): Product

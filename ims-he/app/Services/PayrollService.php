@@ -2,68 +2,165 @@
 
 namespace App\Services;
 
+use App\Models\Attendance;
+use App\Models\AuditLog;
 use App\Models\Employee;
 use App\Models\Payroll;
+use App\Models\User;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class PayrollService
 {
-    /** Builds a Draft payroll batch with one payslip per active employee, from attendance in the period. */
-    public function run(CarbonInterface $start, CarbonInterface $end, ?int $userId): Payroll
-    {
-        $cfg = config('payroll');
+    public function __construct(private LedgerService $ledger) {}
 
-        return DB::transaction(function () use ($start, $end, $userId, $cfg) {
+    public function run(CarbonInterface $start, CarbonInterface $end, User $by): Payroll
+    {
+        if ($end->lt($start)) {
+            throw ValidationException::withMessages(['period' => 'The payroll end date must be on or after the start date.']);
+        }
+
+        return DB::transaction(function () use ($start, $end, $by): Payroll {
+            $periodStart = $start->toDateString();
+            $periodEnd = $end->toDateString();
+
+            if (Payroll::query()
+                ->where('period_start', '<=', $periodEnd)
+                ->where('period_end', '>=', $periodStart)
+                ->exists()) {
+                throw ValidationException::withMessages(['period' => 'This period overlaps an existing payroll.']);
+            }
+
             $payroll = Payroll::create([
-                'period_start' => $start->toDateString(),
-                'period_end'   => $end->toDateString(),
-                'processed_by' => $userId,
-                'status'       => 'Draft',
+                'period_start' => $periodStart,
+                'period_end' => $periodEnd,
+                'processed_by' => $by->user_id,
+                'status' => 'Draft',
             ]);
 
-            $sumGross = $sumDed = $sumNet = 0.0;
+            $totalGross = 0.0;
+            $totalDeductions = 0.0;
+            $totalNet = 0.0;
 
-            foreach (Employee::where('status', 'Active')->get() as $emp) {
-                $att = $emp->attendances()->whereBetween('attendance_date', [$start->toDateString(), $end->toDateString()])->get();
+            foreach (Employee::where('status', 'Active')->orderBy('employee_id')->get() as $employee) {
+                $attendance = Attendance::where('employee_id', $employee->employee_id)
+                    ->whereBetween('work_date', [$periodStart, $periodEnd])
+                    ->whereNotNull('time_out')
+                    ->get();
+                $values = $this->calculate($employee, $attendance);
 
-                $days = $att->where('status', 'Present')->count() + 0.5 * $att->where('status', 'Half-day')->count();
-                $ot   = (float) $att->sum('overtime_hours');
-
-                $rate   = (float) $emp->daily_rate;
-                $hourly = $rate / $cfg['hours_per_day'];
-                $gross  = round($days * $rate + $ot * $hourly * $cfg['overtime_multiplier'], 2);
-
-                $sss  = round($gross * $cfg['sss_rate'], 2);
-                $ph   = round($gross * $cfg['philhealth_rate'], 2);
-                $pag  = $gross > 0 ? (float) $cfg['pagibig_fixed'] : 0.0;
-                $tax  = round($gross * $cfg['tax_rate'], 2);
-                $ded  = round($sss + $ph + $pag + $tax, 2);
-                $net  = round($gross - $ded, 2);
-
-                $payroll->payslips()->create([
-                    'employee_id'          => $emp->id,
-                    'days_worked'          => $days,
-                    'overtime_hours'       => $ot,
-                    'gross_pay'            => $gross,
-                    'sss_deduction'        => $sss,
-                    'philhealth_deduction' => $ph,
-                    'pagibig_deduction'    => $pag,
-                    'tax_deduction'        => $tax,
-                    'total_deductions'     => $ded,
-                    'net_pay'              => $net,
-                ]);
-
-                $sumGross += $gross; $sumDed += $ded; $sumNet += $net;
+                $payroll->payslips()->create(['employee_id' => $employee->employee_id] + $values);
+                $totalGross += $values['gross_pay'];
+                $totalDeductions += $values['total_deductions'];
+                $totalNet += $values['net_pay'];
             }
 
             $payroll->update([
-                'total_gross'      => round($sumGross, 2),
-                'total_deductions' => round($sumDed, 2),
-                'total_net'        => round($sumNet, 2),
+                'total_gross' => round($totalGross, 2),
+                'total_deductions' => round($totalDeductions, 2),
+                'total_net' => round($totalNet, 2),
             ]);
+            AuditLog::record('Created', 'payrolls', $payroll->payroll_id);
 
             return $payroll->load('payslips.employee');
         });
+    }
+
+    /**
+     * @return array{days_worked:float,overtime_hours:float,gross_pay:float,sss_deduction:float,philhealth_deduction:float,pagibig_deduction:float,tax_deduction:float,other_deductions:float,total_deductions:float,net_pay:float}
+     */
+    public function calculate(Employee $employee, Collection $attendance): array
+    {
+        $config = config('payroll');
+        $daysWorked = (float) $attendance->count();
+        $overtimeHours = round((float) $attendance->sum('overtime_hours'), 2);
+        $dailyRate = (float) $employee->daily_rate;
+        $gross = round(
+            $daysWorked * $dailyRate
+            + $overtimeHours * ($dailyRate / (float) $config['hours_per_day']) * (float) $config['overtime_multiplier'],
+            2,
+        );
+        $sss = $this->deduction($gross, $config['sss']);
+        $philhealth = $this->deduction($gross, $config['philhealth']);
+        $pagibig = $this->deduction($gross, $config['pagibig']);
+        $tax = $this->withholdingTax($gross, $config['withholding_tax_brackets']);
+        $totalDeductions = round($sss + $philhealth + $pagibig + $tax, 2);
+
+        return [
+            'days_worked' => $daysWorked,
+            'overtime_hours' => $overtimeHours,
+            'gross_pay' => $gross,
+            'sss_deduction' => $sss,
+            'philhealth_deduction' => $philhealth,
+            'pagibig_deduction' => $pagibig,
+            'tax_deduction' => $tax,
+            'other_deductions' => 0.0,
+            'total_deductions' => $totalDeductions,
+            'net_pay' => round($gross - $totalDeductions, 2),
+        ];
+    }
+
+    public function finalize(Payroll $payroll): Payroll
+    {
+        return DB::transaction(function () use ($payroll): Payroll {
+            $payroll = Payroll::query()->lockForUpdate()->findOrFail($payroll->payroll_id);
+
+            if ($payroll->status !== 'Draft') {
+                throw ValidationException::withMessages(['payroll' => 'Only Draft payrolls can be finalized.']);
+            }
+
+            $payroll->update(['status' => 'Final']);
+            $this->ledger->record(
+                'Expense',
+                (float) $payroll->total_net,
+                "Payroll {$payroll->period_start->toDateString()} to {$payroll->period_end->toDateString()}",
+                'Payroll',
+                $payroll->payroll_id,
+            );
+            AuditLog::record('Finalized', 'payrolls', $payroll->payroll_id);
+
+            return $payroll->fresh();
+        });
+    }
+
+    public function deleteDraft(Payroll $payroll): void
+    {
+        DB::transaction(function () use ($payroll): void {
+            $payroll = Payroll::query()->lockForUpdate()->findOrFail($payroll->payroll_id);
+
+            if ($payroll->status !== 'Draft') {
+                throw ValidationException::withMessages(['payroll' => 'Only Draft payrolls can be deleted.']);
+            }
+
+            $payroll->delete();
+        });
+    }
+
+    /**
+     * @param  array{mode:string,value:float}  $rule
+     */
+    private function deduction(float $gross, array $rule): float
+    {
+        if ($rule['mode'] === 'fixed') {
+            return round($gross > 0 ? (float) $rule['value'] : 0.0, 2);
+        }
+
+        return round($gross * (float) $rule['value'], 2);
+    }
+
+    /**
+     * @param  array<int,array{up_to:?float,base:float,rate:float}>  $brackets
+     */
+    private function withholdingTax(float $gross, array $brackets): float
+    {
+        foreach ($brackets as $bracket) {
+            if ($bracket['up_to'] === null || $gross <= $bracket['up_to']) {
+                return round((float) $bracket['base'] + $gross * (float) $bracket['rate'], 2);
+            }
+        }
+
+        return 0.0;
     }
 }

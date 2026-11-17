@@ -76,7 +76,7 @@ class ExportTest extends TestCase
         $response = $this->actingAs($admin)->post(route('exports.all'));
 
         $path = $response->baseResponse->getFile()->getPathname();
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
         $this->assertSame(true, $zip->open($path));
         $this->assertSame(count(ExportRegistry::forRole(User::ADMINISTRATOR)), $zip->numFiles);
         $this->assertSame('categories.csv', $zip->getNameIndex(0));

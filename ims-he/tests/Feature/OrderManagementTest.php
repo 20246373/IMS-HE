@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\InventoryTransaction;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\User;
@@ -146,7 +147,7 @@ class OrderManagementTest extends TestCase
 
         $this->assertSame('Cancelled', $order->fresh()->status);
         $this->assertSame(10, (int) $product->fresh()->stock_quantity);
-        $this->assertSame(1, \App\Models\InventoryTransaction::where('transaction_type', 'IN')->count());
+        $this->assertSame(1, InventoryTransaction::where('transaction_type', 'IN')->count());
     }
 
     public function test_detail_page_shows_actions_only_while_pending(): void

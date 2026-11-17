@@ -145,6 +145,9 @@
 
             $canViewProcurementReports =
                 $isPresident || $isInventoryClerk;
+            $canViewFinancialReports = $isPresident || $isTreasurer;
+            $canViewLedger = $isPresident || $isTreasurer || $isSupervisor;
+            $canManageEmployees = $isPresident || $isTreasurer;
 
             $canExport =
                 $isAdministrator || $isPresident || $isTreasurer || $isInventoryClerk || $isSupervisor;
@@ -166,6 +169,31 @@
                href="{{ route('online-orders.index') }}">
                 Online Orders
             </a>
+        @endif
+
+        @if($user->hasRole(\App\Models\User::STORE_SUPERVISOR, \App\Models\User::EMPLOYEE))
+            <a class="{{ request()->routeIs('sales.*') ? 'nav-link-active' : '' }}"
+               href="{{ route('sales.create') }}">
+                Sales (POS)
+            </a>
+        @endif
+
+        @if($user->hasRole(\App\Models\User::EMPLOYEE))
+            <a class="{{ request()->routeIs('attendance.*') ? 'nav-link-active' : '' }}"
+               href="{{ route('attendance.my') }}">Attendance</a>
+        @elseif($user->hasRole(\App\Models\User::STORE_SUPERVISOR, \App\Models\User::TREASURER))
+            <a class="{{ request()->routeIs('attendance.*') ? 'nav-link-active' : '' }}"
+               href="{{ route('attendance.day') }}">Attendance</a>
+        @endif
+
+        @if($user->hasRole(\App\Models\User::PRESIDENT, \App\Models\User::TREASURER))
+            <a class="{{ request()->routeIs('payrolls.*') ? 'nav-link-active' : '' }}"
+               href="{{ route('payrolls.index') }}">Payroll</a>
+        @endif
+
+        @if($user->hasRole(\App\Models\User::PRESIDENT, \App\Models\User::STORE_SUPERVISOR))
+            <a class="{{ request()->routeIs('customers.*') ? 'nav-link-active' : '' }}"
+               href="{{ route('customers.index') }}">Customers</a>
         @endif
 
         {{-- INVENTORY --}}
@@ -213,7 +241,7 @@
         @endif
 
         {{-- REPORTS --}}
-        @if($canViewSalesReports || $canViewInventoryReports || $canViewProcurementReports)
+        @if($canViewSalesReports || $canViewInventoryReports || $canViewProcurementReports || $canViewFinancialReports)
             <details class="nav-dropdown"
                 {{ request()->routeIs('reports.*') ? 'open' : '' }}>
                 <summary>Reports</summary>
@@ -240,11 +268,21 @@
                     @endif
 
                     @if($isPresident || $isTreasurer)
-                        {{-- Add this link only if the route exists --}}
-                        {{-- <a href="{{ route('reports.financial') }}">Financial Reports</a> --}}
+                        <a class="{{ request()->routeIs('reports.financial*') ? 'nav-link-active' : '' }}"
+                           href="{{ route('reports.financial') }}">Financial Reports</a>
                     @endif
                 </div>
             </details>
+        @endif
+
+        @if($canViewLedger)
+            <a class="{{ request()->routeIs('ledger.*') ? 'nav-link-active' : '' }}"
+               href="{{ route('ledger.index') }}">Ledger</a>
+        @endif
+
+        @if($canManageEmployees)
+            <a class="{{ request()->routeIs('employees.*') ? 'nav-link-active' : '' }}"
+               href="{{ route('employees.index') }}">Employees</a>
         @endif
 
         {{-- ADMINISTRATION --}}

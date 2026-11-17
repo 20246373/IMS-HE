@@ -32,8 +32,8 @@ class CsvExporter
         $safe = [];
 
         foreach ($row as $value) {
-            if (is_string($value) && !is_numeric($value) && isset($value[0]) && in_array($value[0], ['=', '+', '-', '@'], true)) {
-                $value = "'" . $value;
+            if (is_string($value) && ! is_numeric($value) && isset($value[0]) && in_array($value[0], ['=', '+', '-', '@'], true)) {
+                $value = "'".$value;
             }
 
             $safe[] = $value;

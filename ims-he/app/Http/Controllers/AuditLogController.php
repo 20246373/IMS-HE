@@ -27,8 +27,8 @@ class AuditLogController extends Controller
             ->withQueryString();
 
         return view('audit.index', [
-            'logs'   => $logs,
-            'users'  => User::orderBy('username')->get(),
+            'logs' => $logs,
+            'users' => User::orderBy('username')->get(),
             'actions' => AuditLog::select('action')->distinct()->orderBy('action')->pluck('action'),
         ]);
     }

@@ -15,9 +15,9 @@ class UserController extends Controller
     {
         return view('users.index', [
             // Employees who signed up themselves and are waiting for a role come first.
-            'pending'   => User::where('role', User::PENDING)->orderBy('created_at')->get(),
-            'users'     => User::with('employee')->where('role', '!=', User::PENDING)->orderBy('username')->orderBy('email')->get(),
-            'roles'     => User::roleChoices(),
+            'pending' => User::where('role', User::PENDING)->orderBy('created_at')->get(),
+            'users' => User::with('employee')->where('role', '!=', User::PENDING)->orderBy('username')->orderBy('email')->get(),
+            'roles' => User::roleChoices(),
             'employees' => $this->employeeOptions(null),
         ]);
     }
@@ -35,10 +35,10 @@ class UserController extends Controller
     public function update(Request $request, User $user)
     {
         $data = $request->validate([
-            'role'        => ['required', Rule::in($user->hasRole(User::ADMINISTRATOR)
+            'role' => ['required', Rule::in($user->hasRole(User::ADMINISTRATOR)
                 ? [...User::roleChoices(), $user->role]
                 : User::roleChoices())],
-            'status'      => ['required', Rule::in([User::STATUS_ACTIVE, User::STATUS_LOCKED])],
+            'status' => ['required', Rule::in([User::STATUS_ACTIVE, User::STATUS_LOCKED])],
             'employee_id' => ['nullable', 'exists:employees,employee_id', Rule::unique('users', 'employee_id')->ignore($user->user_id, 'user_id')],
         ]);
 
@@ -51,8 +51,8 @@ class UserController extends Controller
         }
 
         $updates = [
-            'role'        => $data['role'],
-            'status'      => $data['status'],
+            'role' => $data['role'],
+            'status' => $data['status'],
             'employee_id' => $data['employee_id'] ?? null,
         ];
 
@@ -71,7 +71,7 @@ class UserController extends Controller
     public function assignRole(Request $request, User $user)
     {
         $data = $request->validate([
-            'role'        => ['required', Rule::in(User::roleChoices())],
+            'role' => ['required', Rule::in(User::roleChoices())],
             'employee_id' => ['nullable', 'exists:employees,employee_id', Rule::unique('users', 'employee_id')->ignore($user->user_id, 'user_id')],
         ]);
 

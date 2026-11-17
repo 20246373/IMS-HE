@@ -18,9 +18,21 @@
  <h1>Sales report</h1>
  <p>{{ \Illuminate\Support\Carbon::parse($startDate)->format('M d, Y') }} - {{ \Illuminate\Support\Carbon::parse($endDate)->format('M d, Y') }}</p>
  <div class="summary">
-  <span><strong>Total revenue:</strong> &#8369;{{ number_format((float) $report['totalRevenue'], 2) }}</span>
+  <span><strong>Total revenue:</strong> {{ money($report['totalRevenue']) }}</span>
   <span><strong>Total transactions:</strong> {{ number_format($report['totalTransactions']) }}</span>
  </div>
+ <h2>Sales by category</h2>
+ <table>
+  <thead><tr><th>Category</th><th>Units</th><th class="amount">Revenue</th></tr></thead>
+  <tbody>
+   @forelse($report['categorySales'] as $categorySale)
+   <tr><td>{{ $categorySale->category_name }}</td><td>{{ number_format($categorySale->units) }}</td><td class="amount">{{ money($categorySale->revenue) }}</td></tr>
+   @empty
+   <tr><td colspan="3">No completed sales for this date range.</td></tr>
+   @endforelse
+  </tbody>
+ </table>
+ <h2>Completed sales</h2>
  <table>
   <thead><tr><th>Invoice</th><th>Date</th><th>Customer</th><th class="amount">Total</th></tr></thead>
   <tbody>
@@ -29,7 +41,7 @@
     <td>#{{ $sale->invoice_id }}</td>
     <td>{{ \Illuminate\Support\Carbon::parse($sale->invoice_date)->format('M d, Y') }}</td>
     <td>{{ trim(($sale->first_name ?? '') . ' ' . ($sale->last_name ?? '')) ?: 'Walk-in customer' }}</td>
-    <td class="amount">&#8369;{{ number_format((float) $sale->total_amount, 2) }}</td>
+    <td class="amount">{{ money($sale->total_amount) }}</td>
    </tr>
    @empty
    <tr><td colspan="4">No completed sales for this date range.</td></tr>

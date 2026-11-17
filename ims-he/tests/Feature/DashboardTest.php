@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Category;
+use App\Models\Invoice;
+use App\Models\Payment;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -98,6 +100,50 @@ class DashboardTest extends TestCase
             ->assertSee('Low-stock products')
             ->assertSee('Pending Purchase Orders')
             ->assertDontSee('User accounts');
+    }
+
+    public function test_dashboard_sales_widget_excludes_pending_paid_invoices(): void
+    {
+        $this->signInAs(User::PRESIDENT);
+        $completed = Invoice::create([
+            'invoice_date' => today(),
+            'channel' => 'In-store',
+            'status' => 'Completed',
+            'total_amount' => 100,
+        ]);
+        Payment::create([
+            'invoice_id' => $completed->invoice_id,
+            'payment_date' => today(),
+            'amount_paid' => 100,
+            'change_amount' => 0,
+            'payment_method' => 'Cash',
+        ]);
+        $pending = Invoice::create([
+            'invoice_date' => today(),
+            'channel' => 'Online',
+            'status' => 'Pending',
+            'total_amount' => 900,
+        ]);
+        Payment::create([
+            'invoice_id' => $pending->invoice_id,
+            'payment_date' => today(),
+            'amount_paid' => 900,
+            'change_amount' => 0,
+            'payment_method' => 'Cash',
+        ]);
+
+        $this->assertSame('Completed', $completed->fresh()->status);
+        $this->assertSame(today()->toDateString(), $completed->fresh()->invoice_date->toDateString());
+        $this->assertSame(1, Invoice::where('status', 'Completed')->count());
+        $this->assertSame(1, Invoice::where('status', 'Completed')
+            ->whereDate('invoice_date', '>=', now()->startOfMonth()->toDateString())
+            ->whereDate('invoice_date', '<=', now()->toDateString())
+            ->count());
+
+        $this->get(route('dashboard'))->assertOk()
+            ->assertSee('100.00')
+            ->assertDontSee('900.00')
+            ->assertSee('Completed sales this month');
     }
 
     public function test_employee_sees_no_modules(): void

@@ -13,7 +13,7 @@ use Illuminate\Validation\ValidationException;
 // Ledger entries for these transitions are added by the Financial Recording module (task R4).
 class OrderManagementService
 {
-    public function __construct(private InventoryService $inventory) {}
+    public function __construct(private InventoryService $inventory, private LedgerService $ledger) {}
 
     public function complete(Invoice $invoice, User $staff): Invoice
     {
@@ -21,6 +21,7 @@ class OrderManagementService
             $invoice = $this->lockPending($invoice, 'completed');
 
             $invoice->update(['status' => 'Completed']);
+            $this->ledger->recordSale($invoice);
             AuditLog::record('Completed', 'invoices', $invoice->invoice_id, $staff->user_id);
 
             return $invoice;

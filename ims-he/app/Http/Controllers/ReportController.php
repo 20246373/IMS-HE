@@ -13,45 +13,66 @@ class ReportController extends Controller
 {
     public function sales(Request $request)
     {
-        $dates = $this->validateSalesDates($request);
+        $filters = $this->validateSalesDates($request);
+        $categoryId = isset($filters['category_id']) ? (int) $filters['category_id'] : null;
 
         return view('reports.sales', [
-            'report' => $this->getSalesReport($dates['start_date'], $dates['end_date']),
-            'startDate' => $dates['start_date'],
-            'endDate' => $dates['end_date'],
+            'report' => $this->getSalesReport($filters['start_date'], $filters['end_date'], $categoryId),
+            'startDate' => $filters['start_date'],
+            'endDate' => $filters['end_date'],
+            'categories' => Category::orderBy('category_name')->get(),
+            'categoryId' => $categoryId,
         ]);
     }
 
     public function downloadSales(Request $request)
     {
-        $dates = $this->validateSalesDates($request);
-        $report = $this->getSalesReport($dates['start_date'], $dates['end_date']);
+        $filters = $this->validateSalesDates($request);
+        $categoryId = isset($filters['category_id']) ? (int) $filters['category_id'] : null;
+        $report = $this->getSalesReport($filters['start_date'], $filters['end_date'], $categoryId);
 
         return Pdf::loadView('reports.pdf.sales', [
             'report' => $report,
-            'startDate' => $dates['start_date'],
-            'endDate' => $dates['end_date'],
-        ])->download("sales-report-{$dates['start_date']}-to-{$dates['end_date']}.pdf");
+            'startDate' => $filters['start_date'],
+            'endDate' => $filters['end_date'],
+            'categoryId' => $categoryId,
+        ])->download("sales-report-{$filters['start_date']}-to-{$filters['end_date']}.pdf");
     }
 
     /**
-     * Completed sales are invoices with a recorded payment.
+     * Completed sales are invoices whose status is Completed.
      *
-     * @return array{totalRevenue: int|float|string, totalTransactions: int, sales: Collection}
+     * @return array{totalRevenue: int|float|string, totalTransactions: int, sales: Collection, categorySales: Collection}
      */
-    public function getSalesReport($startDate, $endDate): array
+    public function getSalesReport($startDate, $endDate, ?int $categoryId = null): array
     {
         $completedSales = DB::table('invoices')
             ->whereBetween('invoice_date', [$startDate, $endDate])
-            ->whereExists(function ($query) {
-                $query->selectRaw('1')
-                    ->from('payments')
-                    ->whereColumn('payments.invoice_id', 'invoices.invoice_id');
+            ->where('status', 'Completed')
+            ->when($categoryId !== null, function ($query) use ($categoryId): void {
+                $query->whereExists(function ($query) use ($categoryId): void {
+                    $query->selectRaw('1')
+                        ->from('invoice_items')
+                        ->join('products', 'products.product_id', '=', 'invoice_items.product_id')
+                        ->whereColumn('invoice_items.invoice_id', 'invoices.invoice_id')
+                        ->where('products.category_id', $categoryId);
+                });
             });
 
-        $summary = (clone $completedSales)
-            ->selectRaw('COALESCE(SUM(total_amount), 0) as total_revenue, COUNT(invoice_id) as total_transactions')
-            ->first();
+        if ($categoryId === null) {
+            $summary = (clone $completedSales)
+                ->selectRaw('COALESCE(SUM(total_amount), 0) as total_revenue, COUNT(invoice_id) as total_transactions')
+                ->first();
+        } else {
+            $summary = DB::table('invoice_items')
+                ->join('invoices', 'invoices.invoice_id', '=', 'invoice_items.invoice_id')
+                ->join('products', 'products.product_id', '=', 'invoice_items.product_id')
+                ->whereBetween('invoices.invoice_date', [$startDate, $endDate])
+                ->where('invoices.status', 'Completed')
+                ->where('products.category_id', $categoryId)
+                ->selectRaw('COALESCE(SUM(invoice_items.subtotal), 0) as total_revenue, COUNT(DISTINCT invoices.invoice_id) as total_transactions')
+                ->first();
+        }
 
         $sales = (clone $completedSales)
             ->leftJoin('customers', 'customers.customer_id', '=', 'invoices.customer_id')
@@ -66,10 +87,28 @@ class ReportController extends Controller
             ->orderByDesc('invoices.invoice_id')
             ->get();
 
+        $categorySales = DB::table('invoice_items')
+            ->join('invoices', 'invoices.invoice_id', '=', 'invoice_items.invoice_id')
+            ->join('products', 'products.product_id', '=', 'invoice_items.product_id')
+            ->join('categories', 'categories.category_id', '=', 'products.category_id')
+            ->whereBetween('invoices.invoice_date', [$startDate, $endDate])
+            ->where('invoices.status', 'Completed')
+            ->when($categoryId !== null, fn ($query) => $query->where('products.category_id', $categoryId))
+            ->select([
+                'categories.category_id',
+                'categories.category_name',
+            ])
+            ->selectRaw('SUM(invoice_items.quantity) as units')
+            ->selectRaw('COALESCE(SUM(invoice_items.subtotal), 0) as revenue')
+            ->groupBy('categories.category_id', 'categories.category_name')
+            ->orderBy('categories.category_name')
+            ->get();
+
         return [
             'totalRevenue' => $summary->total_revenue,
             'totalTransactions' => (int) $summary->total_transactions,
             'sales' => $sales,
+            'categorySales' => $categorySales,
         ];
     }
 
@@ -149,6 +188,7 @@ class ReportController extends Controller
         return $request->validate([
             'start_date' => ['required', 'date_format:Y-m-d'],
             'end_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:start_date'],
+            'category_id' => ['nullable', 'integer', 'exists:categories,category_id'],
         ]);
     }
 

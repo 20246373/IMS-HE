@@ -47,8 +47,9 @@ class DashboardController extends Controller
 
     private function sales(): array
     {
-        $completed = Invoice::whereHas('payment')
-            ->whereBetween('invoice_date', [now()->startOfMonth()->toDateString(), now()->toDateString()]);
+        $completed = Invoice::where('status', 'Completed')
+            ->whereDate('invoice_date', '>=', now()->startOfMonth()->toDateString())
+            ->whereDate('invoice_date', '<=', now()->toDateString());
 
         return [
             'monthRevenue' => (clone $completed)->sum('total_amount'),

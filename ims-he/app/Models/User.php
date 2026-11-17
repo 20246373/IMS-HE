@@ -7,24 +7,35 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 class User extends Authenticatable
 {
     public const ADMINISTRATOR = 'Administrator';
+
     public const PRESIDENT = 'President';
+
     public const TREASURER = 'Treasurer';
+
     public const INVENTORY_CLERK = 'Inventory Clerk';
+
     public const STORE_SUPERVISOR = 'Store Supervisor';
+
     public const EMPLOYEE = 'Employee';
+
     public const PENDING = 'Pending';        // self-registered, waiting for the Administrator to assign a role
 
     public const ROLES = [self::ADMINISTRATOR, self::PRESIDENT, self::TREASURER, self::INVENTORY_CLERK, self::STORE_SUPERVISOR, self::EMPLOYEE];
 
     public const STATUS_ACTIVE = 'Active';
+
     public const STATUS_LOCKED = 'Locked';
+
     public const MAX_LOGIN_ATTEMPTS = 3;
 
     const UPDATED_AT = null;                 // SDD 7.2.1 only has created_at
 
     protected $table = 'users';
+
     protected $primaryKey = 'user_id';
+
     protected $guarded = [];
+
     protected $hidden = ['password'];
 
     protected function casts(): array
@@ -33,10 +44,20 @@ class User extends Authenticatable
     }
 
     // The SDD schema has no remember_token column.
-    public function getRememberTokenName() { return ''; }
+    public function getRememberTokenName()
+    {
+        return '';
+    }
 
-    public function employee() { return $this->belongsTo(Employee::class, 'employee_id', 'employee_id'); }
-    public function auditLogs() { return $this->hasMany(AuditLog::class, 'user_id', 'user_id'); }
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class, 'employee_id', 'employee_id');
+    }
+
+    public function auditLogs()
+    {
+        return $this->hasMany(AuditLog::class, 'user_id', 'user_id');
+    }
 
     /** Roles the Administrator can assign (Administrator and Pending are excluded). */
     public static function roleChoices(): array
@@ -45,11 +66,28 @@ class User extends Authenticatable
     }
 
     /** Name shown in lists and menus: username if there is one, otherwise the email. */
-    public function label(): string { return $this->username ?: (string) $this->email; }
+    public function label(): string
+    {
+        return $this->username ?: (string) $this->email;
+    }
 
-    public function isPending(): bool { return $this->role === self::PENDING; }
+    public function isPending(): bool
+    {
+        return $this->role === self::PENDING;
+    }
 
-    public function hasRole(string ...$roles): bool { return in_array($this->role, $roles, true); }
-    public function isActive(): bool { return $this->status === self::STATUS_ACTIVE; }
-    public function isLocked(): bool { return $this->status === self::STATUS_LOCKED; }
+    public function hasRole(string ...$roles): bool
+    {
+        return in_array($this->role, $roles, true);
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === self::STATUS_ACTIVE;
+    }
+
+    public function isLocked(): bool
+    {
+        return $this->status === self::STATUS_LOCKED;
+    }
 }

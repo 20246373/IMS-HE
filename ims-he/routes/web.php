@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
@@ -7,14 +8,20 @@ use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerAuthController;
+use App\Http\Controllers\CustomerManagementController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryController;
+use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ExportController;
+use App\Http\Controllers\FinancialReportController;
+use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderManagementController;
+use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SaleController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UserController;
@@ -121,6 +128,23 @@ Route::middleware(['auth', "role:$allRoles"])->group(function () {
         Route::patch('online-orders/{invoice}/cancel', [OrderManagementController::class, 'cancel'])->name('online-orders.cancel');
     });
 
+    Route::middleware('role:'.User::STORE_SUPERVISOR.','.User::EMPLOYEE)->group(function () {
+        Route::get('sales', [SaleController::class, 'index'])->name('sales.index');
+        Route::get('sales/create', [SaleController::class, 'create'])->name('sales.create');
+        Route::post('sales', [SaleController::class, 'store'])->name('sales.store');
+        Route::get('sales/{invoice}', [SaleController::class, 'show'])->name('sales.show');
+    });
+    Route::middleware('role:'.User::EMPLOYEE)->group(function () {
+        Route::get('attendance/my', [AttendanceController::class, 'my'])->name('attendance.my');
+        Route::post('attendance/clock-in', [AttendanceController::class, 'clockIn'])->name('attendance.clock-in');
+        Route::post('attendance/clock-out', [AttendanceController::class, 'clockOut'])->name('attendance.clock-out');
+    });
+    Route::middleware('role:'.User::STORE_SUPERVISOR.','.User::TREASURER)->group(function () {
+        Route::get('attendance/day', [AttendanceController::class, 'day'])->name('attendance.day');
+        Route::post('attendance/day', [AttendanceController::class, 'saveDay'])->name('attendance.day.save');
+        Route::get('attendance/period', [AttendanceController::class, 'period'])->name('attendance.period');
+    });
+
     Route::middleware('role:'.User::ADMINISTRATOR)->group(function () {
         Route::resource('users', UserController::class)->only(['index', 'edit', 'update', 'destroy']);
         Route::post('users/{user}/role', [UserController::class, 'assignRole'])->name('users.role');
@@ -146,6 +170,50 @@ Route::middleware(['auth', "role:$allRoles"])->group(function () {
         Route::get('reports/sales', [ReportController::class, 'sales'])->name('reports.sales');
         Route::get('reports/sales/download', [ReportController::class, 'downloadSales'])
             ->name('reports.sales.download');
+    });
+
+    Route::middleware('role:'.User::TREASURER.','.User::PRESIDENT.','.User::STORE_SUPERVISOR)->group(function () {
+        Route::get('ledger', [LedgerController::class, 'index'])->name('ledger.index');
+    });
+    Route::middleware('role:'.User::PRESIDENT.','.User::TREASURER)->group(function () {
+        Route::get('employees', [EmployeeController::class, 'index'])->name('employees.index');
+        Route::get('employees/create', [EmployeeController::class, 'create'])->name('employees.create');
+        Route::post('employees', [EmployeeController::class, 'store'])->name('employees.store');
+        Route::get('employees/{employee}/edit', [EmployeeController::class, 'edit'])->name('employees.edit');
+        Route::put('employees/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
+        Route::post('employees/{employee}/resign', [EmployeeController::class, 'resign'])->name('employees.resign');
+    });
+    Route::middleware('role:'.User::PRESIDENT.','.User::STORE_SUPERVISOR)->group(function () {
+        Route::get('customers', [CustomerManagementController::class, 'index'])->name('customers.index');
+        Route::get('customers/{customer}/edit', [CustomerManagementController::class, 'edit'])->name('customers.edit');
+        Route::put('customers/{customer}', [CustomerManagementController::class, 'update'])->name('customers.update');
+        Route::get('customers/{customer}', [CustomerManagementController::class, 'show'])->name('customers.show');
+    });
+    Route::middleware('role:'.User::PRESIDENT.','.User::TREASURER)->group(function () {
+        Route::get('payrolls', [PayrollController::class, 'index'])->name('payrolls.index');
+    });
+    Route::middleware('role:'.User::TREASURER)->group(function () {
+        Route::get('payrolls/create', [PayrollController::class, 'create'])->name('payrolls.create');
+        Route::post('payrolls', [PayrollController::class, 'store'])->name('payrolls.store');
+    });
+    Route::middleware('role:'.User::PRESIDENT.','.User::TREASURER)->group(function () {
+        Route::get('payrolls/{payroll}', [PayrollController::class, 'show'])->name('payrolls.show');
+        Route::get('payrolls/{payroll}/payslips/{payslip}', [PayrollController::class, 'payslip'])->name('payrolls.payslip');
+        Route::get('payrolls/{payroll}/download', [PayrollController::class, 'download'])->name('payrolls.download');
+    });
+    Route::middleware('role:'.User::TREASURER)->group(function () {
+        Route::patch('payrolls/{payroll}/finalize', [PayrollController::class, 'finalize'])->name('payrolls.finalize');
+        Route::delete('payrolls/{payroll}', [PayrollController::class, 'destroy'])->name('payrolls.destroy');
+    });
+    Route::middleware('role:'.User::TREASURER)->group(function () {
+        Route::get('ledger/create', [LedgerController::class, 'create'])->name('ledger.create');
+        Route::post('ledger', [LedgerController::class, 'store'])->name('ledger.store');
+        Route::post('ledger/{ledger_entry}/reverse', [LedgerController::class, 'reverse'])->name('ledger.reverse');
+    });
+    Route::middleware('role:'.User::TREASURER.','.User::PRESIDENT)->group(function () {
+        Route::get('reports/financial', [FinancialReportController::class, 'index'])->name('reports.financial');
+        Route::get('reports/financial/download', [FinancialReportController::class, 'download'])
+            ->name('reports.financial.download');
     });
 
     Route::middleware('role:'.User::ADMINISTRATOR.','.User::PRESIDENT.','.User::TREASURER.','.User::INVENTORY_CLERK.','.User::STORE_SUPERVISOR)->group(function () {
