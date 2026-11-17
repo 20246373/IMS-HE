@@ -5,8 +5,8 @@
  @else
   <div class="noimg">No image</div>
  @endif
- <small>{{ $product->category->category_name }}</small>
+ <small>{{ $product->category->category_name }}@if($product->brand) &middot; {{ $product->brand }}@endif</small>
  <strong>{{ $product->product_name }}</strong>
- <div>&#8369;{{ number_format($product->unit_price, 2) }}</div>
+ <div>{{ money($product->unit_price) }}</div>
  @include('catalog._stock')
 </a>

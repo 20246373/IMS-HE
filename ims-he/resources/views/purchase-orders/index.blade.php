@@ -1,5 +1,11 @@
 @extends('layouts.app')
 @section('title','Purchase Orders')
+@push('head')
+<style>
+ .badge{display:inline-block;margin-left:.35rem;padding:.12rem .5rem;border-radius:999px;background:#eef0f3;color:#333;font-size:.72rem;font-weight:700;line-height:1.2;vertical-align:middle}
+ .badge.amber{background:#fff5d8;color:#785b00}
+</style>
+@endpush
 @section('content')
 <div class="card">
  <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem">
@@ -13,8 +19,11 @@
    <td>#{{ $purchaseOrder->po_id }}</td>
    <td>{{ $purchaseOrder->supplier->supplier_name }}</td>
    <td>{{ $purchaseOrder->order_date->format('M d, Y') }}</td>
-   <td>{{ $purchaseOrder->status }}</td>
-   <td>&#8369;{{ number_format($purchaseOrder->items->sum('subtotal'), 2) }}</td>
+   <td>
+    {{ $purchaseOrder->status }}
+    @if($purchaseOrder->is_auto)<span class="badge amber">Auto</span>@endif
+   </td>
+   <td>{{ money($purchaseOrder->items->sum('subtotal')) }}</td>
    <td><a class="btn" href="{{ route('purchase-orders.show', $purchaseOrder) }}">View</a></td>
   </tr>
   @empty

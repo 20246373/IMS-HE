@@ -76,7 +76,14 @@ class InventoryService
                 'reference_id' => $referenceId,
             ]);
 
-            return $product->refresh();
+            $product->refresh();
+
+            if ($type === 'OUT') {
+                // Resolved lazily because ProcurementService itself uses this service.
+                app(ProcurementService::class)->createAutoPurchaseOrder($product);
+            }
+
+            return $product;
         });
     }
 }

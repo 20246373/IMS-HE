@@ -4,8 +4,25 @@
 <div class="card">
  <div class="report-heading">
   <h2>Inventory / stock summary</h2>
-  <a class="btn no-print" href="{{ route('reports.inventory.download') }}">Save as PDF</a>
+  <a class="btn no-print"
+     href="{{ route('reports.inventory.download', array_filter(['category_id' => $categoryId])) }}">
+   Save as PDF
+  </a>
  </div>
+ <form method="GET" action="{{ route('reports.inventory') }}" class="no-print report-filter">
+  <label>Category
+   <select name="category_id">
+    <option value="">All categories</option>
+    @foreach($categories as $category)
+     <option value="{{ $category->category_id }}"
+       @selected((int) $categoryId === (int) $category->category_id)>
+      {{ $category->category_name }}
+     </option>
+    @endforeach
+   </select>
+  </label>
+  <button type="submit">Apply filter</button>
+ </form>
  <div class="report-summary">
   <div><strong>Total stock valuation</strong><span>&#8369;{{ number_format((float) $report['totalValuation'], 2) }}</span></div>
   <div><strong>Low-stock alerts</strong><span>{{ number_format($report['lowStockCount']) }}</span></div>

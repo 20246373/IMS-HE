@@ -6,9 +6,14 @@
  <form method="POST" action="{{ $supplier->exists ? route('suppliers.update', $supplier) : route('suppliers.store') }}">
   @csrf
   @if($supplier->exists) @method('PUT') @endif
-  <label>Supplier name
-   <input name="supplier_name" value="{{ old('supplier_name', $supplier->supplier_name) }}" maxlength="100" required>
-  </label>
+  @if($supplier->exists)
+   <label>Supplier name</label>
+   <input value="{{ $supplier->supplier_name }}" readonly>
+  @else
+   <label>Supplier name
+    <input name="supplier_name" value="{{ old('supplier_name') }}" maxlength="100" required>
+   </label>
+  @endif
   <label>Contact number
    <input name="contact_number" value="{{ old('contact_number', $supplier->contact_number) }}" maxlength="14" required>
   </label>

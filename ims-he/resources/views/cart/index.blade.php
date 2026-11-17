@@ -3,6 +3,11 @@
 @section('content')
 <div class="card">
  <h2>My cart</h2>
+ @if($warnings)
+  <x-alert type="warning" title="Your cart was updated">
+   <ul>@foreach($warnings as $w)<li>{{ $w }}</li>@endforeach</ul>
+  </x-alert>
+ @endif
  @if($items->isEmpty())
   <p>Your cart is empty.</p>
   <a class="btn" href="{{ route('catalog.index') }}">Browse products</a>
@@ -14,19 +19,16 @@
     <tr data-price="{{ $p->unit_price }}">
      <td>
       <a href="{{ route('catalog.show', $p) }}">{{ $p->product_name }}</a>
-      {{-- Stock or availability may have changed since the item was added --}}
-      @if(! $p->is_active)<div class="low">No longer available</div>
-      @elseif($item->quantity > $p->stock_quantity)<div class="low">Only {{ $p->stock_quantity }} in stock</div>@endif
       <div class="low line-error" hidden></div>
      </td>
-     <td>&#8369;{{ number_format($p->unit_price, 2) }}</td>
+     <td>{{ money($p->unit_price) }}</td>
      <td>
       {{-- Saves automatically on - / + or typing (script below); Enter also submits. --}}
       <form method="POST" action="{{ route('customer.cart.update', $item) }}" class="qty cart-qty" data-saved="{{ $item->quantity }}">@csrf @method('PATCH')
        @include('partials.qty', ['value' => $item->quantity, 'max' => max(1, $p->stock_quantity)])
       </form>
      </td>
-     <td class="line-subtotal">&#8369;{{ number_format($item->quantity * $p->unit_price, 2) }}</td>
+     <td class="line-subtotal">{{ money($item->quantity * $p->unit_price) }}</td>
      <td>
       <form method="POST" action="{{ route('customer.cart.remove', $item) }}" class="inline">@csrf @method('DELETE')
        <button class="danger">Remove</button>
@@ -34,7 +36,7 @@
      </td>
     </tr>
    @endforeach
-   <tr class="cart-total-row"><th colspan="3">Total</th><th id="cart-total">&#8369;{{ number_format($total, 2) }}</th><th></th></tr>
+   <tr class="cart-total-row"><th colspan="3">Total</th><th id="cart-total">{{ money($total) }}</th><th></th></tr>
   </table>
   <p>
    <a class="btn" href="{{ route('customer.checkout.show') }}">Checkout</a>

@@ -3,49 +3,66 @@
 @section('content')
 <div class="card">
  <h2>Checkout</h2>
+ @if($warnings)
+  <x-alert type="warning" title="Your cart was updated">
+   <ul>@foreach($warnings as $w)<li>{{ $w }}</li>@endforeach</ul>
+  </x-alert>
+ @endif
 
  <h3>Your order</h3>
- <table>
+ <table class="cart-table">
   <tr><th>Product</th><th>Price</th><th>Qty</th><th>Subtotal</th></tr>
   @foreach($items as $item)
    @php($p = $item->product)
    <tr>
-    <td>
-     {{ $p->product_name }}
-     @if(! $p->is_active)<div class="low">No longer available</div>
-     @elseif($item->quantity > $p->stock_quantity)<div class="low">Only {{ $p->stock_quantity }} in stock</div>@endif
-    </td>
-    <td>&#8369;{{ number_format($p->unit_price, 2) }}</td>
+    <td>{{ $p->product_name }}</td>
+    <td>{{ money($p->unit_price) }}</td>
     <td>{{ $item->quantity }}</td>
-    <td>&#8369;{{ number_format($item->quantity * $p->unit_price, 2) }}</td>
+    <td>{{ money($item->quantity * $p->unit_price) }}</td>
    </tr>
   @endforeach
-  <tr><th colspan="3">Total</th><th>&#8369;{{ number_format($total, 2) }}</th></tr>
+  <tr class="cart-total-row"><th colspan="3">Total</th><th>{{ money($total) }}</th></tr>
  </table>
- <p><a href="{{ route('customer.cart.index') }}">&larr; Change items in my cart</a></p>
+ <p><a href="{{ route('customer.cart.index') }}">Change items in my cart</a></p>
 </div>
 
 <form method="POST" action="{{ route('customer.checkout.store') }}">@csrf
- <div class="card" style="max-width:560px">
+ <div class="card" style="max-width:640px">
   <h3>Delivery details</h3>
-  <p><small>Saved to your profile for next time.</small></p>
-  <label>First name <input name="first_name" value="{{ old('first_name', $customer->first_name) }}" maxlength="50" required></label>
-  <label>Last name <input name="last_name" value="{{ old('last_name', $customer->last_name) }}" maxlength="50" required></label>
-  <label>Contact number <input name="contact_number" value="{{ old('contact_number', $customer->contact_number) }}" maxlength="14" inputmode="numeric" pattern="[0-9]{7,14}" title="Digits only, 7 to 14 numbers" required></label>
-  <label>Address <input name="address" value="{{ old('address', $customer->address) }}" maxlength="100" required></label>
+  @if($missing)
+   {{-- Registration only asks for email and password, so the rest is collected here once and saved. --}}
+   <x-required-note />
+   <p><small>We'll save these to your account for next time.</small></p>
+   <div class="form-grid">
+    @if(in_array('first_name', $missing))<x-field label="First name" name="first_name" maxlength="50" autocomplete="given-name" />@endif
+    @if(in_array('last_name', $missing))<x-field label="Last name" name="last_name" maxlength="50" autocomplete="family-name" />@endif
+    @if(in_array('contact_number', $missing))<x-field label="Contact number" name="contact_number" maxlength="14" inputmode="numeric" pattern="[0-9]{7,14}" title="Digits only, 7 to 14 numbers" autocomplete="tel" />@endif
+    @if(in_array('address', $missing))<x-field label="Delivery address" name="address" maxlength="100" autocomplete="street-address" />@endif
+   </div>
+  @endif
+  @if(count($missing) < 4)
+   <p>
+    <strong>Delivering to</strong><br>
+    @if(! in_array('first_name', $missing) || ! in_array('last_name', $missing)){{ trim($customer->first_name.' '.$customer->last_name) }}<br>@endif
+    @unless(in_array('contact_number', $missing)){{ $customer->contact_number }}<br>@endunless
+    @unless(in_array('address', $missing)){{ $customer->address }}<br>@endunless
+    <small><a href="{{ route('customer.account') }}">Change in My account</a></small>
+   </p>
+  @endif
  </div>
 
- <div class="card" style="max-width:560px">
-  <h3>Payment method</h3>
+ <div class="card" style="max-width:640px">
+  <h3 class="required">Payment method</h3>
   @foreach($methods as $m)
    <label style="font-weight:400">
     <input type="radio" name="payment_method" value="{{ $m }}" style="display:inline;width:auto" @checked(old('payment_method', $methods[0]) === $m) required>
     {{ $m === 'Cash' ? 'Cash (pay when you pick up or receive your order)' : 'GCash (we will message you the payment details)' }}
    </label>
   @endforeach
+  @error('payment_method')<div class="field-error">{{ $message }}</div>@enderror
   <p><small>Payment is arranged with the store after you place the order.</small></p>
   <p>
-   <button>Place order &mdash; &#8369;{{ number_format($total, 2) }}</button>
+   <button>Place order &mdash; {{ money($total) }}</button>
    <a class="btn danger" href="{{ route('customer.cart.index') }}">Cancel</a>
   </p>
  </div>

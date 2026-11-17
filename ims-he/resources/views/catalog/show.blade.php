@@ -11,7 +11,8 @@
  <div>
   <small><a href="{{ route('catalog.index', ['category' => $product->category_id]) }}">{{ $product->category->category_name }}</a></small>
   <h2>{{ $product->product_name }}</h2>
-  <p class="price">&#8369;{{ number_format($product->unit_price, 2) }}</p>
+  @if($product->brand)<p class="brand">Brand: <a href="{{ route('catalog.index', ['brand' => $product->brand]) }}">{{ $product->brand }}</a></p>@endif
+  <p class="price">{{ money($product->unit_price) }}</p>
   <p>@include('catalog._stock')</p>
   @if($product->description)<p>{{ $product->description }}</p>@endif
   {{-- Guests can submit this too; auth:customer sends them to login/register (UC19 includes UC01). --}}

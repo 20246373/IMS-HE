@@ -54,6 +54,9 @@
  .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem 1rem}
  .field{min-width:0}.field label{margin:0 0 .25rem}.field input,.field select,.field textarea{box-sizing:border-box;width:100%;height:2.35rem;margin:0}
  .field textarea{height:auto;min-height:5rem}.required:after{content:" *";color:#b42318}.optional{color:#555}.optional:after{content:" (optional)";color:#777;font-weight:400}
+ .input-with-prefix{display:flex;align-items:center;box-sizing:border-box;border:1px solid #767676;border-radius:3px;background:#fff}
+ .input-with-prefix > span{padding:0 .45rem;color:#555;font-size:.9rem}
+ .input-with-prefix input{box-sizing:border-box;width:100%;min-width:0;height:2.35rem;margin:0;border:0;background:transparent}
  input[readonly],textarea[readonly]{background:#eef0f3;color:#666}.field-error{margin-top:.25rem;color:#b42318;font-size:.82rem}
  .required-note{margin:.2rem 0 1rem;color:#555;font-size:.88rem}.required-note span{font-weight:600}
  .alert{display:flex;align-items:flex-start;gap:.7rem;padding:.75rem 1rem;margin-bottom:1rem;border:1px solid;border-radius:7px}.alert-success{background:#e8f7ed;border-color:#98d5aa;color:#176b35}.alert-error{background:#fcedeb;border-color:#e7a39c;color:#8a1f17}.alert-warning{background:#fff5d8;border-color:#e8c66d;color:#785b00}.alert-icon svg{display:block;width:1.2rem;height:1.2rem}.alert-body{flex:1}.alert-body strong{display:block;margin-bottom:.15rem}.alert-body ul{margin:.25rem 0 0;padding-left:1.2rem}.alert-dismiss{padding:0;background:transparent;color:currentColor;font-size:1.2rem;line-height:1;border:0}
@@ -88,7 +91,18 @@
  .noimg{background:#eef0f3;color:#888;display:flex;align-items:center;justify-content:center;font-size:.85rem}
  .product small,.detail small{color:#666}
  .stock{font-size:.8rem;font-weight:600;padding:.1rem .5rem;border-radius:999px;align-self:flex-start}
- .stock.in{background:#e6f4ea;color:#1e6b34} .stock.out{background:#fdecea;color:#8a1f17}
+ .stock.in{background:#e6f4ea;color:#1e6b34} .stock.out{background:#fdecea;color:#8a1f17} .stock.low{background:#fff5d8;color:#785b00}
+ .brand{margin:.2rem 0;color:#555}
+ /* Storefront on phones: two product columns, filters stacked full width, wide tables scroll sideways */
+ @media (max-width:520px){
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
+  .product img,.product .noimg{height:110px}
+  .search > *{flex:1 1 100%} .search input{min-width:0}
+  .cart-table{display:block;overflow-x:auto}
+ }
+ /* Order status badges (orders/_status) */
+ .status{display:inline-block;font-size:.8rem;font-weight:600;padding:.1rem .55rem;border-radius:999px;background:#eef0f3;color:#333}
+ .status-pending{background:#fff5d8;color:#785b00} .status-completed{background:#e6f4ea;color:#1e6b34} .status-cancelled{background:#fdecea;color:#8a1f17}
  .detail{display:grid;grid-template-columns:minmax(0,320px) 1fr;gap:1.2rem} .detail img,.detail .noimg{width:100%;height:280px;object-fit:cover;border-radius:5px}
  .detail h2{margin:.2rem 0} .price{font-size:1.3rem;font-weight:600;margin:.3rem 0}
  @media (max-width:600px){.detail{grid-template-columns:1fr}}
@@ -139,6 +153,9 @@
             $canViewInventoryReports =
                 $isPresident || $isInventoryClerk || $isSupervisor;
 
+            $canViewProcurementReports =
+                $isPresident || $isInventoryClerk;
+
             $canExport =
                 $isAdministrator || $isPresident || $isTreasurer || $isInventoryClerk || $isSupervisor;
         @endphp
@@ -152,6 +169,14 @@
             Dashboard
         </a>
         @endunless
+
+        {{-- ONLINE ORDERS (task J4) --}}
+        @if($user->hasRole(\App\Models\User::PRESIDENT, \App\Models\User::STORE_SUPERVISOR, \App\Models\User::EMPLOYEE))
+            <a class="{{ request()->routeIs('online-orders.*') ? 'nav-link-active' : '' }}"
+               href="{{ route('online-orders.index') }}">
+                Online Orders
+            </a>
+        @endif
 
         {{-- INVENTORY --}}
         @if($canManageInventory)
@@ -239,7 +264,7 @@
         @endif
 
         {{-- REPORTS --}}
-        @if($canViewSalesReports || $canViewInventoryReports)
+        @if($canViewSalesReports || $canViewInventoryReports || $canViewProcurementReports)
             <details class="nav-dropdown"
                 {{ request()->routeIs('reports.*') ? 'open' : '' }}>
                 <summary>Reports</summary>
@@ -255,6 +280,13 @@
                         <a class="{{ request()->routeIs('reports.inventory*') ? 'nav-link-active' : '' }}"
                            href="{{ route('reports.inventory') }}">
                             Inventory Report
+                        </a>
+                    @endif
+
+                    @if($canViewProcurementReports)
+                        <a class="{{ request()->routeIs('reports.procurement*') ? 'nav-link-active' : '' }}"
+                           href="{{ route('reports.procurement') }}">
+                            Procurement Report
                         </a>
                     @endif
 

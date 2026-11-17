@@ -74,16 +74,16 @@ class CartTest extends TestCase
         $this->assertSame(3, (int) CartItem::first()->quantity);
     }
 
-    public function test_out_of_stock_and_inactive_products_cannot_be_added(): void
+    public function test_out_of_stock_products_cannot_be_added_but_inactive_ones_can(): void
     {
         $customer = $this->customer();
 
         $this->actingAs($customer, 'customer')->post(route('customer.cart.add', $this->product('Empty', stock: 0)), ['quantity' => 1])
             ->assertSessionHasErrors('quantity');
-        $this->actingAs($customer, 'customer')->post(route('customer.cart.add', $this->product('Hidden', active: false)), ['quantity' => 1])
-            ->assertSessionHasErrors('quantity');
+        $this->actingAs($customer, 'customer')->post(route('customer.cart.add', $this->product('Inactive', active: false)), ['quantity' => 1])
+            ->assertRedirect(route('customer.cart.index'));
 
-        $this->assertDatabaseCount('cart_items', 0);
+        $this->assertDatabaseCount('cart_items', 1);
     }
 
     public function test_update_and_remove_items_and_totals_are_recalculated(): void
@@ -140,5 +140,57 @@ class CartTest extends TestCase
         $this->actingAs($other, 'customer')->patch(route('customer.cart.update', $line), ['quantity' => 2])->assertNotFound();
         $this->actingAs($other, 'customer')->delete(route('customer.cart.remove', $line))->assertNotFound();
         $this->assertSame(1, (int) $line->fresh()->quantity);
+    }
+
+    public function test_quantity_above_current_stock_is_clamped_with_a_warning(): void
+    {
+        $customer = $this->customer();
+        $product = $this->product(stock: 10);
+        $this->actingAs($customer, 'customer')->post(route('customer.cart.add', $product), ['quantity' => 6]);
+
+        $product->update(['stock_quantity' => 4]);          // someone else bought some meanwhile
+
+        $this->actingAs($customer, 'customer')->get('/cart')->assertOk()
+            ->assertSee('Your cart was updated')
+            ->assertSee('Only 4 of Claw Hammer left, so your quantity was changed to 4.')
+            ->assertSee('₱1,400.00');                       // 4 x 350, recalculated
+        $this->assertSame(4, (int) CartItem::first()->quantity);
+    }
+
+    public function test_sold_out_product_is_removed_from_the_cart_with_a_warning(): void
+    {
+        $customer = $this->customer();
+        $product = $this->product();
+        $this->actingAs($customer, 'customer')->post(route('customer.cart.add', $product), ['quantity' => 2]);
+
+        $product->update(['stock_quantity' => 0]);
+
+        $this->actingAs($customer, 'customer')->get('/cart')->assertOk()
+            ->assertSee('Claw Hammer is out of stock and was removed from your cart.')
+            ->assertSee('Your cart is empty.');
+        $this->assertDatabaseCount('cart_items', 0);
+    }
+
+    public function test_price_change_since_adding_is_flagged_once(): void
+    {
+        $customer = $this->customer();
+        $product = $this->product(price: 350);
+        $this->actingAs($customer, 'customer')->post(route('customer.cart.add', $product), ['quantity' => 1]);
+        $this->actingAs($customer, 'customer')->get('/cart')->assertDontSee('changed from');
+
+        $product->update(['unit_price' => 399.5]);
+
+        $this->actingAs($customer, 'customer')->get('/cart')
+            ->assertSee('The price of Claw Hammer changed from ₱350.00 to ₱399.50.')
+            ->assertSee('₱399.50');
+        $this->actingAs($customer, 'customer')->get('/cart')->assertDontSee('changed from');   // only reported once
+    }
+
+    public function test_cart_shows_money_format(): void
+    {
+        $customer = $this->customer();
+        $this->actingAs($customer, 'customer')->post(route('customer.cart.add', $this->product(price: 1234.5)), ['quantity' => 2]);
+
+        $this->actingAs($customer, 'customer')->get('/cart')->assertSee('₱1,234.50')->assertSee('₱2,469.00');
     }
 }

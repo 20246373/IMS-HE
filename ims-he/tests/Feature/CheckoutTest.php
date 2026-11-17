@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Services\CartService;
 use App\Services\InventoryService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -23,6 +24,9 @@ class CheckoutTest extends TestCase
     {
         parent::setUp();
         $this->cat = Category::create(['category_name' => 'Hand Tools']);
+
+        // These tests place many orders quickly; the checkout/login rate limits are not what is being tested here.
+        $this->withoutMiddleware(ThrottleRequests::class);
     }
 
     private function customer(string $email = 'juan@example.com'): Customer
@@ -125,13 +129,17 @@ class CheckoutTest extends TestCase
         $this->assertSame('Baguio City', $customer->address);
     }
 
-    public function test_the_customer_lands_on_the_receipt(): void
+    public function test_the_customer_lands_on_the_order_confirmation(): void
     {
         $customer = $this->customer();
-        $this->inCart($customer, $this->product(), 1);
+        $this->inCart($customer, $this->product('Claw Hammer', 10, 1234.5), 1);
 
         $this->actingAs($customer, 'customer')->post(route('customer.checkout.store'), $this->details())
-            ->assertRedirect(route('customer.orders.show', Invoice::firstOrFail()));
+            ->assertRedirect(route('customer.orders.confirmation', $invoice = Invoice::firstOrFail()));
+
+        $this->actingAs($customer, 'customer')->get(route('customer.orders.confirmation', $invoice))
+            ->assertOk()->assertSee('Order placed')->assertSee('#'.$invoice->invoice_id)
+            ->assertSee('₱1,234.50')->assertSee('Pending')->assertSee(route('customer.orders.show', $invoice));
     }
 
     public function test_missing_details_or_a_bad_payment_method_save_nothing(): void
@@ -155,24 +163,30 @@ class CheckoutTest extends TestCase
         $this->inCart($customer, $product, 3);
         $product->update(['stock_quantity' => 1]);                 // someone else bought it meanwhile
 
-        $this->actingAs($customer, 'customer')->get(route('customer.checkout.show'))->assertSee('Only 1 in stock');
+        // Opening checkout clamps the line to what is left and says so.
+        $this->actingAs($customer, 'customer')->get(route('customer.checkout.show'))
+            ->assertSee('Only 1 of Claw Hammer left, so your quantity was changed to 1.');
+        $this->assertSame(1, (int) $customer->cart->items()->first()->quantity);
 
+        // Stock runs out after the page loaded: the order is refused and nothing is saved.
+        $product->update(['stock_quantity' => 0]);
         $this->actingAs($customer, 'customer')->post(route('customer.checkout.store'), $this->details())->assertSessionHasErrors('cart');
 
         $this->assertDatabaseCount('invoices', 0);
-        $this->assertSame(1, (int) $product->fresh()->stock_quantity);
+        $this->assertSame(0, (int) $product->fresh()->stock_quantity);
         $this->assertSame(1, $customer->cart->items()->count());
     }
 
-    public function test_a_product_that_was_hidden_blocks_the_order(): void
+    public function test_a_product_marked_inactive_can_still_be_ordered(): void
     {
         $customer = $this->customer();
         $product = $this->product();
         $this->inCart($customer, $product, 1);
         $product->update(['is_active' => false]);
 
-        $this->actingAs($customer, 'customer')->post(route('customer.checkout.store'), $this->details())->assertSessionHasErrors('cart');
-        $this->assertDatabaseCount('invoices', 0);
+        $this->actingAs($customer, 'customer')->post(route('customer.checkout.store'), $this->details())
+            ->assertRedirect(route('customer.orders.confirmation', Invoice::firstOrFail()));
+        $this->assertDatabaseCount('invoices', 1);
     }
 
     public function test_a_failure_while_deducting_stock_rolls_everything_back(): void
@@ -250,5 +264,129 @@ class CheckoutTest extends TestCase
 
         $this->actingAs($me, 'customer')->get(route('customer.orders.index'))
             ->assertOk()->assertSee('111.00')->assertDontSee('222.00');
+    }
+
+    // J2: the details removed from registration are asked for at checkout, and only when missing.
+    public function test_new_customer_is_asked_for_all_details_marked_required(): void
+    {
+        $customer = $this->customer();                       // registered with email + password only
+        $this->inCart($customer, $this->product(), 1);
+
+        $this->actingAs($customer, 'customer')->get(route('customer.checkout.show'))->assertOk()
+            ->assertSee('All fields are required')
+            ->assertSee('name="first_name"', false)->assertSee('name="last_name"', false)
+            ->assertSee('name="contact_number"', false)->assertSee('name="address"', false);
+    }
+
+    public function test_customer_with_a_complete_profile_is_not_asked_again(): void
+    {
+        $customer = $this->customer();
+        $customer->update(['first_name' => 'Maria', 'last_name' => 'Santos', 'contact_number' => '09170000000', 'address' => 'La Trinidad']);
+        $this->inCart($customer, $this->product(), 1);
+
+        $this->actingAs($customer, 'customer')->get(route('customer.checkout.show'))->assertOk()
+            ->assertSee('Delivering to')->assertSee('Maria Santos')->assertSee('La Trinidad')
+            ->assertDontSee('name="first_name"', false)->assertDontSee('name="address"', false);
+
+        // Only the payment method is sent; the saved details are used and left unchanged.
+        $this->actingAs($customer, 'customer')->post(route('customer.checkout.store'), ['payment_method' => 'Cash'])
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseCount('invoices', 1);
+        $this->assertSame('La Trinidad', $customer->fresh()->address);
+    }
+
+    public function test_only_the_missing_details_are_required_and_saved(): void
+    {
+        $customer = $this->customer();
+        $customer->update(['first_name' => 'Maria', 'last_name' => 'Santos']);     // contact + address still missing
+        $this->inCart($customer, $this->product(), 1);
+
+        $this->actingAs($customer, 'customer')->get(route('customer.checkout.show'))
+            ->assertDontSee('name="first_name"', false)->assertSee('name="contact_number"', false)->assertSee('name="address"', false);
+
+        $this->actingAs($customer, 'customer')->post(route('customer.checkout.store'), ['payment_method' => 'Cash'])
+            ->assertSessionHasErrors(['contact_number', 'address'])->assertSessionDoesntHaveErrors('first_name');
+        $this->assertDatabaseCount('invoices', 0);
+
+        // A name sent for a field that is already saved is ignored.
+        $this->actingAs($customer, 'customer')->post(route('customer.checkout.store'), [
+            'first_name' => 'Hacked', 'contact_number' => '09171112222', 'address' => 'Baguio City', 'payment_method' => 'GCash',
+        ])->assertSessionHasNoErrors();
+
+        $customer->refresh();
+        $this->assertSame('Maria', $customer->first_name);
+        $this->assertSame('09171112222', $customer->contact_number);
+        $this->assertSame('Baguio City', $customer->address);
+    }
+
+    public function test_guest_is_returned_to_checkout_after_logging_in(): void
+    {
+        $customer = $this->customer();
+        $this->inCart($customer, $this->product(), 1);
+
+        $this->get(route('customer.checkout.show'))->assertRedirect(route('login'));
+        $this->post(route('login'), ['login' => 'juan@example.com', 'password' => 'secret123'])
+            ->assertRedirect(route('customer.checkout.show'));
+    }
+
+    public function test_customer_never_sees_the_staff_low_stock_warning(): void
+    {
+        $customer = $this->customer();
+        $product = Product::create([
+            'category_id' => $this->cat->category_id, 'product_name' => 'Cordless Drill', 'unit_price' => 3200,
+            'stock_quantity' => 3, 'reorder_level' => 3,                 // checkout drops it to the reorder level
+        ]);
+        $this->inCart($customer, $product, 1);
+
+        $this->actingAs($customer, 'customer')->post(route('customer.checkout.store'), $this->details())
+            ->assertSessionMissing('warning');
+        $this->actingAs($customer, 'customer')->get(route('customer.orders.confirmation', Invoice::firstOrFail()))
+            ->assertDontSee('Assign a supplier');
+    }
+
+    public function test_checkout_shows_money_format(): void
+    {
+        $customer = $this->customer();
+        $this->inCart($customer, $this->product('Claw Hammer', 10, 1234.5), 2);
+
+        $this->actingAs($customer, 'customer')->get(route('customer.checkout.show'))
+            ->assertSee('₱1,234.50')->assertSee('₱2,469.00');
+    }
+
+    // J3: confirmation, history and receipt.
+    public function test_only_the_owner_can_open_the_confirmation(): void
+    {
+        $owner = $this->customer('owner@example.com');
+        $other = $this->customer('other@example.com');
+        $invoice = Invoice::create(['invoice_date' => today(), 'customer_id' => $owner->customer_id, 'channel' => 'Online', 'status' => 'Pending', 'total_amount' => 10]);
+
+        $this->get(route('customer.orders.confirmation', $invoice))->assertRedirect(route('login'));   // guest first: actingAs() stays logged in
+        $this->actingAs($other, 'customer')->get(route('customer.orders.confirmation', $invoice))->assertNotFound();
+        $this->actingAs($owner, 'customer')->get(route('customer.orders.confirmation', $invoice))->assertOk();
+    }
+
+    public function test_order_history_shows_status_and_can_filter_by_it(): void
+    {
+        $me = $this->customer('me@example.com');
+        Invoice::create(['invoice_date' => today(), 'customer_id' => $me->customer_id, 'channel' => 'Online', 'status' => 'Pending', 'total_amount' => 1500]);
+        Invoice::create(['invoice_date' => today(), 'customer_id' => $me->customer_id, 'channel' => 'Online', 'status' => 'Completed', 'total_amount' => 2750.5]);
+
+        $this->actingAs($me, 'customer')->get(route('customer.orders.index'))->assertOk()
+            ->assertSee('₱1,500.00')->assertSee('₱2,750.50')
+            ->assertSee('status-pending', false)->assertSee('status-completed', false);
+
+        $this->actingAs($me, 'customer')->get(route('customer.orders.index', ['status' => 'Completed']))
+            ->assertSee('₱2,750.50')->assertDontSee('₱1,500.00');
+    }
+
+    public function test_receipt_is_printable_and_uses_money_format(): void
+    {
+        $customer = $this->customer();
+        $this->inCart($customer, $this->product('Claw Hammer', 10, 1234.5), 2);
+        $this->actingAs($customer, 'customer')->post(route('customer.checkout.store'), $this->details());
+
+        $this->actingAs($customer, 'customer')->get(route('customer.orders.show', Invoice::firstOrFail()))
+            ->assertOk()->assertSee('₱1,234.50')->assertSee('₱2,469.00')
+            ->assertSee('window.print()', false)->assertSee('Pending');
     }
 }

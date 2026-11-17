@@ -44,7 +44,7 @@ class InventoryManagementTest extends TestCase
         ]);
     }
 
-    public function test_categories_can_be_created_edited_and_soft_deleted(): void
+    public function test_categories_can_be_created_and_edited(): void
     {
         $this->actingAs($this->staff)
             ->post(route('categories.store'), ['category_name' => 'Fasteners'])
@@ -54,22 +54,19 @@ class InventoryManagementTest extends TestCase
 
         $this->put(route('categories.update', $category), ['category_name' => 'Bolts'])
             ->assertRedirect(route('categories.index'));
-        $this->patch(route('categories.toggle', $category))
-            ->assertRedirect(route('categories.index'));
 
         $this->assertDatabaseHas('categories', [
             'category_id' => $category->category_id,
             'category_name' => 'Bolts',
-            'is_active' => false,
         ]);
-        $this->assertDatabaseHas('categories', ['category_id' => $category->category_id]);
     }
 
-    public function test_products_can_be_created_edited_and_soft_deleted(): void
+    public function test_products_can_be_created_and_edited(): void
     {
         $this->actingAs($this->staff)
             ->post(route('products.store'), [
                 'product_name' => 'Claw Hammer',
+                'brand' => 'Stanley',
                 'category_id' => $this->category->category_id,
                 'unit_price' => 250,
                 'stock_quantity' => 6,
@@ -89,25 +86,22 @@ class InventoryManagementTest extends TestCase
 
         $this->put(route('products.update', $product), [
             'product_name' => 'Claw Hammer 16oz',
+            'brand' => 'Stanley',
             'category_id' => $this->category->category_id,
             'unit_price' => 275,
             'stock_quantity' => 4,
             'reorder_level' => 2,
         ])->assertRedirect(route('products.index'));
 
-        $this->patch(route('products.toggle', $product->fresh()))->assertRedirect();
         $this->assertDatabaseHas('products', [
             'product_id' => $product->product_id,
             'product_name' => 'Claw Hammer 16oz',
-            'stock_quantity' => 4,
-            'is_active' => false,
+            'stock_quantity' => 6,
         ]);
-        $this->assertDatabaseHas('inventory_transactions', [
+        $this->assertDatabaseMissing('inventory_transactions', [
             'product_id' => $product->product_id,
             'transaction_type' => 'OUT',
-            'quantity' => 2,
             'reference_type' => 'Adjustment',
-            'reference_id' => $product->product_id,
         ]);
     }
 
@@ -151,5 +145,50 @@ class InventoryManagementTest extends TestCase
             ->assertOk()
             ->assertSee('Low-stock products')
             ->assertSee('(1)');
+    }
+
+    public function test_product_stock_history_lists_movements_and_paginates(): void
+    {
+        $product = $this->product('History item', stock: 19, reorder: 2);
+
+        for ($i = 1; $i <= 20; $i++) {
+            InventoryTransaction::create([
+                'product_id' => $product->product_id,
+                'transaction_type' => 'IN',
+                'quantity' => 1,
+                'transaction_date' => today(),
+                'reference_type' => 'R-'.str_pad((string) $i, 3, '0', STR_PAD_LEFT),
+                'reference_id' => $i,
+            ]);
+        }
+
+        InventoryTransaction::create([
+            'product_id' => $product->product_id,
+            'transaction_type' => 'OUT',
+            'quantity' => 1,
+            'transaction_date' => today(),
+            'reference_type' => 'R-021',
+            'reference_id' => 21,
+        ]);
+
+        $this->actingAs($this->staff)
+            ->get(route('products.index'))
+            ->assertOk()
+            ->assertSee(route('products.stock-history', $product), false);
+
+        $this->get(route('products.stock-history', $product))
+            ->assertOk()
+            ->assertSee('Stock history: History item')
+            ->assertSee('Resulting stock')
+            ->assertSee('IN')
+            ->assertSee('OUT')
+            ->assertSee('R-021')
+            ->assertSee('R-002')
+            ->assertDontSee('R-001')
+            ->assertSee('page=2', false);
+
+        $this->get(route('products.stock-history', ['product' => $product, 'page' => 2]))
+            ->assertOk()
+            ->assertSee('R-001');
     }
 }

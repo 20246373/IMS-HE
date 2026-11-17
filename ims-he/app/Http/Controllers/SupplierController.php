@@ -45,8 +45,9 @@ class SupplierController extends Controller
 
     public function update(Request $request, Supplier $supplier): RedirectResponse
     {
+        // The supplier name is the stable identifier shown in purchase orders and is read-only.
+        // Only validated fields are returned, so a tampered supplier_name is ignored.
         $supplier->update($request->validate([
-            'supplier_name' => ['required', 'max:100', 'unique:suppliers,supplier_name,'.$supplier->supplier_id.',supplier_id'],
             'contact_number' => ['required', 'max:14'],
             'address' => ['required', 'max:100'],
         ], self::MESSAGES));
