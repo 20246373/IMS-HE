@@ -15,6 +15,7 @@ use App\Http\Controllers\OrderManagementController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SaleController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UserController;
@@ -87,6 +88,14 @@ $allRoles = implode(',', User::ROLES);
 
 Route::middleware(['auth', "role:$allRoles"])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // POS / in-store sales: Employee and Store Supervisor only
+    Route::middleware('role:'.implode(',', [User::EMPLOYEE, User::STORE_SUPERVISOR]))->group(function () {
+        Route::get('sales/create', [SaleController::class, 'create'])->name('sales.create');
+        Route::post('sales', [SaleController::class, 'store'])->name('sales.store');
+        Route::get('sales', [SaleController::class, 'index'])->name('sales.index');
+        Route::get('sales/{invoice}', [SaleController::class, 'show'])->name('sales.show');
+    });
 
     Route::middleware('role:'.User::PRESIDENT.','.User::INVENTORY_CLERK.','.User::STORE_SUPERVISOR)->group(function () {
         Route::resource('suppliers', SupplierController::class)->except(['show', 'destroy']);
