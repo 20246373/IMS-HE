@@ -14,10 +14,10 @@ use Illuminate\Support\Str;
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Photos live in storage/app/public/products/.
-     * By default a product's photo is found by its slug, e.g. "Claw Hammer 16oz" -> claw-hammer-16oz.jpg
-     * (.jpg .jpeg .png .webp). If your files are named differently, map them here:
-     *   'Claw Hammer 16oz' => 'hammer.jpg',
+- Photos live in storage/app/public/products/.
+- By default a product's photo is found by its slug, e.g. "Claw Hammer 16oz" -> claw-hammer-16oz.jpg
+- (.jpg .jpeg .png .webp). If your files are named differently, map them here:
+-   'Claw Hammer 16oz' => 'hammer.jpg',
      */
     private array $photoFiles = [
         'Claw Hammer 16oz' => 'clawhammer.jpg',
@@ -35,7 +35,7 @@ class DatabaseSeeder extends Seeder
         // The Administrator's name comes from a linked employee record, like every other staff account.
         $administrator = Employee::firstOrCreate(
             ['first_name' => 'Anton', 'last_name' => 'Sanchez'],
-            ['position' => 'Administrator', 'daily_rate' => 700, 'date_hired' => now()->subYear()->toDateString(), 'status' => 'Active']
+            ['position' => 'Administrator', 'daily_rate' => 1000, 'date_hired' => now()->subYear()->toDateString(), 'status' => 'Active']
         );
 
         User::updateOrCreate(
@@ -51,7 +51,6 @@ class DatabaseSeeder extends Seeder
 
         // Staff: [email name, role, first, last, position, daily_rate]
         foreach ([
-            ['president',  User::PRESIDENT,        'Pedro',  'Reyes',   'President',        1000],
             ['treasurer',  User::TREASURER,        'Maria',  'Santos',  'Treasurer',         800],
             ['clerk',      User::INVENTORY_CLERK,  'Jose',   'Garcia',  'Inventory Clerk',   650],
             ['supervisor', User::STORE_SUPERVISOR, 'Ana',    'Lopez',   'Store Supervisor',  750],

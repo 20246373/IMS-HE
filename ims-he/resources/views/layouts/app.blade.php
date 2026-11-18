@@ -11,7 +11,7 @@
  nav.staff-nav{position:fixed;z-index:20;inset:0 auto 0 0;width:212px;box-sizing:border-box;flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:.35rem;padding:1.5rem 1rem 1rem;background:linear-gradient(165deg,#172d49 0%,#1f3a5f 58%,#25466d 100%);box-shadow:8px 0 28px #14253a20;overflow-y:auto;overflow-x:hidden}
  nav.staff-nav > strong{display:flex;align-items:center;gap:.7rem;font-size:1.05rem;letter-spacing:.06em;padding:.3rem .65rem 1.45rem}
  nav.staff-nav > strong:before{content:"I";display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:#d8e8fb;color:#1f3a5f;font-size:1.05rem;font-weight:800;letter-spacing:0;box-shadow:0 3px 10px #071b3333}
- nav.staff-nav > a{display:flex;align-items:center;min-height:42px;padding:0 .8rem;border-radius:9px;color:#d9e4f1;font-size:.94rem;font-weight:500;transition:background .16s ease,color .16s ease,transform .16s ease}
+ nav.staff-nav > a{display:flex;align-items:center;min-height:42px;padding:0 .8rem;border-radius:99px;color:#d9e4f1;font-size:.94rem;font-weight:500;transition:background .16s ease,color .16s ease,transform .16s ease}
  nav.staff-nav > a:hover,nav.staff-nav .nav-dropdown > div a:hover{background:#ffffff14;color:#fff;transform:translateX(2px)}
  nav.staff-nav > a.nav-link-active,nav.staff-nav .nav-dropdown > div a.nav-link-active{background:#dceafe;color:#19395e;font-weight:650;box-shadow:0 3px 10px #0c1e342b}
  nav.staff-nav .nav-section{padding:1.1rem .8rem .4rem;color:#d3e0ef;font-size:.8rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
@@ -34,6 +34,7 @@
   nav.staff-nav{width:190px;padding:1rem .7rem .8rem}
   body.staff-layout main{width:calc(100% - 216px);margin:1rem .8rem 1rem 202px}
  }
+ 
  @media (max-width:520px){
   nav.staff-nav{position:sticky;inset:auto;width:100%;height:auto;max-height:48vh;border-radius:0 0 16px 16px;padding:.7rem;gap:.2rem}
   nav.staff-nav > strong{padding:.1rem .55rem .55rem}
@@ -222,6 +223,24 @@
   .cart-table{display:block;overflow-x:auto}
  }
  /* Order status badges (orders/_status) */
+ .grid-checkout { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+  @media(min-width: 900px) { .grid-checkout { grid-template-columns: 2fr 1fr; } }
+  
+  .cart-table-modern { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+  .cart-table-modern th { text-align: left; padding: 0.75rem; border-bottom: 2px solid #e5e7eb; font-size: 0.85rem; color: #4b5563; text-transform: uppercase; }
+  .cart-table-modern td { padding: 1rem 0.75rem; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+  
+  .checkout-card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 1.5rem; }
+  .checkout-summary-box { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.25rem; position: sticky; top: 1.5rem; }
+  
+  .btn-primary { background: #1f3a5f; color: #ffffff; border: none; padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-block; text-align: center; }
+  .btn-primary:hover { background: #172d49; }
+  .btn-danger-sm { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 0.35rem 0.65rem; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
+  .btn-danger-sm:hover { background: #fecaca; }
+
+  .payment-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin-top: 0.5rem; }
+  .payment-option { border: 1.5px solid #d1d5db; border-radius: 8px; padding: 0.85rem; display: flex; flex-direction: column; cursor: pointer; }
+  .payment-option input:checked + div { font-weight: bold; color: #1f3a5f; }
  .status{display:inline-block;font-size:.8rem;font-weight:600;padding:.1rem .55rem;border-radius:999px;background:#eef0f3;color:#333}
  .status-pending{background:#fff5d8;color:#785b00} .status-completed{background:#e6f4ea;color:#1e6b34} .status-cancelled{background:#fdecea;color:#8a1f17}
  .detail{display:grid;grid-template-columns:minmax(0,320px) 1fr;gap:1.2rem} .detail img,.detail .noimg{width:100%;height:280px;object-fit:cover;border-radius:5px}
@@ -295,6 +314,17 @@
  .product .price{font-size:1.05rem;font-weight:700;margin:0}
  .product-add{width:100%;margin-top:.55rem;padding:.45rem .6rem;font-size:.88rem}
  @media (max-width:520px){.sf-logo strong{font-size:1.15rem}.sf-head-in{padding:.6rem .8rem}.sf-nav-in{padding:0 .8rem}}
+ .status { display: inline-block; padding: 0.25rem 0.65rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.status-pending { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.status-completed { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+.status-cancelled { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+.filter-bar { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem; background: #ffffff; padding: 0.75rem 1rem; border: 1px solid #e5e7eb; border-radius: 10px; }
+.filter-bar select { padding: 0.5rem 0.85rem; border-radius: 6px; border: 1px solid #d1d5db; font-size: 0.9rem; }
+
+/* General product card media rules for grid stability across catalog views */
+.product-media { display: block; width: 100%; height: 160px; overflow: hidden; background: #f8fafc; }
+.product-media img, .product img { width: 100%; height: 160px; object-fit: cover; display: block; }
 </style>
 @stack('head')
 </head>

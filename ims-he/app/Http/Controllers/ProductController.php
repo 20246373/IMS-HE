@@ -80,8 +80,7 @@ class ProductController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        // PHP-level upload failures (e.g. over the server limit) never reach the validator,
-        // so without this check the image would be silently dropped.
+        // Guard against PHP engine upload limits (e.g. post_max_size exceeded)
         if ($message = $this->failedUploadMessage($request)) {
             return back()->withErrors(['image' => $message])->withInput();
         }
@@ -90,10 +89,16 @@ class ProductController extends Controller
         $opening = (int) $data['stock_quantity'];
 
         $product = DB::transaction(function () use ($request, $data, $opening) {
-            // Create at 0, then let InventoryService add the opening stock so the movement is logged (UC12 includes UC05).
+            // Handle public disk upload
+            $imagePath = null;
+            if ($request->hasFile('image') && $request->file('image')->isValid()) {
+                $imagePath = $request->file('image')->store('products', 'public');
+            }
+
+            // Create product record
             $product = Product::create(Arr::except($data, ['stock_quantity', 'image']) + [
                 'stock_quantity' => 0,
-                'image_path' => $request->hasFile('image') ? $request->file('image')->store('products', 'public') : null,
+                'image_path'     => $imagePath,
             ]);
 
             if ($opening > 0) {
@@ -191,14 +196,20 @@ class ProductController extends Controller
     // (size limits, partial upload, no temp dir), or null when the upload is fine/absent.
     private function failedUploadMessage(Request $request): ?string
     {
-        $error = $_FILES['image']['error'] ?? UPLOAD_ERR_OK;
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            if (! $file->isValid()) {
+                // This will tell us the exact PHP upload error code
+                return 'Upload failed with PHP error code: ' . $file->getError() . ' (' . $file->getErrorMessage() . ')';
+            }
+        }
 
-        return match ($error) {
-            UPLOAD_ERR_OK, UPLOAD_ERR_NO_FILE => null,
-            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'The photo is too large (max 5 MB).',
-            UPLOAD_ERR_PARTIAL => 'The upload was interrupted. Please try again.',
-            default => 'The photo could not be uploaded. Please try again.',
-        };
+        // Check if POST data was completely emptied (happens when post_max_size is exceeded)
+        if (empty($_POST) && empty($_FILES) && isset($_SERVER['CONTENT_LENGTH']) && $_SERVER['CONTENT_LENGTH'] > 0) {
+            return 'The uploaded file exceeds the post_max_size directive in php.ini.';
+        }
+
+        return null;
     }
 
     private function rules(?Product $product = null): array

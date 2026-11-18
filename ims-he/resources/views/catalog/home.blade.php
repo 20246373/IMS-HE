@@ -38,6 +38,33 @@
  .cta{margin:2rem 0 1rem;background:#fff;border:1px solid #dde2e8;border-left:6px solid #f2b705;border-radius:6px;padding:1.2rem 1.4rem;display:flex;gap:1rem;justify-content:space-between;align-items:center;flex-wrap:wrap}
  .cta p{margin:0}
  @media (max-width:700px){.hero::before,.hero::after{display:none}.hero-inner{padding:2.5rem 1.2rem}}
+ .cat-tile {
+    position: relative;
+    display: block;
+    flex: 0 0 220px;
+    height: 120px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #1f3a5f 0%, #172d49 100%);
+    text-decoration: none;
+    color: #fff;
+    border-left: 6px solid #f2b705;
+    scroll-snap-align: start;
+    transition: transform .18s ease, filter .18s ease;
+}
+.cat-tile img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.cat-tile.has-img::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(transparent 30%, rgba(0,0,0,.75));
+}
 </style>
 @endpush
 

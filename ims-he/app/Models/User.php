@@ -8,8 +8,6 @@ class User extends Authenticatable
 {
     public const ADMINISTRATOR = 'Administrator';
 
-    public const PRESIDENT = 'President';
-
     public const TREASURER = 'Treasurer';
 
     public const INVENTORY_CLERK = 'Inventory Clerk';
@@ -20,7 +18,13 @@ class User extends Authenticatable
 
     public const PENDING = 'Pending';        // self-registered, waiting for the Administrator to assign a role
 
-    public const ROLES = [self::ADMINISTRATOR, self::PRESIDENT, self::TREASURER, self::INVENTORY_CLERK, self::STORE_SUPERVISOR, self::EMPLOYEE];
+    public const ROLES = [
+        self::ADMINISTRATOR, 
+        self::TREASURER, 
+        self::INVENTORY_CLERK, 
+        self::STORE_SUPERVISOR, 
+        self::EMPLOYEE
+    ];
 
     public const STATUS_ACTIVE = 'Active';
 
@@ -62,7 +66,7 @@ class User extends Authenticatable
     /** @var list<string>|null this account's permissions, loaded once per request */
     private ?array $permissionCache = null;
 
-    /** Roles the Administrator can assign: every role in the Roles list except the Administrator. */
+    /** Roles the Administrator can assign: every role in the database except the Administrator. */
     public static function roleChoices(): array
     {
         return Role::where('role_name', '!=', self::ADMINISTRATOR)->orderBy('role_name')->pluck('role_name')->all();
