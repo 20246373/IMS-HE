@@ -37,11 +37,11 @@
 
 <div class="card">
  <table>
-  <tr><th>Email</th><th>Employee</th><th>Role</th><th>Status</th><th>Last Login</th><th>Actions</th></tr>
+  <tr><th>Employee</th><th>Email</th><th>Role</th><th>Status</th><th>Last Login</th><th>Actions</th></tr>
   @foreach($users as $u)
   <tr>
-   <td>{{ $u->email }}</td>
    <td>{{ $u->employee?->full_name ?? '-' }}</td>
+   <td>{{ $u->email }}</td>
    <td>{{ $u->role }}</td>
    <td class="{{ $u->isLocked() ? 'low' : '' }}">{{ $u->status }}</td>
    <td>

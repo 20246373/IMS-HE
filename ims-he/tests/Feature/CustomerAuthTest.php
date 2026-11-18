@@ -154,8 +154,17 @@ class CustomerAuthTest extends TestCase
 
         $this->assertDatabaseHas('customers', ['customer_id' => $customer->customer_id, 'first_name' => 'Juan', 'address' => 'Baguio City']);
 
-        $this->actingAs($customer, 'customer')->patch(route('customer.account.update'), ['contact_number' => '0917-123'])
+        $this->actingAs($customer, 'customer')->patch(route('customer.account.update'), [
+            'address' => 'Unsaved address',
+            'contact_number' => '0917-123',
+        ])
             ->assertSessionHasErrors('contact_number');
+
+        $this->assertDatabaseHas('customers', [
+            'customer_id' => $customer->customer_id,
+            'contact_number' => '09171234567',
+            'address' => 'Baguio City',
+        ]);
     }
 
     public function test_display_name_falls_back_to_the_email_name(): void
@@ -165,6 +174,27 @@ class CustomerAuthTest extends TestCase
 
         $customer->update(['first_name' => 'Juan']);
         $this->assertSame('Juan', $customer->fresh()->display_name);
+    }
+
+    public function test_profile_validates_contact_number_length_and_shows_the_error(): void
+    {
+        $customer = $this->customer(['email_verified_at' => now()]);
+        $this->actingAs($customer, 'customer');
+        $account = route('customer.account');
+
+        foreach (['123456', str_repeat('1', 15)] as $invalidNumber) {
+            $this->from($account)->patch(route('customer.account.update'), ['contact_number' => $invalidNumber])
+                ->assertRedirect($account)->assertSessionHasErrors('contact_number');
+        }
+
+        $this->get($account)->assertOk()->assertSee('alert-error', false);
+        $this->assertNull($customer->fresh()->contact_number);
+
+        foreach (['0123456', '01234567890123', ''] as $validNumber) {
+            $this->from($account)->patch(route('customer.account.update'), ['contact_number' => $validNumber])
+                ->assertRedirect($account)->assertSessionHasNoErrors();
+            $this->assertSame($validNumber === '' ? null : $validNumber, $customer->fresh()->contact_number);
+        }
     }
 
     public function test_signed_verification_link_verifies_the_email_and_signs_the_customer_in(): void

@@ -43,6 +43,19 @@ class CatalogTest extends TestCase
             ->assertDontSee('Empty Shelf Item');
     }
 
+    public function test_invalid_catalog_filters_show_errors_and_return_to_the_catalog(): void
+    {
+        $catalog = route('catalog.index');
+
+        $this->from($catalog)->get(route('catalog.index', [
+            'q' => str_repeat('a', 101),
+            'category' => 999999,
+            'brand' => str_repeat('b', 51),
+        ]))->assertRedirect($catalog)->assertSessionHasErrors(['q', 'category', 'brand']);
+
+        $this->get($catalog)->assertOk()->assertSee('alert-error', false);
+    }
+
     public function test_catalog_searches_by_name_and_filters_by_category(): void
     {
         $this->product('Claw Hammer', $this->tools);

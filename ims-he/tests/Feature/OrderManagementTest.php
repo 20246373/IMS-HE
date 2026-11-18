@@ -84,12 +84,13 @@ class OrderManagementTest extends TestCase
         $inStore = Invoice::create(['invoice_date' => today(), 'channel' => 'In-store', 'status' => 'Completed', 'total_amount' => 999]);
         $supervisor = $this->staff(User::STORE_SUPERVISOR);
 
-        // Pending is the default view.
+        // All statuses is the default view (first in the list), like every other filter.
         $this->actingAs($supervisor)->get(route('online-orders.index'))
-            ->assertSee('#'.$pending->invoice_id)->assertSee('₱1,500.00')->assertDontSee('₱2,750.50');
+            ->assertSeeInOrder(['All statuses', 'Pending'])
+            ->assertSee('#'.$pending->invoice_id)->assertSee('₱1,500.00')->assertSee('₱2,750.50')->assertDontSee('₱999.00');
 
-        $this->actingAs($supervisor)->get(route('online-orders.index', ['status' => 'All']))
-            ->assertSee('₱1,500.00')->assertSee('₱2,750.50')->assertDontSee('₱999.00');
+        $this->actingAs($supervisor)->get(route('online-orders.index', ['status' => 'Pending']))
+            ->assertSee('₱1,500.00')->assertDontSee('₱2,750.50');
 
         $this->actingAs($supervisor)->get(route('online-orders.show', $inStore))->assertNotFound();
     }

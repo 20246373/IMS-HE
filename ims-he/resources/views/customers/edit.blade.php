@@ -3,7 +3,8 @@
 @section('heading'){{ trim($customer->first_name.' '.$customer->last_name) ?: $customer->email }}@endsection
 @section('content')
 <div class="card">
- <form method="POST" action="{{ route('customers.update', $customer) }}" class="plain-labels">
+ <form method="POST" action="{{ route('customers.update', $customer) }}">
+  <x-required-note />
   @csrf
   @method('PUT')
   <div class="form-grid">

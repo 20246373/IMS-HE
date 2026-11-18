@@ -10,7 +10,7 @@
   @if($search !== '')<a class="btn btn-alt" href="{{ route('employees.index') }}">Clear</a>@endif
  </form>
  <table>
-  <thead><tr><th>Name</th><th>Position</th><th>Status</th><th>Daily rate</th><th>Account email</th><th>Actions</th></tr></thead>
+  <thead><tr><th>Name</th><th>Position</th><th>Status</th><th>Daily rate</th><th>Email</th><th>Actions</th></tr></thead>
   <tbody>
    @forelse($employees as $employee)
    <tr>

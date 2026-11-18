@@ -28,6 +28,17 @@ class DatabaseSeeder extends Seeder
         'Common Nails 3" (kg)' => 'commonnail.jpg',
     ];
 
+    /** Sample SSS, PhilHealth, Pag-IBIG and TIN numbers (required for every employee). */
+    private function govIds(int $n): array
+    {
+        return [
+            'sss_no' => sprintf('34-%07d-%d', 1000000 + $n, $n % 10),
+            'philhealth_no' => sprintf('12-%09d-%d', 100000000 + $n, $n % 10),
+            'pagibig_no' => sprintf('1210-%04d-%04d', $n, 1000 + $n),
+            'tin_no' => sprintf('123-456-%03d-000', $n),
+        ];
+    }
+
     public function run(): void
     {
         // DEV ONLY - sample data and shared passwords. Remove before any real deployment.
@@ -35,7 +46,7 @@ class DatabaseSeeder extends Seeder
         // The Administrator's name comes from a linked employee record, like every other staff account.
         $administrator = Employee::firstOrCreate(
             ['first_name' => 'Anton', 'last_name' => 'Sanchez'],
-            ['position' => 'Administrator', 'daily_rate' => 700, 'date_hired' => now()->subYear()->toDateString(), 'status' => 'Active']
+            ['position' => 'Administrator', 'daily_rate' => 700, 'date_hired' => now()->subYear()->toDateString(), 'status' => 'Active'] + $this->govIds(1)
         );
 
         User::updateOrCreate(
@@ -56,10 +67,10 @@ class DatabaseSeeder extends Seeder
             ['clerk',      User::INVENTORY_CLERK,  'Jose',   'Garcia',  'Inventory Clerk',   650],
             ['supervisor', User::STORE_SUPERVISOR, 'Ana',    'Lopez',   'Store Supervisor',  750],
             ['employee',   User::EMPLOYEE,         'Luis',   'Mendoza', 'Sales Associate',   610],
-        ] as [$emailName, $role, $first, $last, $position, $rate]) {
+        ] as $i => [$emailName, $role, $first, $last, $position, $rate]) {
             $emp = Employee::firstOrCreate(
                 ['first_name' => $first, 'last_name' => $last],
-                ['position' => $position, 'daily_rate' => $rate, 'date_hired' => now()->subYear()->toDateString(), 'status' => 'Active']
+                ['position' => $position, 'daily_rate' => $rate, 'date_hired' => now()->subYear()->toDateString(), 'status' => 'Active'] + $this->govIds($i + 2)
             );
 
             User::updateOrCreate(
@@ -68,16 +79,15 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        // An employee who signed up and is waiting for the Administrator to give a role (try it under User Accounts).
+        // A new employee waiting for the Administrator to give a role (try it under User Accounts).
+        // Every employee has an email, because it is their login.
+        $newHire = Employee::firstOrCreate(
+            ['first_name' => 'Pedro', 'last_name' => 'Cruz'],
+            ['position' => 'Warehouse Helper', 'daily_rate' => 570, 'date_hired' => now()->subMonths(6)->toDateString(), 'status' => 'Active'] + $this->govIds(9)
+        );
         User::updateOrCreate(
             ['email' => 'newhire@example.com'],
-            ['role' => User::PENDING, 'password' => 'password123', 'status' => User::STATUS_ACTIVE, 'login_attempt_count' => 0]
-        );
-
-        // An employee without an account (shows up in the "link employee" dropdown)
-        Employee::firstOrCreate(
-            ['first_name' => 'Pedro', 'last_name' => 'Cruz'],
-            ['position' => 'Warehouse Helper', 'daily_rate' => 570, 'date_hired' => now()->subMonths(6)->toDateString(), 'status' => 'Active']
+            ['employee_id' => $newHire->employee_id, 'role' => User::PENDING, 'password' => 'password123', 'status' => User::STATUS_ACTIVE, 'login_attempt_count' => 0]
         );
 
         // Categories + products (stock_quantity / reorder_level per SDD 7.2.4)

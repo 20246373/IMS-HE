@@ -22,6 +22,39 @@ class UserController extends Controller
         ]);
     }
 
+    /** SDD 4.1 User Account Management: the Administrator creates a staff account for an employee who has none yet. */
+    public function create()
+    {
+        return view('users.create', [
+            'employees' => $this->employeeOptions(null),
+            'roles' => User::roleChoices(),
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $request->merge(['email' => mb_strtolower(trim((string) $request->input('email')))]);
+
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:100', Rule::unique('users', 'email'), Rule::unique('customers', 'email')],
+            'employee_id' => ['required', 'exists:employees,employee_id', Rule::unique('users', 'employee_id')],
+            'role' => ['required', Rule::in(User::roleChoices())],
+            'password' => ['required', 'string', 'min:8', 'max:72', 'confirmed'],
+        ], [
+            'email.unique' => 'This email is already used by another account.',
+            'employee_id.unique' => 'This employee already has an account.',
+        ]);
+
+        $user = DB::transaction(function () use ($data) {
+            $user = User::create($data + ['status' => User::STATUS_ACTIVE, 'login_attempt_count' => 0]);
+            AuditLog::record('Created', 'users', $user->user_id);
+
+            return $user;
+        });
+
+        return redirect()->route('users.index')->with('status', "Account created for {$user->displayName()}.");
+    }
+
     public function edit(User $user)
     {
         return view('users.edit', [

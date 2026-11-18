@@ -6,6 +6,7 @@ use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -39,11 +40,23 @@ class DashboardController extends Controller
 
     private function accounts(): array
     {
-        return [
-            'accounts' => User::count(),
-            'locked' => User::where('status', User::STATUS_LOCKED)->count(),
-            'pendingAccounts' => User::where('role', User::PENDING)->count(),
-        ];
+        return ['accountSummaries' => [
+            'all' => $this->accountSummary(User::query()),
+            'unassigned' => $this->accountSummary(User::where('role', User::PENDING)),
+            'locked' => $this->accountSummary(User::where('status', User::STATUS_LOCKED)),
+        ]];
+    }
+
+    private function accountSummary(Builder $query): array
+    {
+        $count = $query->count();
+        $names = $query->with('employee')
+            ->orderBy('email')
+            ->limit(5)
+            ->get()
+            ->map(fn (User $user) => $user->displayName());
+
+        return ['count' => $count, 'names' => $names];
     }
 
     private function sales(): array

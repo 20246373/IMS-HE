@@ -113,7 +113,7 @@ class CustomerAuthController extends Controller
         $data = $request->validate([
             'first_name' => self::NAME_RULES,
             'last_name' => self::NAME_RULES,
-            'contact_number' => ['nullable', 'regex:/^[0-9]+$/', 'max:14'],
+            'contact_number' => ['nullable', 'string', 'regex:/^[0-9]+$/', 'min:7', 'max:14'],
             'address' => ['nullable', 'string', 'max:100'],
         ], [
             'first_name.regex' => 'First name may only contain letters and spaces.',

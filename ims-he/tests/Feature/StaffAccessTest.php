@@ -186,11 +186,11 @@ class StaffAccessTest extends TestCase
     public function test_dashboard_account_cards_link_to_the_accounts_page(): void
     {
         $administrator = $this->staff(User::ADMINISTRATOR);
+        $this->staff(User::PENDING);
 
         $this->actingAs($administrator)->get(route('dashboard'))->assertOk()
-            ->assertSee('class="card card-link" href="'.route('users.index').'"', false)
-            ->assertSee(route('users.index').'#unassigned', false)
-            ->assertDontSee('Review');
+            ->assertSee('href="'.route('users.index').'">Manage accounts</a>', false)
+            ->assertSee('href="'.route('users.index').'#unassigned">Review assignments</a>', false);
     }
 
     public function test_audit_log_shows_date_time_and_the_persons_name(): void

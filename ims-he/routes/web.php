@@ -100,7 +100,7 @@ Route::middleware(['auth', 'permission'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::middleware('permission:suppliers.manage')->group(function () {
-        Route::resource('suppliers', SupplierController::class)->except(['show', 'destroy']);
+        Route::resource('suppliers', SupplierController::class)->only(['index', 'store', 'update']);   // add and edit happen in pop-ups
     });
 
     Route::delete('suppliers/{supplier}', [SupplierController::class, 'destroy'])
@@ -108,7 +108,7 @@ Route::middleware(['auth', 'permission'])->group(function () {
         ->name('suppliers.destroy');
 
     Route::middleware('permission:inventory.manage')->group(function () {
-        Route::resource('categories', CategoryController::class)->except(['show', 'create']);
+        Route::resource('categories', CategoryController::class)->only(['index', 'store', 'update', 'destroy']);   // edit happens in a pop-up
         Route::get('products/{product}/stock-history', [ProductController::class, 'stockHistory'])
             ->name('products.stock-history');
         Route::resource('products', ProductController::class)->except(['show']);
@@ -150,7 +150,7 @@ Route::middleware(['auth', 'permission'])->group(function () {
     });
 
     Route::middleware('role:'.User::ADMINISTRATOR)->group(function () {
-        Route::resource('users', UserController::class)->only(['index', 'edit', 'update', 'destroy']);
+        Route::resource('users', UserController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
         Route::post('users/{user}/role', [UserController::class, 'assignRole'])->name('users.role');
         Route::post('users/{user}/lock', [UserController::class, 'lock'])->name('users.lock');
         Route::post('users/{user}/unlock', [UserController::class, 'unlock'])->name('users.unlock');

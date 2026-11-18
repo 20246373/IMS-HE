@@ -3,7 +3,6 @@
 @section('heading', 'New Ledger Entry')
 @section('content')
 <div class="card">
- <x-required-note />
  <form method="POST" action="{{ route('ledger.store') }}">
   @csrf
   <div class="form-grid">

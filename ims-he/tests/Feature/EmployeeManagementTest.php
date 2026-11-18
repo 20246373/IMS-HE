@@ -43,8 +43,13 @@ class EmployeeManagementTest extends TestCase
         $response = $this->actingAs($president)->post(route('employees.store'), [
             'first_name' => 'Lina',
             'last_name' => 'Cruz',
+            'email' => 'Lina.Cruz@Example.com',
             'position' => 'Cashier',
             'daily_rate' => '₱650.50',
+            'sss_no' => '34-1234567-8',
+            'philhealth_no' => '12-345678901-2',
+            'pagibig_no' => '1210-1234-5678',
+            'tin_no' => '123-456-789-000',
             'date_hired' => '2025-02-01',
             'status' => 'Active',
         ]);
@@ -52,6 +57,9 @@ class EmployeeManagementTest extends TestCase
         $response->assertRedirect(route('employees.index'));
         $employee = Employee::where('first_name', 'Lina')->firstOrFail();
         $this->assertSame('650.50', number_format((float) $employee->daily_rate, 2, '.', ''));
+        $account = User::where('email', 'lina.cruz@example.com')->firstOrFail();
+        $this->assertSame($employee->employee_id, $account->employee_id);
+        $this->assertSame(User::PENDING, $account->role);
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'Created',
             'table_name' => 'employees',
@@ -90,8 +98,12 @@ class EmployeeManagementTest extends TestCase
             'last_name' => 'Name',
             'date_hired' => '2030-01-01',
             'position' => 'Supervisor',
+            'email' => 'ana.santos@example.com',
             'daily_rate' => '700.25',
             'sss_no' => '123',
+            'philhealth_no' => '456',
+            'pagibig_no' => '789',
+            'tin_no' => '000',
             'status' => 'Active',
         ])->assertRedirect(route('employees.index'));
 
@@ -101,6 +113,7 @@ class EmployeeManagementTest extends TestCase
         $this->assertSame('2025-01-15', $updated->date_hired);
         $this->assertSame('Supervisor', $updated->position);
         $this->assertSame('123', $updated->sss_no);
+        $this->assertSame('ana.santos@example.com', $updated->user->email);
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'Updated',
             'table_name' => 'employees',
@@ -147,6 +160,11 @@ class EmployeeManagementTest extends TestCase
             'status' => 'Unknown',
         ])->assertSessionHasErrors([
             'first_name',
+            'email',
+            'sss_no',
+            'philhealth_no',
+            'pagibig_no',
+            'tin_no',
             'last_name',
             'position',
             'daily_rate',

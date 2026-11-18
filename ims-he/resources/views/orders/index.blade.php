@@ -26,7 +26,7 @@
      <td>{{ money($o->total_amount) }}</td>
      <td>{{ $o->payment?->payment_method }}</td>
      <td>@include('orders._status', ['status' => $o->status])</td>
-     <td><a href="{{ route('customer.orders.show', $o) }}">View receipt</a></td>
+     <td><a class="btn" href="{{ route('customer.orders.show', $o) }}">View receipt</a></td>
     </tr>
    @endforeach
   </table>

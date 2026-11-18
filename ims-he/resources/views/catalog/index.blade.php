@@ -3,20 +3,24 @@
 @section('heading', 'Products')
 @section('content')
 <div class="card">
- <form method="GET" action="{{ route('catalog.index') }}" class="search">
+ <form method="GET" action="{{ route('catalog.index') }}" class="search catalog-filters">
   <input name="q" value="{{ $q }}" placeholder="Search by name or brand" maxlength="100" aria-label="Search by name or brand">
+  <span class="catalog-select">
   <select name="category" aria-label="Category">
    <option value="">All categories</option>
    @foreach($categories as $c)
     <option value="{{ $c->category_id }}" @selected($categoryId == $c->category_id)>{{ $c->category_name }}</option>
    @endforeach
   </select>
+  </span>
+  <span class="catalog-select">
   <select name="brand" aria-label="Brand">
    <option value="">All brands</option>
    @foreach($brands as $b)
     <option value="{{ $b }}" @selected($brand === $b)>{{ $b }}</option>
    @endforeach
   </select>
+  </span>
   <button>Filter</button>
   @if($q !== '' || $categoryId || $brand !== '')<a href="{{ route('catalog.index') }}">Clear</a>@endif
  </form>

@@ -2,25 +2,26 @@
 @section('title','Online order #'.$invoice->invoice_id)
 @section('heading')Online Order #{{ $invoice->invoice_id }} @include('orders._status', ['status' => $invoice->status])@endsection
 @section('content')
-<div class="card" style="max-width:760px">
- <div class="form-grid">
-  <p>
-   <strong>Customer</strong><br>
+<div class="card">
+ <div class="details-layout">
+  <dl class="details">
+   <div><dt>Order number</dt><dd>#{{ $invoice->invoice_id }}</dd></div>
+   <div><dt>Date</dt><dd>{{ $invoice->invoice_date->format('M d, Y') }}</dd></div>
+   <div><dt>Number of items</dt><dd>{{ $invoice->items->sum('quantity') }}</dd></div>
+   <div><dt>Payment method</dt><dd>{{ $invoice->payment?->payment_method }}</dd></div>
+   <div><dt>Total</dt><dd><strong>{{ money($invoice->total_amount) }}</strong></dd></div>
+  </dl>
+  <section class="details-aside">
+   <h3>Customer</h3>
    @if($invoice->customer)
-    {{ trim($invoice->customer->first_name.' '.$invoice->customer->last_name) }}<br>
+    <p><strong>{{ trim($invoice->customer->first_name.' '.$invoice->customer->last_name) ?: $invoice->customer->email }}</strong><br>
     {{ $invoice->customer->email }}<br>
     {{ $invoice->customer->contact_number }}<br>
-    {{ $invoice->customer->address }}
+    {{ $invoice->customer->address }}</p>
    @else
-    Deleted account
+    <p>Deleted account</p>
    @endif
-  </p>
-  <p>
-   <strong>Order</strong><br>
-   Date: {{ $invoice->invoice_date->format('M d, Y') }}<br>
-   Payment method: {{ $invoice->payment?->payment_method }}<br>
-   Total: <strong>{{ money($invoice->total_amount) }}</strong>
-  </p>
+  </section>
  </div>
 
  <table class="cart-table">
@@ -37,7 +38,7 @@
  </table>
 
  @if($invoice->status === 'Pending')
-  <p>
+  <div class="details-actions">
    <form method="POST" action="{{ route('online-orders.complete', $invoice) }}" class="inline">@csrf @method('PATCH')
     <button>Mark as Completed</button>
    </form>
@@ -45,7 +46,7 @@
          onsubmit="return confirm('Cancel order #{{ $invoice->invoice_id }}? The items go back into stock. This cannot be undone.')">@csrf @method('PATCH')
     <button class="danger">Cancel order</button>
    </form>
-  </p>
+  </div>
  @else
   <p><small>This order is {{ $invoice->status }} and can no longer be changed.</small></p>
  @endif

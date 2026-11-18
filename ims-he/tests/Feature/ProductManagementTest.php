@@ -114,7 +114,7 @@ class ProductManagementTest extends TestCase
         $this->actingAs($clerk)->get(route('products.create'))
             ->assertOk()
             ->assertSee('name="brand"', false)
-            ->assertSee('All fields are required unless marked');
+            ->assertDontSee('All fields are required unless marked');
 
         $this->actingAs($clerk)->get(route('products.edit', Product::firstOrFail()))
             ->assertOk()

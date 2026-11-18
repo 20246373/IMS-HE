@@ -17,7 +17,7 @@ class CheckoutController extends Controller
     private const RULES = [
         'first_name' => ['required', 'string', 'max:50', 'regex:/^[\pL ]+$/u'],
         'last_name' => ['required', 'string', 'max:50', 'regex:/^[\pL ]+$/u'],
-        'contact_number' => ['required', 'regex:/^[0-9]+$/', 'min:7', 'max:14'],
+        'contact_number' => ['required', 'string', 'regex:/^[0-9]+$/', 'min:7', 'max:14'],
         'address' => ['required', 'string', 'max:100'],
     ];
 
@@ -58,7 +58,7 @@ class CheckoutController extends Controller
         $customer = $request->user('customer');
         $missing = $this->missingDetails($customer);
 
-        // Only the missing details are required (and accepted); saved ones are reused as they are.
+        // Only details that need attention can be submitted; other saved values are reused.
         $data = $request->validate(
             collect(self::RULES)->only($missing)->all()
                 + ['payment_method' => ['required', Rule::in(CheckoutService::PAYMENT_METHODS)]],
@@ -77,12 +77,14 @@ class CheckoutController extends Controller
         return redirect()->route('customer.orders.confirmation', $invoice);
     }
 
-    /** @return list<string> profile fields that are still empty */
+    /** @return list<string> profile fields that are empty or require correction */
     private function missingDetails(Customer $customer): array
     {
         return array_values(array_filter(
             array_keys(self::RULES),
-            fn ($field) => trim((string) $customer->{$field}) === '',
+            fn ($field) => $field === 'contact_number'
+                ? ! preg_match('/^[0-9]{7,14}$/D', (string) $customer->contact_number)
+                : trim((string) $customer->{$field}) === '',
         ));
     }
 }

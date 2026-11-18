@@ -3,11 +3,14 @@
 @section('heading')Purchase Order #{{ $purchaseOrder->po_id }}@endsection
 @section('content')
 <div class="card">
- <p>Supplier: <strong>{{ $purchaseOrder->supplier->supplier_name }}</strong></p>
- <p>Order date: {{ $purchaseOrder->order_date->format('M d, Y') }}</p>
- <p>Status: <strong>{{ $purchaseOrder->status }}</strong></p>
+ <dl class="details">
+  <div><dt>Supplier</dt><dd><strong>{{ $purchaseOrder->supplier->supplier_name }}</strong></dd></div>
+  <div><dt>Order date</dt><dd>{{ $purchaseOrder->order_date->format('M d, Y') }}</dd></div>
+  <div><dt>Status</dt><dd>@include('orders._status', ['status' => $purchaseOrder->status])</dd></div>
+  <div><dt>Total</dt><dd><strong>{{ money($purchaseOrder->items->sum('subtotal')) }}</strong></dd></div>
+ </dl>
  @if($purchaseOrder->status === 'Pending')
-  <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin:1rem 0">
+  <div class="details-actions">
    <a class="btn" href="{{ route('deliveries.create', ['purchase_order_id' => $purchaseOrder->po_id]) }}">Record delivery</a>
    <form method="POST" action="{{ route('purchase-orders.cancel', $purchaseOrder) }}" class="inline" onsubmit="return confirm('Cancel this purchase order?')">
     @csrf @method('PATCH')
@@ -29,6 +32,5 @@
   @endforeach
   <tr><th colspan="5" style="text-align:right">Total</th><th>{{ money($purchaseOrder->items->sum('subtotal')) }}</th></tr>
  </table>
- <p><a class="btn" href="{{ route('purchase-orders.index') }}">Back to purchase orders</a></p>
 </div>
 @endsection

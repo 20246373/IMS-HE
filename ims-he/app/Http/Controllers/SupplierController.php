@@ -21,11 +21,6 @@ class SupplierController extends Controller
         ]);
     }
 
-    public function create(): View
-    {
-        return view('suppliers.form', ['supplier' => new Supplier]);
-    }
-
     public function store(Request $request): RedirectResponse
     {
         $supplier = Supplier::create($request->validate([
@@ -36,11 +31,6 @@ class SupplierController extends Controller
         AuditLog::record('Created', 'suppliers', $supplier->supplier_id);
 
         return redirect()->route('suppliers.index')->with('status', 'Supplier added.');
-    }
-
-    public function edit(Supplier $supplier): View
-    {
-        return view('suppliers.form', ['supplier' => $supplier]);
     }
 
     public function update(Request $request, Supplier $supplier): RedirectResponse

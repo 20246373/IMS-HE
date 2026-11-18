@@ -97,6 +97,28 @@ class CartTest extends TestCase
         $this->assertSame(3, (int) CartItem::first()->quantity);
     }
 
+    public function test_invalid_quantities_do_not_add_or_update_cart_items(): void
+    {
+        $this->actingAs($this->customer(), 'customer');
+        $product = $this->product();
+        $add = route('customer.cart.add', $product);
+        $invalid = [[], ['quantity' => 0], ['quantity' => -1], ['quantity' => '1.5'], ['quantity' => 10000]];
+
+        foreach ($invalid as $input) {
+            $this->postJson($add, $input)->assertUnprocessable()->assertJsonValidationErrors('quantity');
+        }
+        $this->assertDatabaseCount('cart_items', 0);
+
+        $this->postJson($add, ['quantity' => 1])->assertOk();
+        $item = CartItem::firstOrFail();
+
+        foreach ($invalid as $input) {
+            $this->patchJson(route('customer.cart.update', $item), $input)
+                ->assertUnprocessable()->assertJsonValidationErrors('quantity');
+        }
+        $this->assertSame(1, (int) $item->fresh()->quantity);
+    }
+
     public function test_out_of_stock_products_cannot_be_added_but_inactive_ones_can(): void
     {
         $customer = $this->customer();

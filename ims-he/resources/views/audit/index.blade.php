@@ -5,7 +5,7 @@
 <div class="card">
  <form method="GET" class="report-filter">
   <x-select label="Name" name="user_id" :required="false">
-   <option value="">Everyone</option>
+   <option value="">All names</option>
    @foreach($users as $u)<option value="{{ $u->user_id }}" @selected((string) request('user_id') === (string) $u->user_id)>{{ $u->displayName() }}</option>@endforeach
   </x-select>
   <x-select label="Action" name="action" :required="false">

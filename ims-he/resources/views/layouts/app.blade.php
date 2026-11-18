@@ -48,22 +48,25 @@
  .nav-dropdown summary::-webkit-details-marker{display:none}
  .nav-dropdown > div{position:absolute;z-index:10;top:calc(100% + .7rem);left:0;min-width:10rem;background:#1f3a5f;padding:.7rem;display:grid;gap:.7rem;border-radius:0 0 5px 5px;box-shadow:0 2px 6px #0003}
  main{max-width:1000px;margin:1.2rem auto;padding:0 1rem}
- .card{background:#fff;border-radius:8px;padding:1rem 1.2rem;margin-bottom:1rem;box-shadow:0 1px 3px #0001}
+ .card{background:#fff;border:1px solid #dde2e8;border-radius:12px;padding:1rem 1.2rem;margin-bottom:1rem;box-shadow:none}
  table{width:100%;border-collapse:collapse} th,td{padding:.45rem .5rem;border-bottom:1px solid #eee;text-align:left}
- input,select,textarea{padding:.4rem;margin:.2rem 0;max-width:100%} label{display:block;margin-top:.5rem;font-size:.9rem}
+ input,select,textarea{padding:.4rem;margin:.2rem 0;max-width:100%}
+ input,select,textarea,button{font-family:inherit}   /* form controls use the page font, not the browser default */
+  /* :where() keeps this rule weak, so boxes inside the stepper and the ₱ prefix keep their own (borderless) look */
+ input:where(:not([type=checkbox],[type=radio],[type=hidden])),select,textarea{border:1px solid #767676;border-radius:8px;background:#fff;color:#222} label{display:block;margin-top:.5rem;font-size:.9rem}
  .form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem 1rem}
  .field{min-width:0}.field label{margin:0 0 .25rem}.field input,.field select,.field textarea{box-sizing:border-box;width:100%;height:2.35rem;margin:0}
- .field textarea{height:auto;min-height:5rem}.required:after{content:" *";color:#b42318}.optional{color:#555}.optional:after{content:" (optional)";color:#777;font-weight:400}
- .input-with-prefix{display:flex;align-items:center;box-sizing:border-box;border:1px solid #767676;border-radius:3px;background:#fff}
+ .field textarea{height:auto;min-height:5rem}.required:after{content:" *";color:#b42318}.optional{color:inherit}
+ .input-with-prefix{display:flex;align-items:center;box-sizing:border-box;border:1px solid #767676;border-radius:8px;background:#fff;overflow:hidden}
  .input-with-prefix > span{padding:0 .45rem;color:#555;font-size:.9rem}
  .input-with-prefix input{box-sizing:border-box;width:100%;min-width:0;height:2.35rem;margin:0;border:0;background:transparent}
   /* Read-only values read as plain text, not as a grayed-out box */
  .field input[readonly],.field textarea[readonly]{border:0;background:transparent;padding-left:0;font-weight:600;color:inherit;outline:0}
  input[readonly],textarea[readonly]{background:#eef0f3;color:#666}.field-error{margin-top:.25rem;color:#b42318;font-size:.82rem}
- .required-note{margin:.2rem 0 1rem;color:#555;font-size:.88rem}.required-note span{font-weight:600}
+ .required-note{margin:0 0 .9rem;color:#555;font-size:.85rem}.required-note span{color:#b42318;font-weight:700}   /* "* Required" legend, only on forms that mix required and optional fields */
  .alert{display:flex;align-items:flex-start;gap:.7rem;padding:.75rem 1rem;margin-bottom:1rem;border:1px solid;border-radius:7px}.alert-success{background:#e8f7ed;border-color:#98d5aa;color:#176b35}.alert-error{background:#fcedeb;border-color:#e7a39c;color:#8a1f17}.alert-warning{background:#fff5d8;border-color:#e8c66d;color:#785b00}.alert-icon svg{display:block;width:1.2rem;height:1.2rem}.alert-body{flex:1}.alert-body strong{display:block;margin-bottom:.15rem}.alert-body ul{margin:.25rem 0 0;padding-left:1.2rem}.alert-dismiss{padding:0;background:transparent;color:currentColor;font-size:1.2rem;line-height:1;border:0}
  @media (max-width:700px){.form-grid{grid-template-columns:1fr}}
- button,.btn{background:#1f3a5f;color:#fff;border:0;border-radius:5px;padding:.45rem .9rem;cursor:pointer;text-decoration:none;display:inline-block;box-sizing:border-box;font:inherit;font-size:.9rem;line-height:1.25;vertical-align:middle}
+ button,.btn{background:#1f3a5f;color:#fff;border:0;border-radius:8px;padding:.45rem .9rem;cursor:pointer;text-decoration:none;display:inline-block;box-sizing:border-box;font:inherit;font-size:.9rem;line-height:1.25;vertical-align:middle}
  .danger{background:#a33}.ok{background:#e6f4ea;padding:.6rem;border-radius:5px;margin-bottom:1rem}
  .err{background:#fdecea;padding:.6rem;border-radius:5px;margin-bottom:1rem;color:#8a1f17}
  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem}.low{color:#a33;font-weight:600}
@@ -87,6 +90,19 @@
  .page-heading{margin-bottom:1rem}
  .text-muted{color:#888;font-size:.88rem}
  .cell-sub{display:block;color:#777;font-size:.82rem}   /* second line in a table cell, e.g. the time under a date */
+ /* Detail pages: label / value rows (like the customer receipt), an optional shaded side box, and the page's buttons */
+ .details{margin:0 0 .5rem;max-width:44rem}
+ .details > div{display:grid;grid-template-columns:11rem minmax(0,1fr);gap:.75rem;align-items:baseline;padding:.55rem 0;border-bottom:1px solid #e4e9f0}
+ .details > div:last-child{border-bottom:0}
+ .details dt{color:#555} .details dd{margin:0;overflow-wrap:anywhere}
+ .details-layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:1.5rem;align-items:start;margin-bottom:1.2rem}
+ .details-layout .details{max-width:none;margin:0}
+ .details-aside{padding:1rem;border-radius:10px;background:#eef0f3;overflow-wrap:anywhere} .details-aside h3{margin:0 0 .4rem;font-size:1rem} .details-aside p{margin:0}
+ .details-actions{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;margin:1rem 0}
+ .details-actions form{margin:0}
+ @media (max-width:700px){.details-layout{grid-template-columns:1fr} .details > div{grid-template-columns:minmax(0,1fr)}}
+ /* Daily attendance: time and overtime boxes centered under their titles */
+ .attendance-table td:not(:first-child){text-align:center} .attendance-table input{text-align:center}
  /* Roles form: permission checkboxes grouped by area */
  .permission-groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem}
  .permission-group{margin:0;padding:.8rem 1rem 1rem;border:1px solid #e3e8ef;border-radius:8px}
@@ -105,15 +121,22 @@
  .access-dialog h3:focus{outline:none}
  .access-dialog .actions{margin-top:1.2rem;justify-content:flex-end}
  .access-dialog .actions .btn,.access-dialog .actions button{min-width:5.5rem;height:2.1rem;display:inline-flex;align-items:center;justify-content:center}
+ /* Pop-up forms for small edits (components/modal) */
+ .modal-dialog{width:min(440px,calc(100% - 2rem));max-height:85vh;box-sizing:border-box;padding:1.4rem 1.6rem;border:0;border-radius:12px;box-shadow:0 20px 50px -12px #0f1f3366}
+ .modal-dialog::backdrop{background:#0f1f3366}
+ .modal-dialog h3{margin:0 0 1rem} .modal-dialog h3:focus{outline:none}
+ .modal-dialog .field input{box-sizing:border-box;width:100%;height:2.35rem;margin:0}
+ .modal-dialog form > .actions{margin-top:1.2rem;justify-content:flex-end}
+ .modal-dialog .actions .btn,.modal-dialog .actions button{min-width:5.5rem;height:2.1rem;display:inline-flex;align-items:center;justify-content:center}
  .row{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:.8rem}
  /* Two cards side by side (e.g. Edit account: details + reset password); stacked on small screens */
  .split{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:1rem;align-items:start} .split > .card{margin-bottom:0}
  @media (max-width:900px){.split{grid-template-columns:1fr}}
  /* Page header (outside the cards): Back link, bigger title, page buttons on the right */
- .back-link{display:inline-block;margin:0 0 .4rem;color:#1f3a5f;text-decoration:none;font-size:.9rem;font-weight:600}
+ .back-link{display:inline-block;margin:0 0 .4rem;color:#555;text-decoration:none;font-size:.9rem;font-weight:600}
  .back-link:hover{text-decoration:underline}
  .page-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin:0 0 1rem}
- .page-head h1{margin:0;font-size:1.75rem;line-height:1.2}
+ .page-head h1{margin:0;font-size:2rem;line-height:1.15;font-weight:750;letter-spacing:-.02em}
  .page-sub{margin:-.6rem 0 1rem;color:#555}
  .page-actions{display:flex;gap:.5rem;flex-wrap:wrap}
  .form-grid.single{grid-template-columns:1fr}
@@ -142,9 +165,8 @@
  /* Export Center: full width, filters left-aligned, Download buttons centered */
  .export-table{width:100%} .export-table td:last-child{text-align:center}
  .export-table .report-filter{margin:0;justify-content:flex-start} .export-table td:last-child{white-space:nowrap}
- /* No "(optional)" or "*" on filter/search forms, read-only forms, or forms where every field is optional */
- form[method="GET" i] .optional:after,form[method="GET" i] .required:after,.plain-labels .optional:after,.plain-labels .required:after{content:none}
- form[method="GET" i] .optional,.plain-labels .optional{color:inherit}
+ /* Filters and search bars are not data entry: no required asterisks there */
+ form[method="GET" i] .required:after{content:none}
  /* Auth pages (log in, sign up, password): card centered in the viewport on a soft gradient */
  body:has(.card.auth){min-height:100vh;display:flex;flex-direction:column;background:radial-gradient(1100px 560px at 12% -8%,#d9e5f6 0%,transparent 62%),radial-gradient(900px 520px at 108% 108%,#e3eaf4 0%,transparent 58%),#f3f5f9}
  body:not(.staff-layout):has(.card.auth) main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;max-width:none;box-sizing:border-box;margin:0;padding:2.5rem 1rem}
@@ -157,7 +179,7 @@
  .auth input:not([type=checkbox]):not([type=radio]):not([type=hidden]):focus{outline:none;border-color:#1f3a5f;background:#fff;box-shadow:0 0 0 4px #1f3a5f1f}
  .auth .password-wrap input:not([type=checkbox]):not([type=radio]):not([type=hidden]){padding-right:2.7rem}
  .auth label{color:#344256;font-size:.85rem;font-weight:600}
- .auth .form-grid{grid-template-columns:1fr;gap:1.05rem} .auth .required:after{content:none}
+ .auth .form-grid{grid-template-columns:1fr;gap:1.05rem}
  .auth form > p{margin:1.4rem 0 0}
  .auth form > p > button{width:100%;height:2.9rem;padding:0 1rem;border-radius:10px;background:linear-gradient(180deg,#25466d,#1a3355);font-size:.95rem;font-weight:600;letter-spacing:.01em;box-shadow:inset 0 1px 0 #ffffff26,0 10px 22px -10px #1f3a5fcc;transition:transform .15s ease,box-shadow .15s ease,filter .15s ease}
  .auth form > p > button:hover{filter:brightness(1.08);transform:translateY(-1px);box-shadow:inset 0 1px 0 #ffffff26,0 14px 26px -10px #1f3a5fcc}
@@ -205,6 +227,7 @@
  .search{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center} .search input{flex:1;min-width:180px}
  .cats a{display:inline-block;margin:.2rem .4rem .2rem 0;padding:.2rem .6rem;border:1px solid #1f3a5f;border-radius:999px;color:#1f3a5f;text-decoration:none;font-size:.85rem}
  .product{display:flex;flex-direction:column;gap:.25rem;color:inherit;text-decoration:none;margin:0} .product:hover{box-shadow:0 2px 8px #0002}
+ .product-copy{display:flex;flex-direction:column;gap:.35rem}
  .product img,.product .noimg{width:100%;height:150px;object-fit:cover;border-radius:5px}
  .noimg{background:#eef0f3;color:#888;display:flex;align-items:center;justify-content:center;font-size:.85rem}
  .product small,.detail small{color:#666}
@@ -220,7 +243,7 @@
  }
  /* Order status badges (orders/_status) */
  .status{display:inline-block;font-size:.8rem;font-weight:600;padding:.1rem .55rem;border-radius:999px;background:#eef0f3;color:#333}
- .status-pending{background:#fff5d8;color:#785b00} .status-completed{background:#e6f4ea;color:#1e6b34} .status-cancelled{background:#fdecea;color:#8a1f17}
+ .status-pending{background:#fff5d8;color:#785b00} .status-completed,.status-delivered{background:#e6f4ea;color:#1e6b34} .status-cancelled{background:#fdecea;color:#8a1f17}
  .detail{display:grid;grid-template-columns:minmax(0,320px) 1fr;gap:1.2rem} .detail img,.detail .noimg{width:100%;height:280px;object-fit:cover;border-radius:5px}
  .detail h2{margin:.2rem 0} .price{font-size:1.3rem;font-weight:600;margin:.3rem 0}
  @media (max-width:600px){.detail{grid-template-columns:1fr}}
@@ -236,17 +259,24 @@
  .report-filter label{margin:0}
  .report-summary{display:flex;gap:1rem;flex-wrap:wrap;margin:1rem 0}
  .report-summary > div{background:#f4f5f7;border-radius:5px;padding:.7rem 1rem;min-width:11rem;display:grid;gap:.3rem}
- .stepper{display:inline-flex;align-items:stretch;border:1px solid #ccc;border-radius:5px;overflow:hidden;background:#fff}
+ .stepper{display:inline-flex;align-items:stretch;border:1px solid #ccc;border-radius:8px;overflow:hidden;background:#fff}
  .stepper button{background:#eef0f3;color:#1f3a5f;border-radius:0;padding:.3rem .7rem;font-size:1rem;font-weight:600}
  .stepper button:hover{background:#dde2e8}
- .stepper input{width:3.5rem;margin:0;border:0;border-left:1px solid #ccc;border-right:1px solid #ccc;text-align:center;-moz-appearance:textfield}
+ .stepper input{width:3.5rem;margin:0;border:0;border-radius:0;border-left:1px solid #ccc;border-right:1px solid #ccc;text-align:center;-moz-appearance:textfield}
  .stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 </style>
+@if(! auth('web')->check() && request()->routeIs('home', 'catalog.*', 'customer.*', 'login', 'register', 'password.*'))
+    <link rel="stylesheet" href="{{ asset('css/storefront.css') }}">
+@endif
 @stack('head')
 </head>
-<body class="@auth('web') staff-layout @endauth">
+<body @class(['staff-layout' => auth('web')->check(), 'storefront' => ! auth('web')->check()])>
 <nav class="@auth('web') staff-nav @else top-nav @endauth">
-    <strong>IMS-HE</strong>
+    @auth('web')
+        <strong>IMS-HE</strong>
+    @else
+        <a class="store-brand" href="{{ route('home') }}">Ibay <span>Enterprises</span></a>
+    @endauth
 
     @auth('web')
         @php
@@ -566,6 +596,9 @@
    }).finally(function () { button.disabled = false; });
   });
  })();
+
+ // A pop-up form the server sent back with errors opens again by itself (components/modal).
+ document.querySelectorAll('dialog[data-open-on-load]').forEach(function (dialog) { dialog.showModal(); });
 
  // Tables: each cell's content goes in an invisible box as wide as the widest entry in its column, centered under
  // the column title. The table keeps the full width, but every column reads as narrow and lines up on the left.

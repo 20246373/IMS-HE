@@ -6,8 +6,8 @@
  <form method="GET" action="{{ route('online-orders.index') }}" class="report-filter">
   <label>Status
   <select name="status">
-   @foreach($statuses as $s)<option value="{{ $s }}" @selected($status === $s)>{{ $s }}</option>@endforeach
    <option value="All" @selected($status === 'All')>All statuses</option>
+   @foreach($statuses as $s)<option value="{{ $s }}" @selected($status === $s)>{{ $s }}</option>@endforeach
   </select>
   </label>
   <button>Filter</button>
@@ -27,7 +27,7 @@
      <td>{{ money($o->total_amount) }}</td>
      <td>{{ $o->payment?->payment_method }}</td>
      <td>@include('orders._status', ['status' => $o->status])</td>
-     <td><a href="{{ route('online-orders.show', $o) }}">{{ $o->status === 'Pending' ? 'Review' : 'View' }}</a></td>
+     <td><a class="btn" href="{{ route('online-orders.show', $o) }}">{{ $o->status === 'Pending' ? 'Review' : 'View' }}</a></td>
     </tr>
    @endforeach
   </table>

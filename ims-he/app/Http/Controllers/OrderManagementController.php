@@ -16,8 +16,8 @@ class OrderManagementController extends Controller
 
     public function index(Request $request)
     {
-        // Pending first by default: those are the orders staff still have to act on.
-        $status = $request->validate(['status' => ['nullable', Rule::in([...self::STATUSES, 'All'])]])['status'] ?? 'Pending';
+        // All orders by default, like every other filter; staff can narrow it to Pending.
+        $status = $request->validate(['status' => ['nullable', Rule::in([...self::STATUSES, 'All'])]])['status'] ?? 'All';
 
         $orders = Invoice::with('customer', 'payment')->withCount('items')
             ->where('channel', 'Online')

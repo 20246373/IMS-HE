@@ -80,6 +80,26 @@ class CheckoutTest extends TestCase
             ->assertOk()->assertSee('Claw Hammer')->assertSee('700.00')->assertSee('Cash')->assertSee('GCash');
     }
 
+    public function test_resubmitting_checkout_does_not_create_a_second_order_or_deduct_stock_again(): void
+    {
+        $customer = $this->customer();
+        $product = $this->product(stock: 2);
+        $this->inCart($customer, $product, 2);
+        $this->actingAs($customer, 'customer');
+
+        $checkout = route('customer.checkout.store');
+        $this->post($checkout, $this->details())
+            ->assertRedirect(route('customer.orders.confirmation', Invoice::firstOrFail()));
+        $this->post($checkout, $this->details())->assertSessionHasErrors('cart');
+
+        $this->assertDatabaseCount('invoices', 1);
+        $this->assertDatabaseCount('invoice_items', 1);
+        $this->assertDatabaseCount('payments', 1);
+        $this->assertDatabaseCount('inventory_transactions', 1);
+        $this->assertSame(0, (int) $product->fresh()->stock_quantity);
+        $this->assertSame(0, $customer->cart->items()->count());
+    }
+
     public function test_cart_page_has_a_checkout_button(): void
     {
         $customer = $this->customer();
@@ -274,7 +294,7 @@ class CheckoutTest extends TestCase
         $this->inCart($customer, $this->product(), 1);
 
         $this->actingAs($customer, 'customer')->get(route('customer.checkout.show'))->assertOk()
-            ->assertSee('All fields are required')
+            ->assertDontSee('All fields are required')
             ->assertSee('name="first_name"', false)->assertSee('name="last_name"', false)
             ->assertSee('name="contact_number"', false)->assertSee('name="address"', false);
     }
@@ -294,6 +314,27 @@ class CheckoutTest extends TestCase
             ->assertSessionHasNoErrors();
         $this->assertDatabaseCount('invoices', 1);
         $this->assertSame('La Trinidad', $customer->fresh()->address);
+    }
+
+    public function test_checkout_requires_correction_of_a_saved_short_contact_number(): void
+    {
+        $customer = $this->customer();
+        $customer->update([
+            'first_name' => 'Juan', 'last_name' => 'Cruz',
+            'contact_number' => '123', 'address' => 'Baguio City',
+        ]);
+        $this->inCart($customer, $this->product(), 1);
+        $this->actingAs($customer, 'customer');
+
+        $this->get(route('customer.checkout.show'))->assertOk()->assertSee('name="contact_number"', false);
+        $this->post(route('customer.checkout.store'), ['payment_method' => 'Cash'])
+            ->assertSessionHasErrors('contact_number');
+        $this->assertDatabaseCount('invoices', 0);
+
+        $this->post(route('customer.checkout.store'), [
+            'payment_method' => 'Cash', 'contact_number' => '0123456',
+        ])->assertRedirect(route('customer.orders.confirmation', Invoice::firstOrFail()));
+        $this->assertSame('0123456', $customer->fresh()->contact_number);
     }
 
     public function test_only_the_missing_details_are_required_and_saved(): void

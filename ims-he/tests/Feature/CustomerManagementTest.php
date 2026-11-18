@@ -73,7 +73,7 @@ class CustomerManagementTest extends TestCase
             ->assertOk()
             ->assertSee('#'.$online->invoice_id)
             ->assertSee('₱1,234.50')
-            ->assertSee('Open online order')
+            ->assertSee('href="'.route('online-orders.show', $online).'">View</a>', false)
             ->assertDontSee('do-not-display');
     }
 

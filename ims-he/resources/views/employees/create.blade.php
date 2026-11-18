@@ -3,7 +3,6 @@
 @section('heading', 'Add Employee')
 @section('content')
 <div class="card">
- <x-required-note />
  <form method="POST" action="{{ route('employees.store') }}">
   @csrf
   @include('employees._form')

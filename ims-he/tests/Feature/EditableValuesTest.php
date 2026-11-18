@@ -34,6 +34,26 @@ class EditableValuesTest extends TestCase
         ]);
     }
 
+    public function test_supplier_add_and_edit_are_pop_ups_that_reopen_with_errors(): void
+    {
+        $supplier = $this->supplier();
+        $clerk = $this->staff(User::INVENTORY_CLERK);
+        $modal = 'edit-supplier-'.$supplier->supplier_id;
+
+        $list = $this->actingAs($clerk)->get(route('suppliers.index'))->assertOk()
+            ->assertSee('id="add-supplier"', false)
+            ->assertSee('id="'.$modal.'"', false)
+            ->getContent();
+        $this->assertDoesNotMatchRegularExpression('/<dialog [^>]*data-open-on-load/', $list);
+
+        // A blank contact number is refused: back on the list with that pop-up open again.
+        $html = $this->actingAs($clerk)->from(route('suppliers.index'))->followingRedirects()
+            ->put(route('suppliers.update', $supplier), ['_modal' => $modal, 'contact_number' => '', 'address' => 'Baguio'])
+            ->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('/<dialog id="'.$modal.'"[^>]*data-open-on-load/', $html);
+        $this->assertDoesNotMatchRegularExpression('/<dialog id="add-supplier"[^>]*data-open-on-load/', $html);
+    }
+
     public function test_supplier_update_ignores_a_tampered_supplier_name(): void
     {
         $supplier = $this->supplier();

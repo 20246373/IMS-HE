@@ -35,6 +35,54 @@ class DashboardTest extends TestCase
             ->assertDontSee('Pending Purchase Orders');
     }
 
+    public function test_empty_account_groups_show_the_empty_state(): void
+    {
+        $this->signInAs(User::ADMINISTRATOR);
+
+        $response = $this->get(route('dashboard'))->assertOk();
+
+        $this->assertSame(2, substr_count($response->getContent(), '<p>None yet.</p>'));
+        $response->assertDontSee(route('users.index').'#unassigned', false);
+    }
+
+    public function test_account_previews_keep_full_counts_and_limit_each_group_to_five_entries(): void
+    {
+        $this->signInAs(User::ADMINISTRATOR);
+
+        foreach (range(1, 6) as $number) {
+            User::create([
+                'email' => "pending-{$number}@example.com",
+                'password' => 'secret123',
+                'role' => User::PENDING,
+                'status' => User::STATUS_ACTIVE,
+            ]);
+        }
+
+        User::create([
+            'email' => 'locked@example.com',
+            'password' => 'secret123',
+            'role' => User::EMPLOYEE,
+            'status' => User::STATUS_LOCKED,
+        ]);
+
+        $response = $this->get(route('dashboard'))->assertOk()
+            ->assertSee('+1 more')
+            ->assertSee('+3 more')
+            ->assertSee(route('users.index').'#unassigned', false)
+            ->assertDontSee('pending-6@example.com');
+
+        $summaries = $response->viewData('accountSummaries');
+        $this->assertSame(8, $summaries['all']['count']);
+        $this->assertCount(5, $summaries['all']['names']);
+        $this->assertSame(6, $summaries['unassigned']['count']);
+        $this->assertSame([
+            'pending-1@example.com', 'pending-2@example.com', 'pending-3@example.com',
+            'pending-4@example.com', 'pending-5@example.com',
+        ], $summaries['unassigned']['names']->all());
+        $this->assertSame(1, $summaries['locked']['count']);
+        $this->assertSame(['locked@example.com'], $summaries['locked']['names']->all());
+    }
+
     public function test_president_sees_business_widgets_only(): void
     {
         $this->signInAs(User::PRESIDENT);

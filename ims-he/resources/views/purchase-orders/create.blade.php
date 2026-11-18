@@ -8,7 +8,7 @@
  @else
  <form method="POST" action="{{ route('purchase-orders.store') }}" id="purchase-order-form">
   @csrf
-  <label>Supplier
+  <label class="required">Supplier
    <select name="supplier_id" required>
     <option value="">Select a supplier</option>
     @foreach($suppliers as $supplier)
@@ -18,7 +18,7 @@
   </label>
   <h3>Products</h3>
   <table>
-   <thead><tr><th>Product</th><th>Quantity</th><th>Unit cost</th><th>Subtotal</th><th></th></tr></thead>
+   <thead><tr><th class="required">Product</th><th class="required">Quantity</th><th class="required">Unit cost</th><th>Subtotal</th><th></th></tr></thead>
    <tbody id="purchase-order-lines">
     @php($oldItems = old('items'))
     @if(!is_array($oldItems) || $oldItems === [])

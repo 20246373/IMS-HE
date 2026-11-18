@@ -3,7 +3,7 @@
 
 {{-- Password input with a show/hide toggle inside the field, and an optional gray hint below it. --}}
 <div class="field">
- <label for="{{ $id }}">{{ $label }}</label>
+ <label for="{{ $id }}" class="required">{{ $label }}</label>
  <div class="password-wrap">
   <input id="{{ $id }}" type="password" name="{{ $name }}" required {{ $attributes }} @if($hint) aria-describedby="{{ $id }}-hint" @endif>
   <button type="button" class="password-toggle" aria-label="Show password" aria-controls="{{ $id }}"

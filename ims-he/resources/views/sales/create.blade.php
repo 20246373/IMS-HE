@@ -3,7 +3,6 @@
 @section('heading')Sales (POS)@endsection
 @section('content')
 <div class="card">
- <x-required-note />
  <form method="GET" action="{{ route('sales.create') }}" class="report-filter no-print">
   <x-field label="Search product" name="q" :value="$filters['q'] ?? null" :required="false" placeholder="Name or brand" />
   <x-select label="Category" name="category_id" :required="false">
@@ -25,7 +24,7 @@
       <small>{{ $product->brand ?: 'No brand' }} &middot; {{ $product->category?->category_name }}</small>
       <span>{{ money($product->unit_price) }} &middot; Stock: {{ $product->stock_quantity }}</span>
       @if($product->stock_quantity > 0)
-       <button type="button" class="add-product" data-product-id="{{ $product->product_id }}" data-product-name="{{ $product->product_name }}" data-price="{{ $product->unit_price }}">Add</button>
+       <button type="button" class="add-product" data-product-id="{{ $product->product_id }}" data-product-name="{{ $product->product_name }}" data-price="{{ $product->unit_price }}" data-stock="{{ $product->stock_quantity }}">Add</button>
       @else
        <button type="button" disabled>Out of stock</button>
       @endif
@@ -45,7 +44,9 @@
      <tbody id="sale-lines"><tr id="empty-lines"><td colspan="5">Add products to begin.</td></tr></tbody>
      <tfoot><tr><th colspan="3" style="text-align:right">Total</th><th id="sale-total">₱0.00</th><th></th></tr></tfoot>
     </table>
+    <p id="pos-stock-note" class="field-error" role="status" hidden></p>
     <div id="sale-fields"></div>
+    <x-required-note />
     <div class="form-grid">
      <x-field label="Amount paid" name="amount_paid" prefix="₱" inputmode="decimal" />
      <x-select label="Payment method" name="payment_method"><option value="Cash">Cash</option><option value="GCash">GCash</option></x-select>
@@ -75,12 +76,14 @@ document.addEventListener('DOMContentLoaded', function () {
  const lines = new Map(), tbody = document.getElementById('sale-lines'), fields = document.getElementById('sale-fields');
  const paid = document.querySelector('[name="amount_paid"]'), total = document.getElementById('sale-total'), change = document.getElementById('change-due');
  const money = value => new Intl.NumberFormat('en-PH', {style:'currency', currency:'PHP'}).format(value);
+ const note = document.getElementById('pos-stock-note');
+ const warn = line => { note.textContent = `Only ${line.stock} of ${line.name} in stock.`; note.hidden = false; };
  function render() {
   tbody.innerHTML = ''; fields.innerHTML = ''; let sum = 0, index = 0;
   lines.forEach((line, id) => {
    const subtotal = line.price * line.quantity; sum += subtotal;
    const row = document.createElement('tr');
-   row.innerHTML = `<td>${line.name}</td><td>${money(line.price)}</td><td><input type="number" min="1" value="${line.quantity}" data-qty="${id}" style="width:4rem"></td><td>${money(subtotal)}</td><td><button type="button" class="danger" data-remove="${id}">Remove</button></td>`;
+   row.innerHTML = `<td>${line.name}</td><td>${money(line.price)}</td><td><input type="number" min="1" max="${line.stock}" value="${line.quantity}" data-qty="${id}" style="width:4rem"></td><td>${money(subtotal)}</td><td><button type="button" class="danger" data-remove="${id}">Remove</button></td>`;
    tbody.appendChild(row);
    fields.insertAdjacentHTML('beforeend', `<input type="hidden" name="items[${index}][product_id]" value="${id}"><input type="hidden" name="items[${index}][quantity]" value="${line.quantity}">`);
    index++;
@@ -90,11 +93,19 @@ document.addEventListener('DOMContentLoaded', function () {
   change.textContent = money(Math.max(0, tendered - sum));
  }
  document.querySelectorAll('.add-product').forEach(button => button.addEventListener('click', () => {
-  const id = button.dataset.productId, line = lines.get(id) || {name:button.dataset.productName, price:parseFloat(button.dataset.price), quantity:0};
-  line.quantity++; lines.set(id, line); render();
+  const id = button.dataset.productId, line = lines.get(id) || {name:button.dataset.productName, price:parseFloat(button.dataset.price), stock:parseInt(button.dataset.stock, 10), quantity:0};
+  // Never more than what is on the shelf.
+  if (line.quantity >= line.stock) { warn(line); return; }
+  line.quantity++; lines.set(id, line); note.hidden = true; render();
  }));
  tbody.addEventListener('click', event => { if (event.target.dataset.remove) { lines.delete(event.target.dataset.remove); render(); } });
- tbody.addEventListener('input', event => { if (event.target.dataset.qty) { lines.get(event.target.dataset.qty).quantity = Math.max(1, parseInt(event.target.value || '1', 10)); render(); } });
+ tbody.addEventListener('change', event => {
+  if (!event.target.dataset.qty) return;
+  const line = lines.get(event.target.dataset.qty), wanted = Math.max(1, parseInt(event.target.value || '1', 10));
+  line.quantity = Math.min(wanted, line.stock);
+  if (wanted > line.stock) { warn(line); } else { note.hidden = true; }
+  render();
+ });
  paid.addEventListener('input', render); render();
 });
 </script>

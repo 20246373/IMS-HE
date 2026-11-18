@@ -33,13 +33,19 @@ class UiKitTest extends TestCase
     public function test_required_note_and_required_field_marker_render(): void
     {
         $this->withViewErrors([])
-            ->blade('<x-required-note /><x-field label="Name" name="name" />')
-            ->assertSee('All fields are required unless marked <span>(optional)</span>.', false)
-            ->assertSee('class="required"', false);
+            ->blade('<x-required-note /><x-field label="Name" name="name" /><x-field label="Notes" name="notes" :required="false" />')
+            ->assertSee('<span>*</span> Required', false)
+            ->assertSee('<label for="name" class="required">Name</label>', false)
+            ->assertSee('<label for="notes" class="optional">Notes</label>', false);
     }
 
-    public function test_short_login_form_skips_the_required_note(): void
+    public function test_required_fields_are_marked_with_an_asterisk_without_a_legend_when_all_are_required(): void
     {
-        $this->get(route('login'))->assertOk()->assertDontSee('All fields are required');
+        // Log in: both fields required, so they carry the asterisk and no "* Required" legend is needed.
+        $this->get(route('login', ['as' => 'customer']))->assertOk()
+            ->assertSee('<label for="login" class="required">Email</label>', false)
+            ->assertSee('<label for="login-password" class="required">Password</label>', false)
+            ->assertDontSee('class="required-note"', false)
+            ->assertDontSee('All fields are required');
     }
 }

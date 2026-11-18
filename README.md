@@ -49,7 +49,7 @@ You need PHP 8.3 or newer, [Composer](https://getcomposer.org/), and MySQL. XAMP
 - **"No connection could be made because the target machine actively refused it"** means MySQL is not running. Start it in XAMPP.
 - **"Unknown column ..." or "Table ... doesn't exist" after pulling** means a teammate added a database change. Run `php artisan migrate`.
 - **Starting over with fresh sample data:** `php artisan migrate:fresh --seed`. This deletes everything in your local database.
-- **Running the tests:** `php artisan test`. If you get "429 Too Many Requests" failures after several runs, run `php artisan cache:clear` and try again.
+- **Running the tests:** `php artisan test` (it uses its own in-memory database, so your data is never touched).
 
 Angel: Inventory
 

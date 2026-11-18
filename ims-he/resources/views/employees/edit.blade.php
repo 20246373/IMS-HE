@@ -3,7 +3,6 @@
 @section('heading'){{ $employee->full_name }}@endsection
 @section('content')
 <div class="card">
- <x-required-note />
  <form method="POST" action="{{ route('employees.update', $employee) }}">
   @csrf
   @method('PUT')

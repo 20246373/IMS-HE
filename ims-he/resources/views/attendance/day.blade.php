@@ -5,14 +5,13 @@
 @section('content')
 <div class="card">
  <form method="GET" action="{{ route('attendance.day') }}" class="report-filter">
-  <label>Date <input type="date" name="date" value="{{ $date }}" required></label>
-  <button type="submit">Show day</button>
+  {{-- Picking a date loads that day right away (no button needed). --}}
+  <label>Date <input type="date" name="date" value="{{ $date }}" required onchange="if (this.value) this.form.submit()"></label>
  </form>
- <x-required-note />
  <form method="POST" action="{{ route('attendance.day.save') }}">
   @csrf
   <input type="hidden" name="work_date" value="{{ $date }}">
-  <table>
+  <table class="attendance-table no-fit">
    <thead><tr><th>Employee</th><th>Time in</th><th>Time out</th><th>Overtime hours</th></tr></thead>
    <tbody>
     @foreach($employees as $employee)

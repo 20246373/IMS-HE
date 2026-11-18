@@ -3,7 +3,6 @@
 @section('heading', 'Run Payroll')
 @section('content')
 <div class="card">
- <x-required-note />
  <form method="POST" action="{{ route('payrolls.store') }}">
   @csrf
   <div class="form-grid">

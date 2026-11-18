@@ -24,11 +24,6 @@ class CategoryController extends Controller
         return redirect()->route('categories.index')->with('status', 'Category added.');
     }
 
-    public function edit(Category $category)
-    {
-        return view('categories.edit', ['category' => $category]);
-    }
-
     public function update(Request $request, Category $category)
     {
         $category->update($request->validate([

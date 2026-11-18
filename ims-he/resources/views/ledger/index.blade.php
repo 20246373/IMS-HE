@@ -7,7 +7,7 @@
  <form method="GET" action="{{ route('ledger.index') }}" class="report-filter">
   <label>From <input type="date" name="start_date" value="{{ $startDate }}" required></label>
   <label>To <input type="date" name="end_date" value="{{ $endDate }}" required></label>
-  <label>Type <select name="entry_type"><option value="">All</option><option value="Income" @selected($type === 'Income')>Income</option><option value="Expense" @selected($type === 'Expense')>Expense</option></select></label>
+  <label>Type <select name="entry_type"><option value="">All types</option><option value="Income" @selected($type === 'Income')>Income</option><option value="Expense" @selected($type === 'Expense')>Expense</option></select></label>
   <button type="submit">Apply filter</button>
  </form>
  <div class="report-summary">

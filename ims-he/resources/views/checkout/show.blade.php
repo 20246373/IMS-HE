@@ -2,7 +2,8 @@
 @section('title','Checkout')
 @section('heading', 'Checkout')
 @section('content')
-<div class="card">
+<div class="checkout-layout">
+<div class="card checkout-summary">
  @if($warnings)
   <x-alert type="warning" title="Your cart was updated">
    <ul>@foreach($warnings as $w)<li>{{ $w }}</li>@endforeach</ul>
@@ -27,11 +28,10 @@
 </div>
 
 <form method="POST" action="{{ route('customer.checkout.store') }}">@csrf
- <div class="card" style="max-width:640px">
+ <div class="card">
   <h3>Delivery details</h3>
   @if($missing)
    {{-- Registration only asks for email and password, so the rest is collected here once and saved. --}}
-   <x-required-note />
    <p><small>We'll save these to your account for next time.</small></p>
    <div class="form-grid">
     @if(in_array('first_name', $missing))<x-field label="First name" name="first_name" maxlength="50" autocomplete="given-name" />@endif
@@ -51,7 +51,7 @@
   @endif
  </div>
 
- <div class="card" style="max-width:640px">
+ <div class="card">
   <h3 class="required">Payment method</h3>
   @foreach($methods as $m)
    <label style="font-weight:400">
@@ -67,4 +67,5 @@
   </p>
  </div>
 </form>
+</div>
 @endsection
