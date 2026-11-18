@@ -1,10 +1,8 @@
 @extends('layouts.app')
 @section('title','Dashboard')
+@section('heading')Welcome, {{ auth()->user()->displayName() }}@endsection
 @section('content')
-<div class="card">
- <h2>Welcome, {{ auth()->user()->employee?->full_name ?? auth()->user()->label() }}</h2>
- <p>Signed in as <strong>{{ auth()->user()->role }}</strong>.</p>
-</div>
+<p class="page-sub">Signed in as <strong>{{ auth()->user()->role }}</strong>.</p>
 @forelse($widgets as $widget)
  @include('dashboard._'.$widget)
 @empty

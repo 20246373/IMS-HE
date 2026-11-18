@@ -1,14 +1,15 @@
 @extends('layouts.app')
 @section('title','Categories')
+@section('heading', 'Categories')
 @section('content')
 <div class="card"><h3>Add category</h3>
  <form method="POST" action="{{ route('categories.store') }}">@csrf
   <input name="category_name" placeholder="Category name" value="{{ old('category_name') }}" maxlength="50" required> <button>Add</button>
  </form>
 </div>
-<div class="card"><h3>Categories</h3>
+<div class="card">
  <table>
-  <tr><th>Name</th><th>Products</th><th></th></tr>
+  <tr><th>Name</th><th>Products</th><th>Actions</th></tr>
   @foreach($categories as $c)
   <tr>
    <td>{{ $c->category_name }}</td><td>{{ $c->products_count }}</td>

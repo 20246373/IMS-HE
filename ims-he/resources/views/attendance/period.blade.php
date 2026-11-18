@@ -1,8 +1,9 @@
 @extends('layouts.app')
 @section('title', 'Attendance period')
+@section('heading', 'Attendance Period')
+@section('page-actions')<a class="btn btn-alt" href="{{ route('attendance.day') }}">Daily view</a>@endsection
 @section('content')
 <div class="card">
- <div class="report-heading"><h2>Attendance period</h2><a class="btn btn-alt" href="{{ route('attendance.day') }}">Daily view</a></div>
  <form method="GET" action="{{ route('attendance.period') }}" class="report-filter">
   <label>From <input type="date" name="start_date" value="{{ $startDate }}" required></label>
   <label>To <input type="date" name="end_date" value="{{ $endDate }}" required></label>

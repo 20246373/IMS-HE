@@ -1,10 +1,8 @@
 @extends('layouts.app')
 @section('title','Online order #'.$invoice->invoice_id)
+@section('heading')Online Order #{{ $invoice->invoice_id }} @include('orders._status', ['status' => $invoice->status])@endsection
 @section('content')
-<p><a href="{{ route('online-orders.index') }}">Back to online orders</a></p>
 <div class="card" style="max-width:760px">
- <h2>Online order #{{ $invoice->invoice_id }} @include('orders._status', ['status' => $invoice->status])</h2>
-
  <div class="form-grid">
   <p>
    <strong>Customer</strong><br>

@@ -1,8 +1,9 @@
 @extends('layouts.app')
 @section('title', 'Ledger')
+@section('heading', 'Ledger')
+@section('page-actions')<a class="btn" href="{{ route('ledger.create') }}">New entry</a>@endsection
 @section('content')
 <div class="card">
- <div class="report-heading"><h2>Ledger</h2><a class="btn" href="{{ route('ledger.create') }}">New entry</a></div>
  <form method="GET" action="{{ route('ledger.index') }}" class="report-filter">
   <label>From <input type="date" name="start_date" value="{{ $startDate }}" required></label>
   <label>To <input type="date" name="end_date" value="{{ $endDate }}" required></label>
@@ -15,13 +16,13 @@
   <div><strong>Net</strong><span>{{ money($totals['Net']) }}</span></div>
  </div>
  <table>
-  <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Description</th><th>Reference</th><th>Recorded by</th><th></th></tr></thead>
+  <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Description</th><th>Reference</th><th>Recorded by</th><th>Actions</th></tr></thead>
   <tbody>
    @forelse($entries as $entry)
    <tr>
     <td>{{ $entry->entry_date->format('M d, Y') }}</td><td>{{ $entry->entry_type }}</td><td>{{ money($entry->amount) }}</td>
     <td>{{ $entry->description }}</td><td>{{ $entry->reference_type ? $entry->reference_type.' #'.$entry->reference_id : '—' }}</td>
-    <td>{{ $entry->recorder?->email ?: ($entry->recorder?->username ?: 'System') }}</td>
+    <td>{{ $entry->recorder?->displayName() ?? 'System' }}</td>
     <td><form method="POST" action="{{ route('ledger.reverse', $entry) }}" class="inline">@csrf @method('POST')<button class="danger" onclick="return confirm('Reverse this entry?')">Reverse</button></form></td>
    </tr>
    @empty

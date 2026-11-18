@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\ExportDatasets;
 use App\Exports\ExportRegistry;
 use App\Models\AuditLog;
 use App\Models\Category;
 use App\Support\CsvExporter;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use ZipArchive;
 
 class ExportController extends Controller
@@ -14,15 +16,16 @@ class ExportController extends Controller
     public function index()
     {
         return view('exports.index', [
-            'datasets' => ExportRegistry::forRole(auth()->user()->role),
+            'datasets' => ExportRegistry::forUser(auth()->user()),
             'categories' => Category::orderBy('category_name')->get(),
+            'statusOptions' => ExportDatasets::STATUS_OPTIONS,
         ]);
     }
 
     public function download(Request $request, string $dataset)
     {
         $definition = $this->allowedDataset($dataset);
-        $request->validate($this->rules());
+        $request->validate($this->rules($dataset));
         AuditLog::record('Exported', $dataset);
 
         return CsvExporter::download(
@@ -38,8 +41,7 @@ class ExportController extends Controller
             return back()->with('warning', 'Enable the zip extension in php.ini to download all exports.');
         }
 
-        $role = auth()->user()->role;
-        $datasets = ExportRegistry::forRole($role);
+        $datasets = ExportRegistry::forUser(auth()->user());
         $filename = 'ims-he-exports-'.now()->format('Ymd-His').'.zip';
         $path = storage_path('app'.DIRECTORY_SEPARATOR.$filename);
         $zip = new ZipArchive;
@@ -89,20 +91,20 @@ class ExportController extends Controller
     private function allowedDataset(string $key): array
     {
         $definition = ExportRegistry::find($key);
-        if (! $definition || ! in_array(auth()->user()->role, $definition['roles'], true)) {
+        if (! $definition || ! ExportRegistry::allows(auth()->user(), $definition)) {
             abort(404);
         }
 
         return $definition;
     }
 
-    private function rules(): array
+    private function rules(string $dataset): array
     {
         return [
             'start_date' => ['nullable', 'date_format:Y-m-d'],
             'end_date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:start_date'],
             'category_id' => ['nullable', 'integer', 'exists:categories,category_id'],
-            'status' => ['nullable', 'string', 'max:50'],
+            'status' => ['nullable', Rule::in(ExportDatasets::STATUS_OPTIONS[$dataset] ?? [])],
         ];
     }
 }

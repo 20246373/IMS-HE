@@ -6,7 +6,6 @@ use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Product;
-use App\Models\User;
 use App\Services\SaleService;
 use App\Support\Money;
 use Illuminate\Http\RedirectResponse;
@@ -75,7 +74,7 @@ class SaleController extends Controller
         $invoices = Invoice::with(['customer', 'payment', 'employee'])
             ->where('channel', 'In-store')
             ->when(
-                ! $user->hasRole(User::STORE_SUPERVISOR),
+                ! $user->hasPermission('sales.view_all'),
                 fn ($query) => $user->employee_id === null
                     ? $query->whereNull('employee_id')
                     : $query->where('employee_id', $user->employee_id),
@@ -92,16 +91,14 @@ class SaleController extends Controller
 
         $user = $request->user();
         abort_unless(
-            $user->hasRole(User::STORE_SUPERVISOR)
+            $user->hasPermission('sales.view_all')
                 || (int) $invoice->employee_id === (int) $user->employee_id,
             403,
         );
 
-        $cashier = $invoice->employee?->user;
-
         return view('sales.show', [
             'invoice' => $invoice->load('items.product', 'payment', 'customer', 'employee.user'),
-            'cashierName' => $cashier?->label() ?: ($user->label() ?: 'System'),
+            'cashierName' => $invoice->employee?->full_name ?: ($user?->displayName() ?: 'System'),
         ]);
     }
 }

@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title','Checkout')
+@section('heading', 'Checkout')
 @section('content')
 <div class="card">
- <h2>Checkout</h2>
  @if($warnings)
   <x-alert type="warning" title="Your cart was updated">
    <ul>@foreach($warnings as $w)<li>{{ $w }}</li>@endforeach</ul>

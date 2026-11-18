@@ -16,7 +16,7 @@ class UserController extends Controller
         return view('users.index', [
             // Employees who signed up themselves and are waiting for a role come first.
             'pending' => User::where('role', User::PENDING)->orderBy('created_at')->get(),
-            'users' => User::with('employee')->where('role', '!=', User::PENDING)->orderBy('username')->orderBy('email')->get(),
+            'users' => User::with('employee')->where('role', '!=', User::PENDING)->orderBy('email')->get(),
             'roles' => User::roleChoices(),
             'employees' => $this->employeeOptions(null),
         ]);
@@ -34,12 +34,19 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
+        $request->merge(['email' => mb_strtolower(trim((string) $request->input('email')))]);
+
+        // Every field on the account form is required; the email must stay unique across staff and customers.
         $data = $request->validate([
+            'email' => ['required', 'email', 'max:100', Rule::unique('users', 'email')->ignore($user->user_id, 'user_id'), Rule::unique('customers', 'email')],
             'role' => ['required', Rule::in($user->hasRole(User::ADMINISTRATOR)
                 ? [...User::roleChoices(), $user->role]
                 : User::roleChoices())],
             'status' => ['required', Rule::in([User::STATUS_ACTIVE, User::STATUS_LOCKED])],
-            'employee_id' => ['nullable', 'exists:employees,employee_id', Rule::unique('users', 'employee_id')->ignore($user->user_id, 'user_id')],
+            'employee_id' => ['required', 'exists:employees,employee_id', Rule::unique('users', 'employee_id')->ignore($user->user_id, 'user_id')],
+        ], [
+            'email.unique' => 'This email is already used by another account.',
+            'employee_id.required' => 'Choose the employee this account belongs to.',
         ]);
 
         if ($user->is($request->user()) && $data['role'] !== $user->role) {
@@ -51,9 +58,10 @@ class UserController extends Controller
         }
 
         $updates = [
+            'email' => $data['email'],
             'role' => $data['role'],
             'status' => $data['status'],
-            'employee_id' => $data['employee_id'] ?? null,
+            'employee_id' => $data['employee_id'],
         ];
 
         if ($user->isLocked() && $data['status'] === User::STATUS_ACTIVE) {

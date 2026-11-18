@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title','My account')
+@section('heading', 'My Account')
 @section('content')
 <div class="card" style="max-width:560px">
- <h2>My account</h2>
  <table>
   <tr><th>Email</th><td>{{ $customer->email }}</td></tr>
   <tr><th>Member since</th><td>{{ $customer->created_at?->format('M j, Y') }}</td></tr>

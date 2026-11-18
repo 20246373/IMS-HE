@@ -1,29 +1,22 @@
 @extends('layouts.app')
 @section('title', $supplier->exists ? 'Edit supplier' : 'Add supplier')
+@section('heading'){{ $supplier->exists ? $supplier->supplier_name : 'Add supplier' }}@endsection
 @section('content')
-<div class="card" style="max-width:560px">
- <h2>{{ $supplier->exists ? 'Edit supplier' : 'Add supplier' }}</h2>
- <form method="POST" action="{{ $supplier->exists ? route('suppliers.update', $supplier) : route('suppliers.store') }}">
+<div class="card">
+ <form method="POST" action="{{ $supplier->exists ? route('suppliers.update', $supplier) : route('suppliers.store') }}" class="plain-labels">
   @csrf
   @if($supplier->exists) @method('PUT') @endif
-  @if($supplier->exists)
-   <label>Supplier name</label>
-   <input value="{{ $supplier->supplier_name }}" readonly>
-  @else
-   <label>Supplier name
-    <input name="supplier_name" value="{{ old('supplier_name') }}" maxlength="100" required>
-   </label>
-  @endif
-  <label>Contact number
-   <input name="contact_number" value="{{ old('contact_number', $supplier->contact_number) }}" maxlength="14" required>
-  </label>
-  <label>Address
-   <input name="address" value="{{ old('address', $supplier->address) }}" maxlength="100" required>
-  </label>
-  <p>
+  <div class="form-grid">
+   @unless($supplier->exists)
+    <x-field label="Supplier name" name="supplier_name" maxlength="100" />
+   @endunless
+   <x-field label="Contact number" name="contact_number" :value="$supplier->contact_number" maxlength="14" />
+   <x-field label="Address" name="address" :value="$supplier->address" maxlength="100" />
+  </div>
+  <div class="actions">
    <button>{{ $supplier->exists ? 'Save changes' : 'Add supplier' }}</button>
-   <a class="btn" href="{{ route('suppliers.index') }}">Cancel</a>
-  </p>
+   <a class="btn btn-alt" href="{{ route('suppliers.index') }}">Cancel</a>
+  </div>
  </form>
 </div>
 @endsection

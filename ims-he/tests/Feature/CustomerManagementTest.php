@@ -18,7 +18,6 @@ class CustomerManagementTest extends TestCase
         $number++;
 
         return User::create([
-            'username' => "customer-manager-{$number}",
             'email' => "customer-manager-{$number}@example.com",
             'password' => 'secret123',
             'role' => $role,
@@ -78,7 +77,7 @@ class CustomerManagementTest extends TestCase
             ->assertDontSee('do-not-display');
     }
 
-    public function test_customer_update_ignores_email_validates_digits_and_audits(): void
+    public function test_customer_update_changes_email_validates_digits_and_audits(): void
     {
         $customer = $this->customer();
 
@@ -99,7 +98,7 @@ class CustomerManagementTest extends TestCase
             ->assertRedirect(route('customers.show', $customer));
 
         $updated = $customer->fresh();
-        $this->assertSame('maria@example.com', $updated->email);
+        $this->assertSame('changed@example.com', $updated->email);
         $this->assertSame('Updated', $updated->first_name);
         $this->assertSame('09181234567', $updated->contact_number);
         $this->assertDatabaseHas('audit_logs', [
@@ -109,8 +108,13 @@ class CustomerManagementTest extends TestCase
         ]);
 
         $this->actingAs($this->staff(User::PRESIDENT))
-            ->put(route('customers.update', $customer), ['contact_number' => 'not-digits'])
+            ->put(route('customers.update', $customer), ['email' => 'changed@example.com', 'contact_number' => 'not-digits'])
             ->assertSessionHasErrors('contact_number');
+
+        // The email must stay unique across customers and staff.
+        $this->actingAs($this->staff(User::PRESIDENT))
+            ->put(route('customers.update', $customer), ['email' => User::first()->email])
+            ->assertSessionHasErrors('email');
     }
 
     public function test_only_president_and_store_supervisor_can_manage_customers(): void

@@ -1,8 +1,9 @@
 @extends('layouts.app')
 @section('title', 'Financial report')
+@section('heading', 'Financial Report')
+@section('page-actions')<a class="btn" href="{{ route('reports.financial.download', ['start_date' => $startDate, 'end_date' => $endDate]) }}">Save as PDF</a>@endsection
 @section('content')
 <div class="card">
- <div class="report-heading"><h2>Financial report</h2><a class="btn" href="{{ route('reports.financial.download', ['start_date' => $startDate, 'end_date' => $endDate]) }}">Save as PDF</a></div>
  <form method="GET" action="{{ route('reports.financial') }}" class="report-filter">
   <label>From <input type="date" name="start_date" value="{{ $startDate }}" required></label>
   <label>To <input type="date" name="end_date" value="{{ $endDate }}" required></label>

@@ -1,14 +1,14 @@
 @extends('layouts.app')
 @section('title', 'My attendance')
+@section('heading', 'My Attendance')
 @section('content')
 <div class="card">
- <h2>My attendance</h2>
  @if(!$employee)
   <x-alert type="warning" title="Employee record not linked">Your account has no employee record linked yet. Ask an Administrator to link it.</x-alert>
  @else
   <p><strong>{{ $employee->full_name }}</strong> · {{ today()->format('M d, Y') }}</p>
   <table>
-   <tr><th>Clock in</th><th>Clock out</th><th>Overtime</th><th></th></tr>
+   <tr><th>Clock in</th><th>Clock out</th><th>Overtime</th><th>Actions</th></tr>
    <tr>
     <td>{{ $record?->time_in ?: '—' }}</td>
     <td>{{ $record?->time_out ?: '—' }}</td>

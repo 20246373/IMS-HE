@@ -32,11 +32,16 @@ class DatabaseSeeder extends Seeder
     {
         // DEV ONLY - sample data and shared passwords. Remove before any real deployment.
 
+        // The Administrator's name comes from a linked employee record, like every other staff account.
+        $administrator = Employee::firstOrCreate(
+            ['first_name' => 'Anton', 'last_name' => 'Sanchez'],
+            ['position' => 'Administrator', 'daily_rate' => 700, 'date_hired' => now()->subYear()->toDateString(), 'status' => 'Active']
+        );
+
         User::updateOrCreate(
-            ['username' => 'admin'],
+            ['email' => 'admin@example.com'],
             [
-                'email' => 'admin@example.com',
-                'employee_id' => null,
+                'employee_id' => $administrator->employee_id,
                 'role' => User::ADMINISTRATOR,
                 'password' => 'password123',
                 'status' => User::STATUS_ACTIVE,
@@ -44,22 +49,22 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Staff: [username, role, first, last, position, daily_rate]
+        // Staff: [email name, role, first, last, position, daily_rate]
         foreach ([
             ['president',  User::PRESIDENT,        'Pedro',  'Reyes',   'President',        1000],
             ['treasurer',  User::TREASURER,        'Maria',  'Santos',  'Treasurer',         800],
             ['clerk',      User::INVENTORY_CLERK,  'Jose',   'Garcia',  'Inventory Clerk',   650],
             ['supervisor', User::STORE_SUPERVISOR, 'Ana',    'Lopez',   'Store Supervisor',  750],
             ['employee',   User::EMPLOYEE,         'Luis',   'Mendoza', 'Sales Associate',   610],
-        ] as [$username, $role, $first, $last, $position, $rate]) {
+        ] as [$emailName, $role, $first, $last, $position, $rate]) {
             $emp = Employee::firstOrCreate(
                 ['first_name' => $first, 'last_name' => $last],
                 ['position' => $position, 'daily_rate' => $rate, 'date_hired' => now()->subYear()->toDateString(), 'status' => 'Active']
             );
 
             User::updateOrCreate(
-                ['username' => $username],
-                ['email' => "{$username}@example.com", 'employee_id' => $emp->employee_id, 'role' => $role, 'password' => 'password123', 'status' => User::STATUS_ACTIVE, 'login_attempt_count' => 0]
+                ['email' => "{$emailName}@example.com"],
+                ['employee_id' => $emp->employee_id, 'role' => $role, 'password' => 'password123', 'status' => User::STATUS_ACTIVE, 'login_attempt_count' => 0]
             );
         }
 
@@ -120,8 +125,8 @@ class DatabaseSeeder extends Seeder
         }
 
         // Verified sample customer for storefront testing (guard: customer)
-        Customer::updateOrCreate(['username' => 'customer1'], [
-            'first_name' => 'Sample', 'last_name' => 'Customer', 'email' => 'customer1@example.com',
+        Customer::updateOrCreate(['email' => 'customer1@example.com'], [
+            'first_name' => 'Sample', 'last_name' => 'Customer',
             'email_verified_at' => now(), 'contact_number' => '09171234567', 'address' => 'Baguio City',
             'password' => 'password123',
         ]);

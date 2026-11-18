@@ -17,7 +17,7 @@ class AuditLogController extends Controller
             'end_date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:start_date'],
         ]);
 
-        $logs = AuditLog::with('user')
+        $logs = AuditLog::with('user.employee')
             ->when($filters['user_id'] ?? null, fn ($q, $id) => $q->where('user_id', $id))
             ->when($filters['action'] ?? null, fn ($q, $action) => $q->where('action', $action))
             ->when($filters['start_date'] ?? null, fn ($q, $date) => $q->whereDate('logged_at', '>=', $date))
@@ -28,7 +28,7 @@ class AuditLogController extends Controller
 
         return view('audit.index', [
             'logs' => $logs,
-            'users' => User::orderBy('username')->get(),
+            'users' => User::with('employee')->orderBy('email')->get(),
             'actions' => AuditLog::select('action')->distinct()->orderBy('action')->pluck('action'),
         ]);
     }

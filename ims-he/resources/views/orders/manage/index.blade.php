@@ -1,13 +1,15 @@
 @extends('layouts.app')
 @section('title','Online orders')
+@section('heading', 'Online Orders')
 @section('content')
 <div class="card">
- <h2>Online orders</h2>
- <form method="GET" action="{{ route('online-orders.index') }}" class="search">
-  <select name="status" aria-label="Filter by status">
+ <form method="GET" action="{{ route('online-orders.index') }}" class="report-filter">
+  <label>Status
+  <select name="status">
    @foreach($statuses as $s)<option value="{{ $s }}" @selected($status === $s)>{{ $s }}</option>@endforeach
    <option value="All" @selected($status === 'All')>All statuses</option>
   </select>
+  </label>
   <button>Filter</button>
  </form>
 
@@ -15,7 +17,7 @@
   <p>{{ $status === 'All' ? 'There are no online orders yet.' : "There are no {$status} online orders." }}</p>
  @else
   <table class="cart-table">
-   <tr><th>Order</th><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th></th></tr>
+   <tr><th>Order</th><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th>Actions</th></tr>
    @foreach($orders as $o)
     <tr>
      <td>#{{ $o->invoice_id }}</td>

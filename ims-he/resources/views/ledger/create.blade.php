@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title', 'New ledger entry')
+@section('heading', 'New Ledger Entry')
 @section('content')
 <div class="card">
- <h2>New ledger entry</h2>
  <x-required-note />
  <form method="POST" action="{{ route('ledger.store') }}">
   @csrf

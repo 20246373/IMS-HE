@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title','Receipt #'.$invoice->invoice_id)
+@section('heading')Receipt &mdash; Order #{{ $invoice->invoice_id }}@endsection
 @section('content')
 <div class="card" id="receipt" style="max-width:640px">
- <h2>Receipt &mdash; Order #{{ $invoice->invoice_id }}</h2>
  <p>
   <strong>Ibay Enterprises Corporation</strong><br>
   Date: {{ $invoice->invoice_date->format('M d, Y') }}<br>

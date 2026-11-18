@@ -6,14 +6,12 @@
  .badge.amber{background:#fff5d8;color:#785b00}
 </style>
 @endpush
+@section('heading', 'Purchase Orders')
+@section('page-actions')<a class="btn" href="{{ route('purchase-orders.create') }}">+ New purchase order</a>@endsection
 @section('content')
 <div class="card">
- <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem">
-  <h2>Purchase Orders</h2>
-  <a class="btn" href="{{ route('purchase-orders.create') }}">+ New purchase order</a>
- </div>
  <table>
-  <tr><th>PO</th><th>Supplier</th><th>Date</th><th>Status</th><th>Total</th><th></th></tr>
+  <tr><th>PO</th><th>Supplier</th><th>Date</th><th>Status</th><th>Total</th><th>Actions</th></tr>
   @forelse($purchaseOrders as $purchaseOrder)
   <tr>
    <td>#{{ $purchaseOrder->po_id }}</td>

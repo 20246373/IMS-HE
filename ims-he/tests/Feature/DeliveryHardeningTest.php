@@ -28,7 +28,7 @@ class DeliveryHardeningTest extends TestCase
         parent::setUp();
 
         $this->clerk = User::create([
-            'username' => 'delivery-clerk',
+            'email' => 'delivery-clerk@example.com',
             'password' => 'secret123',
             'role' => User::INVENTORY_CLERK,
             'status' => User::STATUS_ACTIVE,

@@ -33,7 +33,7 @@ class ProductManagementTest extends TestCase
     private function staff(string $role, ?string $username = null): User
     {
         return User::create([
-            'username' => $username ?? strtolower(str_replace(' ', '', $role)),
+            'email' => ($username ?? strtolower(str_replace(' ', '', $role))).'@example.com',
             'password' => 'secret123',
             'role' => $role,
             'status' => User::STATUS_ACTIVE,

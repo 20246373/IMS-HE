@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title', 'Purchase Order #' . $purchaseOrder->po_id)
+@section('heading')Purchase Order #{{ $purchaseOrder->po_id }}@endsection
 @section('content')
 <div class="card">
- <h2>Purchase Order #{{ $purchaseOrder->po_id }}</h2>
  <p>Supplier: <strong>{{ $purchaseOrder->supplier->supplier_name }}</strong></p>
  <p>Order date: {{ $purchaseOrder->order_date->format('M d, Y') }}</p>
  <p>Status: <strong>{{ $purchaseOrder->status }}</strong></p>

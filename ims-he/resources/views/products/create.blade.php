@@ -1,7 +1,8 @@
 @extends('layouts.app')
 @section('title','Add product')
+@section('heading', 'Add Product')
 @section('content')
-<div class="card" style="max-width:520px"><h3>Add product</h3>
+<div class="card">
  <form method="POST" action="{{ route('products.store') }}" enctype="multipart/form-data">@csrf
   <x-required-note />
   @include('products._fields', ['product' => null])

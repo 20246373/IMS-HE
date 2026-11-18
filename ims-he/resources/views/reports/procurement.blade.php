@@ -1,10 +1,8 @@
 @extends('layouts.app')
 @section('title', 'Procurement report')
-@section('content')
-<div class="card">
- <div class="report-heading">
-  <h2>Procurement report</h2>
-  <a class="btn no-print"
+@section('heading', 'Procurement Report')
+@section('page-actions')
+  <a class="btn"
      href="{{ route('reports.procurement.download', array_filter([
          'start_date' => $startDate,
          'end_date' => $endDate,
@@ -13,8 +11,9 @@
      ])) }}">
    Save as PDF
   </a>
- </div>
-
+@endsection
+@section('content')
+<div class="card">
  <form method="GET" action="{{ route('reports.procurement') }}" class="no-print report-filter">
   <label>From
    <input type="date" name="start_date" value="{{ $startDate }}" required>

@@ -1,18 +1,16 @@
 @extends('layouts.app')
 @section('title', 'Employees')
+@section('heading', 'Employees')
+@section('page-actions')<a class="btn" href="{{ route('employees.create') }}">+ Add employee</a>@endsection
 @section('content')
 <div class="card">
- <div class="report-heading">
-  <h2>Employees</h2>
-  <a class="btn" href="{{ route('employees.create') }}">+ Add employee</a>
- </div>
  <form method="GET" action="{{ route('employees.index') }}" class="report-filter">
   <label>Search name <input type="search" name="q" value="{{ $search }}" placeholder="First or last name"></label>
   <button type="submit">Search</button>
   @if($search !== '')<a class="btn btn-alt" href="{{ route('employees.index') }}">Clear</a>@endif
  </form>
  <table>
-  <thead><tr><th>Name</th><th>Position</th><th>Status</th><th>Daily rate</th><th>Account email</th><th></th></tr></thead>
+  <thead><tr><th>Name</th><th>Position</th><th>Status</th><th>Daily rate</th><th>Account email</th><th>Actions</th></tr></thead>
   <tbody>
    @forelse($employees as $employee)
    <tr>

@@ -1,9 +1,9 @@
 @extends('layouts.app')
 @section('title','Receive delivery')
+@section('heading', 'Receive Delivery')
 @section('content')
 <div class="card">
- <h2>Receive delivery</h2>
- <form method="GET" action="{{ route('deliveries.create') }}">
+ <form method="GET" action="{{ route('deliveries.create') }}" class="report-filter">
   <label>Pending purchase order
    <select name="purchase_order_id" required>
     <option value="">Select a purchase order</option>

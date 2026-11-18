@@ -104,9 +104,9 @@ class CustomerAuthTest extends TestCase
         $this->customer(['email_verified_at' => now()]);
 
         $this->post('/login', ['login' => 'juan@example.com', 'password' => 'wrongpass'])
-            ->assertSessionHasErrors(['login' => 'Invalid email/username or password.']);
+            ->assertSessionHasErrors(['login' => 'Invalid email or password.']);
         $this->post('/login', ['login' => 'nobody@example.com', 'password' => 'secret123'])
-            ->assertSessionHasErrors(['login' => 'Invalid email/username or password.']);
+            ->assertSessionHasErrors(['login' => 'Invalid email or password.']);
         $this->assertGuest('customer');
     }
 

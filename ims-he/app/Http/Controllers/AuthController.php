@@ -14,17 +14,17 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 use Throwable;
 
-// One login for everybody, like an online shop: the email (or username) decides whether it is a staff or a customer account.
+// One login for everybody, like an online shop: the email decides whether it is a staff or a customer account.
 // Employees sign up with email + password too, but get the role "Pending" until the Administrator assigns a real one.
 class AuthController extends Controller
 {
-    private const INVALID = 'Invalid email/username or password.';
+    private const INVALID = 'Invalid email or password.';
 
     private const LOCKED = 'Account locked after 3 failed attempts. Contact the administrator.';
 
     /**
      * Without ?as= the page asks who is logging in; with ?as=customer or ?as=employee it shows the form.
-     * Both forms post to the same login(), which finds the account by email or username.
+     * Both forms post to the same login(), which finds the account by email.
      */
     public function showLogin(Request $request)
     {
@@ -109,15 +109,14 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        $id = trim($data['login']);
-        $email = mb_strtolower($id);
+        $email = mb_strtolower(trim($data['login']));
 
-        $user = User::where('email', $email)->first() ?? User::where('username', $id)->first();
+        $user = User::where('email', $email)->first();
         if ($user) {
             return $this->loginStaff($request, $user, $data['password']);
         }
 
-        $customer = Customer::where('email', $email)->first() ?? Customer::where('username', $id)->first();
+        $customer = Customer::where('email', $email)->first();
         if ($customer) {
             return $this->loginCustomer($request, $customer, $data['password']);
         }

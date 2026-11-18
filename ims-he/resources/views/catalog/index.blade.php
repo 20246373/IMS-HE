@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title','Products')
+@section('heading', 'Products')
 @section('content')
 <div class="card">
- <h2>Products</h2>
  <form method="GET" action="{{ route('catalog.index') }}" class="search">
   <input name="q" value="{{ $q }}" placeholder="Search by name or brand" maxlength="100" aria-label="Search by name or brand">
   <select name="category" aria-label="Category">

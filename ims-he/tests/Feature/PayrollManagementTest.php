@@ -21,7 +21,6 @@ class PayrollManagementTest extends TestCase
         $number++;
 
         return User::create([
-            'username' => "payroll-{$number}",
             'email' => "payroll-{$number}@example.com",
             'password' => 'secret123',
             'role' => $role,

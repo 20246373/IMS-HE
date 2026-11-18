@@ -1,7 +1,7 @@
 @props(['label', 'name', 'required' => true])
 
 <div class="field">
- <label for="{{ $attributes->get('id', $name) }}" class="{{ $required ? 'required' : 'optional' }}">{{ $label }}</label>
+ <label for="{{ $attributes->get('id', $name) }}" class="{{ $attributes->has('readonly') ? '' : ($required ? 'required' : 'optional') }}">{{ $label }}</label>
  <select
   id="{{ $attributes->get('id', $name) }}"
   name="{{ $name }}"

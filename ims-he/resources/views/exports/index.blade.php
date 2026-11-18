@@ -2,32 +2,28 @@
 
 @section('title', 'Export Center')
 
-@section('content')
-<div class="report-heading">
-    <h2>Export Center</h2>
-    <div>
-        <form method="POST" action="{{ route('exports.all') }}" class="inline">
-            @csrf
-            <button type="submit">Download everything (ZIP)</button>
-        </form>
-        @if(auth()->user()->hasRole(\App\Models\User::ADMINISTRATOR))
-            <a class="btn" href="{{ route('exports.backup') }}">Database backup</a>
-        @endif
-    </div>
-</div>
+@section('heading', 'Export Center')
+@section('page-actions')
+    <form method="POST" action="{{ route('exports.all') }}" class="inline">
+        @csrf
+        <button type="submit">Download everything (ZIP)</button>
+    </form>
+@endsection
 
+@section('content')
 <div class="card">
-    <table>
-        <thead><tr><th>Dataset</th><th>Filters</th><th></th></tr></thead>
+    <table class="export-table">
+        <thead><tr><th>Dataset</th><th>Filters</th><th>Download</th></tr></thead>
         <tbody>
         @foreach($datasets as $dataset)
             <tr>
                 <td>{{ $dataset['label'] }}</td>
                 <td>
-                    <form method="GET" action="{{ route('exports.download', $dataset['key']) }}" class="report-filter">
+                    {{-- The Download button in the next column submits this form (form="..."). --}}
+                    <form id="export-{{ $dataset['key'] }}" method="GET" action="{{ route('exports.download', $dataset['key']) }}" class="report-filter">
                         @if(in_array('dates', $dataset['filters'], true))
-                            <x-field label="Start date" name="start_date" type="date" :value="request('start_date')" />
-                            <x-field label="End date" name="end_date" type="date" :value="request('end_date')" />
+                            <x-field label="From" name="start_date" type="date" :value="request('start_date')" :required="false" />
+                            <x-field label="To" name="end_date" type="date" :value="request('end_date')" :required="false" />
                         @endif
                         @if(in_array('category', $dataset['filters'], true))
                             <x-select label="Category" name="category_id" :required="false">
@@ -38,11 +34,19 @@
                             </x-select>
                         @endif
                         @if(in_array('status', $dataset['filters'], true))
-                            <x-field label="Status" name="status" :value="request('status')" :required="false" />
+                            <x-select label="Status" name="status" :required="false">
+                                <option value="">All statuses</option>
+                                @foreach($statusOptions[$dataset['key']] ?? [] as $status)
+                                    <option value="{{ $status }}" @selected(request('status') === $status)>{{ $status }}</option>
+                                @endforeach
+                            </x-select>
                         @endif
-                        <button type="submit">Download CSV</button>
+                        @if($dataset['filters'] === [])
+                            <span class="text-muted">No filters</span>
+                        @endif
                     </form>
                 </td>
+                <td><button type="submit" form="export-{{ $dataset['key'] }}">Download CSV</button></td>
             </tr>
         @endforeach
         </tbody>

@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title','My orders')
+@section('heading', 'My Orders')
 @section('content')
 <div class="card">
- <h2>My orders</h2>
  <form method="GET" action="{{ route('customer.orders.index') }}" class="search">
   <select name="status" aria-label="Filter by status">
    <option value="">All statuses</option>
@@ -17,7 +17,7 @@
   <a class="btn" href="{{ route('catalog.index') }}">Browse products</a>
  @else
   <table class="cart-table">
-   <tr><th>Order</th><th>Date</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th></th></tr>
+   <tr><th>Order</th><th>Date</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th>Actions</th></tr>
    @foreach($orders as $o)
     <tr>
      <td>#{{ $o->invoice_id }}</td>

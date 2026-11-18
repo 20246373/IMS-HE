@@ -1,13 +1,11 @@
 @extends('layouts.app')
 @section('title','Suppliers')
+@section('heading', 'Suppliers')
+@section('page-actions')<a class="btn" href="{{ route('suppliers.create') }}">+ Add supplier</a>@endsection
 @section('content')
 <div class="card">
- <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem">
-  <h2>Suppliers</h2>
-  <a class="btn" href="{{ route('suppliers.create') }}">+ Add supplier</a>
- </div>
  <table>
-  <tr><th>Name</th><th>Contact number</th><th>Address</th><th>Purchase orders</th><th></th></tr>
+  <tr><th>Name</th><th>Contact number</th><th>Address</th><th>Purchase orders</th><th>Actions</th></tr>
   @forelse($suppliers as $supplier)
   <tr>
    <td>{{ $supplier->supplier_name }}</td>
@@ -18,7 +16,7 @@
     <a class="btn" href="{{ route('suppliers.edit', $supplier) }}">Edit</a>
     <form method="POST" action="{{ route('suppliers.destroy', $supplier) }}" class="inline" onsubmit="return confirm('Are you sure you want to delete this record? This action cannot be undone.')">
      @csrf @method('DELETE')
-     @if(auth()->user()->hasRole('President'))<button class="danger">Delete</button>@endif
+     @if(auth()->user()->hasPermission('suppliers.delete'))<button class="danger">Delete</button>@endif
     </form>
    </td>
   </tr>

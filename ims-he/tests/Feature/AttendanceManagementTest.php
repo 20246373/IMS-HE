@@ -20,7 +20,6 @@ class AttendanceManagementTest extends TestCase
 
         return User::create([
             'employee_id' => $employeeId,
-            'username' => "attendance-{$number}",
             'email' => "attendance-{$number}@example.com",
             'password' => 'secret123',
             'role' => $role,

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AuditLog;
 use App\Models\Customer;
 use App\Models\Employee;
 use App\Models\User;
@@ -27,7 +28,6 @@ class StaffAccessTest extends TestCase
         $n++;
 
         return User::create(array_merge([
-            'username' => "staff{$n}",
             'email' => "staff{$n}@example.com",
             'password' => 'secret123',
             'role' => $role,
@@ -42,7 +42,6 @@ class StaffAccessTest extends TestCase
 
         $user = User::where('email', 'new.hire@example.com')->firstOrFail();
         $this->assertSame(User::PENDING, $user->role);
-        $this->assertNull($user->username);
         $this->assertNotSame('secret123', $user->password);
         $this->assertAuthenticatedAs($user, 'web');
         $this->assertDatabaseHas('audit_logs', ['action' => 'Registered', 'table_name' => 'users', 'record_id' => $user->user_id]);
@@ -74,9 +73,9 @@ class StaffAccessTest extends TestCase
         $this->actingAs($this->staff(User::INVENTORY_CLERK))->get(route('staff.pending'))->assertRedirect(route('dashboard'));
     }
 
-    public function test_staff_log_in_with_email_or_username_and_pending_goes_to_the_waiting_page(): void
+    public function test_staff_log_in_with_email_and_pending_goes_to_the_waiting_page(): void
     {
-        $clerk = $this->staff(User::INVENTORY_CLERK, ['username' => 'clerk1', 'email' => 'clerk1@example.com']);
+        $clerk = $this->staff(User::INVENTORY_CLERK, ['email' => 'clerk1@example.com']);
 
         $this->post('/login', ['login' => 'CLERK1@example.com', 'password' => 'secret123'])->assertRedirect(route('dashboard'));
         $this->assertAuthenticatedAs($clerk, 'web');
@@ -84,11 +83,12 @@ class StaffAccessTest extends TestCase
         $this->post('/logout');
         $this->assertGuest('web');
 
-        $this->post('/login', ['login' => 'clerk1', 'password' => 'secret123'])->assertRedirect(route('dashboard'));
-        $this->assertAuthenticatedAs($clerk, 'web');
+        // Usernames are gone: only the email logs in.
+        $this->post('/login', ['login' => 'clerk1', 'password' => 'secret123'])->assertSessionHasErrors('login');
+        $this->assertGuest('web');
 
         $this->post('/logout');
-        $this->staff(User::PENDING, ['username' => null, 'email' => 'wait@example.com']);
+        $this->staff(User::PENDING, ['email' => 'wait@example.com']);
         $this->post('/login', ['login' => 'wait@example.com', 'password' => 'secret123'])->assertRedirect(route('staff.pending'));
     }
 
@@ -148,18 +148,19 @@ class StaffAccessTest extends TestCase
 
     public function test_administrator_sees_waiting_employees_on_the_accounts_page_and_dashboard(): void
     {
-        $this->staff(User::PENDING, ['username' => null, 'email' => 'wait@example.com']);
+        $this->staff(User::PENDING, ['email' => 'wait@example.com']);
         $administrator = $this->staff(User::ADMINISTRATOR);
 
         $response = $this->actingAs($administrator)->get(route('users.index'));
 
         $response->assertOk()
-            ->assertSee('Waiting for a role')
+            ->assertSee('Unassigned accounts')
+            ->assertDontSee('Unassigned accounts (')
             ->assertSee('wait@example.com')
             ->assertSee('Approve')
             ->assertDontSee('<option value="Administrator">', false)
             ->assertDontSee('<option value="Pending">', false);
-        $this->actingAs($administrator)->get(route('dashboard'))->assertOk()->assertSee('Waiting for a role');
+        $this->actingAs($administrator)->get(route('dashboard'))->assertOk()->assertSee('Unassigned accounts');
     }
 
     public function test_president_cannot_access_account_management(): void
@@ -182,6 +183,29 @@ class StaffAccessTest extends TestCase
         $this->actingAs($administrator)->get(route('suppliers.index'))->assertForbidden();
     }
 
+    public function test_dashboard_account_cards_link_to_the_accounts_page(): void
+    {
+        $administrator = $this->staff(User::ADMINISTRATOR);
+
+        $this->actingAs($administrator)->get(route('dashboard'))->assertOk()
+            ->assertSee('class="card card-link" href="'.route('users.index').'"', false)
+            ->assertSee(route('users.index').'#unassigned', false)
+            ->assertDontSee('Review');
+    }
+
+    public function test_audit_log_shows_date_time_and_the_persons_name(): void
+    {
+        $employee = Employee::create(['first_name' => 'Maria', 'last_name' => 'Santos', 'position' => 'Treasurer', 'daily_rate' => 800, 'date_hired' => today(), 'status' => 'Active']);
+        $treasurer = $this->staff(User::TREASURER, ['employee_id' => $employee->employee_id]);
+        AuditLog::record('Updated', 'products', 7, $treasurer->user_id);
+
+        $this->actingAs($this->staff(User::ADMINISTRATOR))->get(route('audit.index'))->assertOk()
+            ->assertSeeInOrder(['<th>Date</th>', '<th>Time</th>', '<th>Name</th>', '<th>Action</th>'], false)
+            ->assertSee('Maria Santos')
+            ->assertDontSee('<th>Table</th>', false)
+            ->assertDontSee('<th>Record</th>', false);
+    }
+
     public function test_seeded_administrator_can_log_in(): void
     {
         $this->seed(DatabaseSeeder::class);
@@ -189,9 +213,14 @@ class StaffAccessTest extends TestCase
         $this->post('/login', ['login' => 'admin@example.com', 'password' => 'password123'])
             ->assertRedirect(route('dashboard'));
         $this->assertAuthenticatedAs(User::where('email', 'admin@example.com')->firstOrFail(), 'web');
+
+        // Welcome message and the sidebar box show the person's name, not the email.
+        $this->get(route('dashboard'))->assertOk()
+            ->assertSee('Welcome, Anton Sanchez')
+            ->assertSee('<strong>Anton Sanchez</strong>', false);
     }
 
-    public function test_user_edit_ignores_identity_fields_updates_allowed_fields_and_audits_changes(): void
+    public function test_user_edit_updates_email_role_status_and_employee_and_audits_changes(): void
     {
         $administrator = $this->staff(User::ADMINISTRATOR);
         $employee = Employee::create([
@@ -202,19 +231,17 @@ class StaffAccessTest extends TestCase
             'date_hired' => today(),
             'status' => 'Active',
         ]);
-        $target = $this->staff(User::EMPLOYEE, ['email' => 'original@example.com', 'username' => 'original']);
+        $target = $this->staff(User::EMPLOYEE, ['email' => 'original@example.com']);
 
         $this->actingAs($administrator)->put(route('users.update', $target), [
-            'email' => 'changed@example.com',
-            'username' => 'changed',
+            'email' => 'Changed@Example.com',
             'role' => User::TREASURER,
             'status' => User::STATUS_LOCKED,
             'employee_id' => $employee->employee_id,
         ])->assertRedirect(route('users.index'));
 
         $updated = $target->fresh();
-        $this->assertSame('original@example.com', $updated->email);
-        $this->assertSame('original', $updated->username);
+        $this->assertSame('changed@example.com', $updated->email);
         $this->assertSame(User::TREASURER, $updated->role);
         $this->assertSame(User::STATUS_LOCKED, $updated->status);
         $this->assertSame($employee->employee_id, $updated->employee_id);
@@ -226,6 +253,7 @@ class StaffAccessTest extends TestCase
 
         $updated->update(['login_attempt_count' => 2]);
         $this->actingAs($administrator)->put(route('users.update', $updated), [
+            'email' => 'changed@example.com',
             'role' => User::TREASURER,
             'status' => User::STATUS_ACTIVE,
             'employee_id' => $employee->employee_id,
@@ -234,20 +262,49 @@ class StaffAccessTest extends TestCase
         $this->assertSame(0, $updated->fresh()->login_attempt_count);
     }
 
-    public function test_administrator_cannot_change_own_role_or_lock_own_account(): void
+    public function test_pages_show_a_back_link_and_the_title_outside_the_cards_except_the_dashboard(): void
     {
         $administrator = $this->staff(User::ADMINISTRATOR);
 
-        $this->actingAs($administrator)->put(route('users.update', $administrator), [
+        $this->actingAs($administrator)->get(route('users.index'))->assertOk()
+            ->assertSee('class="back-link no-print"', false)
+            ->assertSeeInOrder(['<div class="page-head">', '<h1>User Accounts</h1>', '<div class="card'], false);
+
+        $this->actingAs($administrator)->get(route('dashboard'))->assertOk()
+            ->assertDontSee('class="back-link', false);
+    }
+
+    public function test_user_edit_requires_every_field_and_a_unique_email(): void
+    {
+        $administrator = $this->staff(User::ADMINISTRATOR);
+        $target = $this->staff(User::EMPLOYEE, ['email' => 'target@example.com']);
+        Customer::create(['email' => 'shopper@example.com', 'password' => 'secret123']);
+
+        $this->actingAs($administrator)->put(route('users.update', $target), ['email' => '', 'role' => User::EMPLOYEE, 'status' => User::STATUS_ACTIVE])
+            ->assertSessionHasErrors(['email', 'employee_id']);
+
+        $this->actingAs($administrator)->put(route('users.update', $target), ['email' => $administrator->email, 'role' => User::EMPLOYEE, 'status' => User::STATUS_ACTIVE])
+            ->assertSessionHasErrors('email');
+        $this->actingAs($administrator)->put(route('users.update', $target), ['email' => 'shopper@example.com', 'role' => User::EMPLOYEE, 'status' => User::STATUS_ACTIVE])
+            ->assertSessionHasErrors('email');
+
+        $this->assertSame('target@example.com', $target->fresh()->email);
+    }
+
+    public function test_administrator_cannot_change_own_role_or_lock_own_account(): void
+    {
+        $administrator = $this->staff(User::ADMINISTRATOR);
+        $employee = Employee::create(['first_name' => 'Anton', 'last_name' => 'Sanchez', 'position' => 'Administrator', 'daily_rate' => 700, 'date_hired' => today(), 'status' => 'Active']);
+        $fields = ['email' => $administrator->email, 'employee_id' => $employee->employee_id];
+
+        $this->actingAs($administrator)->put(route('users.update', $administrator), $fields + [
             'role' => User::PRESIDENT,
             'status' => User::STATUS_ACTIVE,
-            'employee_id' => null,
         ])->assertSessionHasErrors('role');
 
-        $this->actingAs($administrator)->put(route('users.update', $administrator), [
+        $this->actingAs($administrator)->put(route('users.update', $administrator), $fields + [
             'role' => User::ADMINISTRATOR,
             'status' => User::STATUS_LOCKED,
-            'employee_id' => null,
         ])->assertSessionHasErrors('status');
     }
 }

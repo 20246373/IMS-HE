@@ -7,6 +7,7 @@ use App\Models\Customer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class CustomerManagementController extends Controller
@@ -44,12 +45,15 @@ class CustomerManagementController extends Controller
 
     public function update(Request $request, Customer $customer): RedirectResponse
     {
+        $request->merge(['email' => mb_strtolower(trim((string) $request->input('email')))]);
+
         $data = $request->validate([
+            'email' => ['required', 'email', 'max:100', Rule::unique('customers', 'email')->ignore($customer->customer_id, 'customer_id'), Rule::unique('users', 'email')],
             'first_name' => ['nullable', 'string', 'max:50'],
             'last_name' => ['nullable', 'string', 'max:50'],
             'contact_number' => ['nullable', 'digits_between:7,14'],
             'address' => ['nullable', 'string', 'max:100'],
-        ]);
+        ], ['email.unique' => 'This email is already used by another account.']);
 
         DB::transaction(function () use ($customer, $data): void {
             $customer->update($data);

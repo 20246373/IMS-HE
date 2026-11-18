@@ -40,7 +40,6 @@ class SaleFeatureTest extends TestCase
 
         return User::create([
             'employee_id' => $employee?->employee_id,
-            'username' => strtolower($role).'-cashier',
             'email' => strtolower(str_replace(' ', '', $role)).'@example.com',
             'password' => 'secret123',
             'role' => $role,

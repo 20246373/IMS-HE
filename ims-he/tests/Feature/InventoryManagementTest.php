@@ -24,7 +24,7 @@ class InventoryManagementTest extends TestCase
         parent::setUp();
 
         $this->staff = User::create([
-            'username' => 'inventory-user',
+            'email' => 'inventory-user@example.com',
             'password' => 'secret123',
             'role' => User::INVENTORY_CLERK,
             'status' => User::STATUS_ACTIVE,
@@ -178,7 +178,7 @@ class InventoryManagementTest extends TestCase
 
         $this->get(route('products.stock-history', $product))
             ->assertOk()
-            ->assertSee('Stock history: History item')
+            ->assertSee('Stock History: History item')
             ->assertSee('Resulting stock')
             ->assertSee('IN')
             ->assertSee('OUT')

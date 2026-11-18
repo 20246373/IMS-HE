@@ -1,7 +1,7 @@
 @props(['label', 'name', 'type' => 'text', 'value' => null, 'required' => true, 'prefix' => null])
 
 <div class="field">
- <label for="{{ $attributes->get('id', $name) }}" class="{{ $required ? 'required' : 'optional' }}">{{ $label }}</label>
+ <label for="{{ $attributes->get('id', $name) }}" class="{{ $attributes->has('readonly') ? '' : ($required ? 'required' : 'optional') }}">{{ $label }}</label>
  @if($prefix)
   <div class="input-with-prefix">
    <span>{{ $prefix }}</span>

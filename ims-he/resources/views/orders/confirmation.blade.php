@@ -1,5 +1,6 @@
 @extends('layouts.app')
 @section('title','Order placed')
+@section('heading', 'Order Placed')
 @section('content')
 <div class="card" style="max-width:640px">
  <x-alert type="success" title="Order placed">Thank you! Your order #{{ $invoice->invoice_id }} has been received.</x-alert>

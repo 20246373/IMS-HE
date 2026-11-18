@@ -17,7 +17,6 @@ class EmployeeManagementTest extends TestCase
         $number++;
 
         return User::create([
-            'username' => "employee-manager-{$number}",
             'email' => "employee-manager-{$number}@example.com",
             'password' => 'secret123',
             'role' => $role,
@@ -107,6 +106,16 @@ class EmployeeManagementTest extends TestCase
             'table_name' => 'employees',
             'record_id' => $employee->employee_id,
         ]);
+    }
+
+    public function test_edit_page_shows_the_fixed_name_and_hire_date(): void
+    {
+        $employee = $this->employee();
+
+        $this->actingAs($this->staff(User::PRESIDENT))->get(route('employees.edit', $employee))->assertOk()
+            ->assertSee('value="Ana"', false)
+            ->assertSee('value="Santos"', false)
+            ->assertSee('value="Jan 15, 2025"', false);
     }
 
     public function test_resigning_employee_updates_status_and_audits_it(): void

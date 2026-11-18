@@ -232,7 +232,7 @@ class AutoPurchaseOrderTest extends TestCase
     public function test_the_purchase_order_list_marks_auto_generated_orders(): void
     {
         $clerk = User::create([
-            'username' => 'auto-po-clerk',
+            'email' => 'auto-po-clerk@example.com',
             'password' => 'secret123',
             'role' => User::INVENTORY_CLERK,
             'status' => User::STATUS_ACTIVE,

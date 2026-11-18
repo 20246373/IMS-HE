@@ -32,7 +32,7 @@ class OrderManagementTest extends TestCase
         $n++;
 
         return User::create([
-            'username' => "staff{$n}", 'email' => "staff{$n}@example.com", 'password' => 'secret123',
+            'email' => "staff{$n}@example.com", 'password' => 'secret123',
             'role' => $role, 'status' => User::STATUS_ACTIVE,
         ]);
     }

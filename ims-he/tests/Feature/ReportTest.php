@@ -25,7 +25,7 @@ class ReportTest extends TestCase
         $number++;
 
         return User::create([
-            'username' => "report-user-{$number}",
+            'email' => "report-user-{$number}@example.com",
             'password' => 'secret123',
             'role' => $role,
             'status' => User::STATUS_ACTIVE,

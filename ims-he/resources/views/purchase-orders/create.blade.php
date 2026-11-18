@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title','New purchase order')
+@section('heading', 'New Purchase Order')
 @section('content')
 <div class="card">
- <h2>New purchase order</h2>
  @if($suppliers->isEmpty() || $products->isEmpty())
   <p>A supplier and at least one product are required before creating a purchase order.</p>
  @else

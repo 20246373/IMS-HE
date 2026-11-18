@@ -1,12 +1,13 @@
 @extends('layouts.app')
 @section('title', 'Payslip')
 @push('head')
-<style>@media print{nav, .no-print{display:none!important}body.staff-layout main{width:auto;margin:0;padding:0}.card{box-shadow:none}}</style>
+<style>@media print{nav, .no-print, .page-head{display:none!important}body.staff-layout main{width:auto;margin:0;padding:0}.card{box-shadow:none}}</style>
 @endpush
+@section('heading', 'Payslip')
+@section('page-actions')<button onclick="window.print()">Print</button>@endsection
 @section('content')
 <div class="card">
- <div class="report-heading no-print"><h2>Payslip</h2><button onclick="window.print()">Print</button></div>
- <h2>{{ $payslip->employee->full_name }}</h2>
+ <h3>{{ $payslip->employee->full_name }}</h3>
  <p>Payroll period: {{ $payroll->period_start->format('M d, Y') }} – {{ $payroll->period_end->format('M d, Y') }}</p>
  <table>
   <tr><th>Days worked</th><td>{{ number_format((float) $payslip->days_worked, 2) }}</td></tr>

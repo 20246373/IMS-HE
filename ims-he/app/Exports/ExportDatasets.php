@@ -2,23 +2,31 @@
 
 namespace App\Exports;
 
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class ExportDatasets
 {
+    /**
+     * The only statuses each table can hold, for the Status filter dropdown.
+     *
+     * @var array<string, list<string>>
+     */
+    /** Datasets only the Administrator may export (accounts and the audit log). */
+    public const ADMIN_ONLY = 'admin';
+
+    public const STATUS_OPTIONS = [
+        'purchase_orders' => ['Pending', 'Delivered', 'Cancelled'],
+        'invoices' => ['Pending', 'Completed', 'Cancelled'],
+    ];
+
     public static function all(): array
     {
-        $businessRoles = [User::ADMINISTRATOR, User::PRESIDENT, User::INVENTORY_CLERK, User::STORE_SUPERVISOR];
-        $financeRoles = [User::ADMINISTRATOR, User::PRESIDENT, User::TREASURER, User::STORE_SUPERVISOR];
-        $payrollRoles = [User::ADMINISTRATOR, User::PRESIDENT, User::TREASURER];
-
         return [
-            self::dataset('categories', 'Categories', $businessRoles, [], ['category_id', 'category_name'],
+            self::dataset('categories', 'Categories', 'exports.inventory', [], ['category_id', 'category_name'],
                 fn (Request $r) => DB::table('categories')->select(['category_id', 'category_name'])->orderBy('category_id')->cursor()),
 
-            self::dataset('products', 'Products', $businessRoles, ['category'], ['product_id', 'product_name', 'brand', 'category', 'supplier', 'unit_price', 'stock_quantity', 'reorder_level', 'is_active'],
+            self::dataset('products', 'Products', 'exports.inventory', ['category'], ['product_id', 'product_name', 'brand', 'category', 'supplier', 'unit_price', 'stock_quantity', 'reorder_level', 'is_active'],
                 fn (Request $r) => self::query($r, DB::table('products')
                     ->leftJoin('categories', 'categories.category_id', '=', 'products.category_id')
                     ->leftJoin('suppliers', 'suppliers.supplier_id', '=', 'products.supplier_id')
@@ -26,7 +34,7 @@ class ExportDatasets
                     ->orderBy('products.product_id'), 'products.category_id')
                     ->cursor()->map(fn ($row) => [$row->product_id, $row->product_name, $row->brand, $row->category, $row->supplier, number_format((float) $row->unit_price, 2, '.', ''), $row->stock_quantity, $row->reorder_level, $row->is_active ? '1' : '0'])),
 
-            self::dataset('inventory_transactions', 'Inventory transactions', $businessRoles, ['dates', 'category'], ['transaction_id', 'transaction_date', 'product_name', 'category', 'transaction_type', 'quantity', 'reference_type', 'reference_id'],
+            self::dataset('inventory_transactions', 'Inventory transactions', 'exports.inventory', ['dates', 'category'], ['transaction_id', 'transaction_date', 'product_name', 'category', 'transaction_type', 'quantity', 'reference_type', 'reference_id'],
                 fn (Request $r) => self::query($r, DB::table('inventory_transactions')
                     ->join('products', 'products.product_id', '=', 'inventory_transactions.product_id')
                     ->leftJoin('categories', 'categories.category_id', '=', 'products.category_id')
@@ -34,10 +42,10 @@ class ExportDatasets
                     ->orderBy('inventory_transactions.transaction_date'), 'products.category_id', 'inventory_transactions.transaction_date')
                     ->cursor()->map(fn ($row) => [$row->transaction_id, $row->transaction_date, $row->product_name, $row->category, $row->transaction_type, $row->quantity, $row->reference_type, $row->reference_id])),
 
-            self::dataset('suppliers', 'Suppliers', [User::ADMINISTRATOR, User::PRESIDENT, User::STORE_SUPERVISOR], [], ['supplier_id', 'supplier_name', 'contact_number', 'address'],
+            self::dataset('suppliers', 'Suppliers', 'exports.suppliers', [], ['supplier_id', 'supplier_name', 'contact_number', 'address'],
                 fn (Request $r) => DB::table('suppliers')->select(['supplier_id', 'supplier_name', 'contact_number', 'address'])->orderBy('supplier_id')->cursor()),
 
-            self::dataset('purchase_orders', 'Purchase orders', $businessRoles, ['dates', 'status'], ['po_id', 'order_date', 'supplier_name', 'status', 'is_auto', 'total'],
+            self::dataset('purchase_orders', 'Purchase orders', 'exports.inventory', ['dates', 'status'], ['po_id', 'order_date', 'supplier_name', 'status', 'is_auto', 'total'],
                 fn (Request $r) => self::query($r, DB::table('purchase_orders')
                     ->leftJoin('suppliers', 'suppliers.supplier_id', '=', 'purchase_orders.supplier_id')
                     ->leftJoinSub(DB::table('purchase_order_items')->selectRaw('po_id, SUM(subtotal) as total')->groupBy('po_id'), 'po_totals', 'po_totals.po_id', '=', 'purchase_orders.po_id')
@@ -45,7 +53,7 @@ class ExportDatasets
                     ->orderBy('purchase_orders.order_date'), null, 'purchase_orders.order_date')
                     ->cursor()->map(fn ($row) => [$row->po_id, $row->order_date, $row->supplier_name, $row->status, $row->is_auto ? '1' : '0', number_format((float) ($row->total ?? 0), 2, '.', '')])),
 
-            self::dataset('purchase_order_items', 'Purchase order items', $businessRoles, ['dates', 'category'], ['po_id', 'order_date', 'supplier_name', 'product_name', 'category', 'quantity', 'quantity_received', 'unit_cost', 'subtotal'],
+            self::dataset('purchase_order_items', 'Purchase order items', 'exports.inventory', ['dates', 'category'], ['po_id', 'order_date', 'supplier_name', 'product_name', 'category', 'quantity', 'quantity_received', 'unit_cost', 'subtotal'],
                 fn (Request $r) => self::query($r, DB::table('purchase_order_items')
                     ->join('purchase_orders', 'purchase_orders.po_id', '=', 'purchase_order_items.po_id')
                     ->leftJoin('suppliers', 'suppliers.supplier_id', '=', 'purchase_orders.supplier_id')
@@ -55,7 +63,7 @@ class ExportDatasets
                     ->orderBy('purchase_orders.order_date'), 'products.category_id', 'purchase_orders.order_date')
                     ->cursor()->map(fn ($row) => [$row->po_id, $row->order_date, $row->supplier_name, $row->product_name, $row->category, $row->quantity, $row->quantity_received, number_format((float) $row->unit_cost, 2, '.', ''), number_format((float) $row->subtotal, 2, '.', '')])),
 
-            self::dataset('invoices', 'Invoices', $financeRoles, ['dates', 'status'], ['invoice_id', 'invoice_date', 'channel', 'status', 'customer_email', 'cashier', 'total_amount', 'payment_method'],
+            self::dataset('invoices', 'Invoices', 'exports.sales', ['dates', 'status'], ['invoice_id', 'invoice_date', 'channel', 'status', 'customer_email', 'cashier', 'total_amount', 'payment_method'],
                 fn (Request $r) => self::query($r, DB::table('invoices')
                     ->leftJoin('customers', 'customers.customer_id', '=', 'invoices.customer_id')
                     ->leftJoin('employees', 'employees.employee_id', '=', 'invoices.employee_id')
@@ -64,7 +72,7 @@ class ExportDatasets
                     ->orderBy('invoices.invoice_date'), null, 'invoices.invoice_date')
                     ->cursor()->map(fn ($row) => [$row->invoice_id, $row->invoice_date, $row->channel, $row->status, $row->customer_email, trim(($row->cashier_first_name ?? '').' '.($row->cashier_last_name ?? '')), number_format((float) $row->total_amount, 2, '.', ''), $row->payment_method])),
 
-            self::dataset('invoice_items', 'Invoice items', $financeRoles, ['dates', 'category'], ['invoice_id', 'invoice_date', 'product_name', 'category', 'quantity', 'price', 'subtotal'],
+            self::dataset('invoice_items', 'Invoice items', 'exports.sales', ['dates', 'category'], ['invoice_id', 'invoice_date', 'product_name', 'category', 'quantity', 'price', 'subtotal'],
                 fn (Request $r) => self::query($r, DB::table('invoice_items')
                     ->join('invoices', 'invoices.invoice_id', '=', 'invoice_items.invoice_id')
                     ->join('products', 'products.product_id', '=', 'invoice_items.product_id')
@@ -73,37 +81,37 @@ class ExportDatasets
                     ->orderBy('invoices.invoice_date'), 'products.category_id', 'invoices.invoice_date')
                     ->cursor()->map(fn ($row) => [$row->invoice_id, $row->invoice_date, $row->product_name, $row->category, $row->quantity, number_format((float) $row->price, 2, '.', ''), number_format((float) $row->subtotal, 2, '.', '')])),
 
-            self::dataset('payments', 'Payments', $financeRoles, ['dates'], ['payment_id', 'invoice_id', 'payment_date', 'payment_method', 'amount_paid', 'change_amount'],
+            self::dataset('payments', 'Payments', 'exports.sales', ['dates'], ['payment_id', 'invoice_id', 'payment_date', 'payment_method', 'amount_paid', 'change_amount'],
                 fn (Request $r) => self::query($r, DB::table('payments')->select(['payment_id', 'invoice_id', 'payment_date', 'payment_method', 'amount_paid', 'change_amount'])->orderBy('payment_date'), null, 'payment_date')
                     ->cursor()->map(fn ($row) => [$row->payment_id, $row->invoice_id, $row->payment_date, $row->payment_method, number_format((float) $row->amount_paid, 2, '.', ''), number_format((float) $row->change_amount, 2, '.', '')])),
 
-            self::dataset('ledger_entries', 'Ledger entries', $payrollRoles, ['dates'], ['ledger_id', 'entry_date', 'entry_type', 'amount', 'description', 'reference_type', 'reference_id', 'recorded_by'],
+            self::dataset('ledger_entries', 'Ledger entries', 'exports.payroll', ['dates'], ['ledger_id', 'entry_date', 'entry_type', 'amount', 'description', 'reference_type', 'reference_id', 'recorded_by'],
                 fn (Request $r) => self::query($r, DB::table('ledger_entries')
                     ->leftJoin('users', 'users.user_id', '=', 'ledger_entries.recorded_by')
-                    ->selectRaw('ledger_entries.ledger_id, ledger_entries.entry_date, ledger_entries.entry_type, ledger_entries.amount, ledger_entries.description, ledger_entries.reference_type, ledger_entries.reference_id, COALESCE(users.email, users.username, \'System\') as recorded_by')
+                    ->selectRaw('ledger_entries.ledger_id, ledger_entries.entry_date, ledger_entries.entry_type, ledger_entries.amount, ledger_entries.description, ledger_entries.reference_type, ledger_entries.reference_id, COALESCE(users.email, \'System\') as recorded_by')
                     ->orderBy('ledger_entries.entry_date'), null, 'ledger_entries.entry_date')
                     ->cursor()->map(fn ($row) => [$row->ledger_id, $row->entry_date, $row->entry_type, number_format((float) $row->amount, 2, '.', ''), $row->description, $row->reference_type, $row->reference_id, $row->recorded_by ?: 'System'])),
 
-            self::dataset('employees', 'Employees', $payrollRoles, [], ['employee_id', 'first_name', 'last_name', 'position', 'daily_rate', 'sss_no', 'philhealth_no', 'pagibig_no', 'tin_no', 'date_hired', 'status', 'account_email'],
+            self::dataset('employees', 'Employees', 'exports.payroll', [], ['employee_id', 'first_name', 'last_name', 'position', 'daily_rate', 'sss_no', 'philhealth_no', 'pagibig_no', 'tin_no', 'date_hired', 'status', 'account_email'],
                 fn (Request $r) => DB::table('employees')->leftJoin('users', 'users.employee_id', '=', 'employees.employee_id')
                     ->selectRaw('employees.employee_id, employees.first_name, employees.last_name, employees.position, employees.daily_rate, employees.sss_no, employees.philhealth_no, employees.pagibig_no, employees.tin_no, employees.date_hired, employees.status, users.email as account_email')
                     ->orderBy('employees.employee_id')->cursor()->map(fn ($row) => [$row->employee_id, $row->first_name, $row->last_name, $row->position, number_format((float) $row->daily_rate, 2, '.', ''), $row->sss_no, $row->philhealth_no, $row->pagibig_no, $row->tin_no, $row->date_hired, $row->status, $row->account_email])),
 
-            self::dataset('attendance', 'Attendance', $payrollRoles, ['dates'], ['attendance_id', 'work_date', 'employee_name', 'time_in', 'time_out', 'overtime_hours'],
+            self::dataset('attendance', 'Attendance', 'exports.payroll', ['dates'], ['attendance_id', 'work_date', 'employee_name', 'time_in', 'time_out', 'overtime_hours'],
                 fn (Request $r) => self::query($r, DB::table('attendance')
                     ->join('employees', 'employees.employee_id', '=', 'attendance.employee_id')
                     ->select(['attendance.attendance_id', 'attendance.work_date', 'employees.first_name as employee_first_name', 'employees.last_name as employee_last_name', 'attendance.time_in', 'attendance.time_out', 'attendance.overtime_hours'])
                     ->orderBy('attendance.work_date'), null, 'attendance.work_date')
                     ->cursor()->map(fn ($row) => [$row->attendance_id, $row->work_date, trim($row->employee_first_name.' '.$row->employee_last_name), $row->time_in, $row->time_out, number_format((float) $row->overtime_hours, 2, '.', '')])),
 
-            self::dataset('payrolls', 'Payrolls', $payrollRoles, ['dates'], ['payroll_id', 'period_start', 'period_end', 'status', 'total_gross', 'total_deductions', 'total_net', 'processed_by'],
+            self::dataset('payrolls', 'Payrolls', 'exports.payroll', ['dates'], ['payroll_id', 'period_start', 'period_end', 'status', 'total_gross', 'total_deductions', 'total_net', 'processed_by'],
                 fn (Request $r) => self::query($r, DB::table('payrolls')
                     ->leftJoin('users', 'users.user_id', '=', 'payrolls.processed_by')
-                    ->selectRaw('payrolls.payroll_id, payrolls.period_start, payrolls.period_end, payrolls.status, payrolls.total_gross, payrolls.total_deductions, payrolls.total_net, COALESCE(users.email, users.username) as processed_by')
+                    ->selectRaw('payrolls.payroll_id, payrolls.period_start, payrolls.period_end, payrolls.status, payrolls.total_gross, payrolls.total_deductions, payrolls.total_net, users.email as processed_by')
                     ->orderBy('payrolls.period_start'), null, 'payrolls.period_start')
                     ->cursor()->map(fn ($row) => [$row->payroll_id, $row->period_start, $row->period_end, $row->status, number_format((float) $row->total_gross, 2, '.', ''), number_format((float) $row->total_deductions, 2, '.', ''), number_format((float) $row->total_net, 2, '.', ''), $row->processed_by])),
 
-            self::dataset('payslips', 'Payslips', $payrollRoles, ['dates'], ['payslip_id', 'payroll_id', 'period_start', 'period_end', 'employee_name', 'days_worked', 'overtime_hours', 'gross_pay', 'sss_deduction', 'philhealth_deduction', 'pagibig_deduction', 'tax_deduction', 'other_deductions', 'total_deductions', 'net_pay'],
+            self::dataset('payslips', 'Payslips', 'exports.payroll', ['dates'], ['payslip_id', 'payroll_id', 'period_start', 'period_end', 'employee_name', 'days_worked', 'overtime_hours', 'gross_pay', 'sss_deduction', 'philhealth_deduction', 'pagibig_deduction', 'tax_deduction', 'other_deductions', 'total_deductions', 'net_pay'],
                 fn (Request $r) => self::query($r, DB::table('payslips')
                     ->join('payrolls', 'payrolls.payroll_id', '=', 'payslips.payroll_id')
                     ->join('employees', 'employees.employee_id', '=', 'payslips.employee_id')
@@ -113,26 +121,26 @@ class ExportDatasets
                         return [$row->payslip_id, $row->payroll_id, $row->period_start, $row->period_end, trim($row->employee_first_name.' '.$row->employee_last_name), $row->days_worked, $row->overtime_hours, number_format((float) $row->gross_pay, 2, '.', ''), number_format((float) $row->sss_deduction, 2, '.', ''), number_format((float) $row->philhealth_deduction, 2, '.', ''), number_format((float) $row->pagibig_deduction, 2, '.', ''), number_format((float) $row->tax_deduction, 2, '.', ''), number_format((float) $row->other_deductions, 2, '.', ''), number_format((float) $row->total_deductions, 2, '.', ''), number_format((float) $row->net_pay, 2, '.', '')];
                     })),
 
-            self::dataset('customers', 'Customers', [User::ADMINISTRATOR, User::PRESIDENT, User::STORE_SUPERVISOR], [], ['customer_id', 'email', 'first_name', 'last_name', 'contact_number', 'address', 'email_verified_at', 'created_at'],
+            self::dataset('customers', 'Customers', 'exports.customers', [], ['customer_id', 'email', 'first_name', 'last_name', 'contact_number', 'address', 'email_verified_at', 'created_at'],
                 fn (Request $r) => DB::table('customers')->select(['customer_id', 'email', 'first_name', 'last_name', 'contact_number', 'address', 'email_verified_at', 'created_at'])->orderBy('customer_id')->cursor()),
 
-            self::dataset('users', 'Users', [User::ADMINISTRATOR], [], ['user_id', 'email', 'username', 'role', 'status', 'employee_name', 'last_login', 'created_at'],
+            self::dataset('users', 'Users', self::ADMIN_ONLY, [], ['user_id', 'email', 'role', 'status', 'employee_name', 'last_login', 'created_at'],
                 fn (Request $r) => DB::table('users')->leftJoin('employees', 'employees.employee_id', '=', 'users.employee_id')
-                    ->select(['users.user_id', 'users.email', 'users.username', 'users.role', 'users.status', 'employees.first_name as employee_first_name', 'employees.last_name as employee_last_name', 'users.last_login', 'users.created_at'])
-                    ->orderBy('users.user_id')->cursor()->map(fn ($row) => [$row->user_id, $row->email, $row->username, $row->role, $row->status, trim(($row->employee_first_name ?? '').' '.($row->employee_last_name ?? '')), $row->last_login, $row->created_at])),
+                    ->select(['users.user_id', 'users.email', 'users.role', 'users.status', 'employees.first_name as employee_first_name', 'employees.last_name as employee_last_name', 'users.last_login', 'users.created_at'])
+                    ->orderBy('users.user_id')->cursor()->map(fn ($row) => [$row->user_id, $row->email, $row->role, $row->status, trim(($row->employee_first_name ?? '').' '.($row->employee_last_name ?? '')), $row->last_login, $row->created_at])),
 
-            self::dataset('audit_logs', 'Audit logs', [User::ADMINISTRATOR], ['dates'], ['log_id', 'logged_at', 'user', 'action', 'table_name', 'record_id'],
+            self::dataset('audit_logs', 'Audit logs', self::ADMIN_ONLY, ['dates'], ['log_id', 'logged_at', 'user', 'action', 'table_name', 'record_id'],
                 fn (Request $r) => self::query($r, DB::table('audit_logs')
                     ->leftJoin('users', 'users.user_id', '=', 'audit_logs.user_id')
-                    ->selectRaw('audit_logs.log_id, audit_logs.logged_at, COALESCE(users.email, users.username, \'System\') as audit_user, audit_logs.action, audit_logs.table_name, audit_logs.record_id')
+                    ->selectRaw('audit_logs.log_id, audit_logs.logged_at, COALESCE(users.email, \'System\') as audit_user, audit_logs.action, audit_logs.table_name, audit_logs.record_id')
                     ->orderBy('audit_logs.logged_at'), null, 'audit_logs.logged_at')
                     ->cursor()->map(fn ($row) => [$row->log_id, $row->logged_at, $row->audit_user ?: 'System', $row->action, $row->table_name, $row->record_id])),
         ];
     }
 
-    private static function dataset(string $key, string $label, array $roles, array $filters, array $headers, callable $rows): array
+    private static function dataset(string $key, string $label, string $permission, array $filters, array $headers, callable $rows): array
     {
-        return compact('key', 'label', 'roles', 'filters', 'headers', 'rows');
+        return compact('key', 'label', 'permission', 'filters', 'headers', 'rows');
     }
 
     private static function query(Request $request, $query, ?string $categoryColumn = null, ?string $dateColumn = null)

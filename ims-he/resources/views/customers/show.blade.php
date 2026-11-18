@@ -1,8 +1,9 @@
 @extends('layouts.app')
 @section('title', 'Customer profile')
+@section('heading', 'Customer Profile')
+@section('page-actions')<a class="btn" href="{{ route('customers.edit', $customer) }}">Edit profile</a>@endsection
 @section('content')
 <div class="card">
- <div class="report-heading"><h2>Customer profile</h2><a class="btn" href="{{ route('customers.edit', $customer) }}">Edit profile</a></div>
  <div class="form-grid">
   <p><strong>Email</strong><br>{{ $customer->email }}</p>
   <p><strong>Email status</strong><br>{{ $customer->hasVerifiedEmail() ? 'Verified' : 'Not verified' }}</p>
@@ -14,7 +15,7 @@
 <div class="card">
  <h2>Orders</h2>
  <table>
-  <thead><tr><th>Invoice</th><th>Date</th><th>Status</th><th>Total</th><th></th></tr></thead>
+  <thead><tr><th>Invoice</th><th>Date</th><th>Status</th><th>Total</th><th>Actions</th></tr></thead>
   <tbody>
    @forelse($orders as $order)
     <tr>

@@ -10,18 +10,19 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    /** Dashboard card => what a role needs to see it (the Administrator always sees the accounts card). */
     private const WIDGETS = [
-        User::ADMINISTRATOR => ['accounts'],
-        User::PRESIDENT => ['sales', 'low-stock', 'pending-pos'],
-        User::TREASURER => ['sales'],
-        User::INVENTORY_CLERK => ['low-stock', 'pending-pos'],
-        User::STORE_SUPERVISOR => ['sales', 'low-stock', 'pending-pos'],
-        User::EMPLOYEE => [],
+        'sales' => 'reports.sales',
+        'low-stock' => 'inventory.manage',
+        'pending-pos' => 'procurement.manage',
     ];
 
     public function index(): View
     {
-        $widgets = self::WIDGETS[auth()->user()->role] ?? [];
+        $user = auth()->user();
+        $widgets = $user->hasRole(User::ADMINISTRATOR)
+            ? ['accounts']
+            : array_keys(array_filter(self::WIDGETS, fn (string $permission) => $user->hasPermission($permission)));
         $data = [];
 
         foreach ($widgets as $widget) {

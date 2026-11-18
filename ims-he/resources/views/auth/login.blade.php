@@ -4,26 +4,21 @@
 <div class="card auth">
  @if(! $as)
   {{-- Step 1: who is logging in --}}
-  <h2>Log in</h2>
+  <h2>Welcome</h2>
+  <p class="auth-sub">Log in to continue to IMS-HE.</p>
   <p class="choice-label">Log in as</p>
-  <div class="choice-list">
-   <a href="{{ route('login', ['as' => 'customer']) }}">Customer</a>
-   <a href="{{ route('login', ['as' => 'employee']) }}">Employee</a>
-  </div>
+  @include('partials.auth-choices', ['customerUrl' => route('login', ['as' => 'customer']), 'employeeUrl' => route('login', ['as' => 'employee'])])
   <div class="auth-links">
    <span>Don't have an account? <a href="{{ route('register') }}">Sign up</a></span>
   </div>
  @else
-  {{-- Step 2: the form. Both post to the same login, which finds the account by email or username. --}}
+  {{-- Step 2: the form. Both post to the same login, which finds the account by email. --}}
   <a class="auth-back" href="{{ route('login') }}">Change access</a>
   <h2>{{ $as === 'customer' ? 'Customer log in' : 'Employee log in' }}</h2>
+  <p class="auth-sub">Enter your email and password to continue.</p>
   <form method="POST" action="{{ route('login') }}">@csrf
    <div class="form-grid">
-    @if($as === 'customer')
-     <x-field label="Email" name="login" type="email" value="{{ old('login') }}" maxlength="100" autocomplete="email" autofocus />
-    @else
-     <x-field label="Email or username" name="login" value="{{ old('login') }}" maxlength="100" autocomplete="username" autofocus />
-    @endif
+    <x-field label="Email" name="login" type="email" value="{{ old('login') }}" maxlength="100" autocomplete="email" autofocus />
     <x-password id="login-password" autocomplete="current-password" />
    </div>
    <p><button>Log in</button></p>

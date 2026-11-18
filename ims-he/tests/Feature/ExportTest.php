@@ -23,7 +23,6 @@ class ExportTest extends TestCase
 
         return User::create([
             'email' => "export{$number}@example.com",
-            'username' => "export{$number}",
             'password' => 'secret123',
             'role' => $role,
             'status' => User::STATUS_ACTIVE,
@@ -38,7 +37,7 @@ class ExportTest extends TestCase
 
         $response->assertOk()->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
         $csv = $response->streamedContent();
-        $this->assertStringStartsWith("\xEF\xBB\xBFuser_id,email,username,role,status,employee_name,last_login,created_at", $csv);
+        $this->assertStringStartsWith("\xEF\xBB\xBFuser_id,email,role,status,employee_name,last_login,created_at", $csv);
         $this->assertStringNotContainsString('password', strtolower($csv));
         $this->assertDatabaseHas('audit_logs', ['action' => 'Exported', 'table_name' => 'users']);
     }
@@ -56,6 +55,27 @@ class ExportTest extends TestCase
         $this->actingAs($this->user(User::PRESIDENT))
             ->get(route('exports.backup'))
             ->assertForbidden();
+    }
+
+    public function test_administrator_export_page_has_a_download_column_and_no_backup_button(): void
+    {
+        $this->actingAs($this->user(User::ADMINISTRATOR))->get(route('exports.index'))->assertOk()
+            ->assertSeeInOrder(['<th>Dataset</th>', '<th>Filters</th>', '<th>Download</th>'], false)
+            ->assertDontSee('Database backup');
+    }
+
+    public function test_status_filter_is_a_dropdown_of_real_statuses(): void
+    {
+        $administrator = $this->user(User::ADMINISTRATOR);
+
+        $this->actingAs($administrator)->get(route('exports.index'))->assertOk()
+            ->assertDontSee('<input id="status"', false)
+            ->assertSee('<option value="Delivered"', false)
+            ->assertSee('<option value="Completed"', false);
+
+        $this->actingAs($administrator)->get(route('exports.download', ['dataset' => 'invoices', 'status' => 'Completed']))->assertOk();
+        $this->actingAs($administrator)->get(route('exports.download', ['dataset' => 'invoices', 'status' => 'Delivered']))
+            ->assertSessionHasErrors('status');      // Delivered is a purchase order status, not an invoice one
     }
 
     public function test_page_lists_only_datasets_allowed_for_the_role(): void
@@ -78,7 +98,7 @@ class ExportTest extends TestCase
         $path = $response->baseResponse->getFile()->getPathname();
         $zip = new ZipArchive;
         $this->assertSame(true, $zip->open($path));
-        $this->assertSame(count(ExportRegistry::forRole(User::ADMINISTRATOR)), $zip->numFiles);
+        $this->assertSame(count(ExportRegistry::forUser($admin)), $zip->numFiles);
         $this->assertSame('categories.csv', $zip->getNameIndex(0));
         $zip->close();
         File::delete($path);

@@ -25,7 +25,7 @@ class CartTest extends TestCase
     private function customer(string $username = 'juan123'): Customer
     {
         return Customer::create([
-            'first_name' => 'Juan', 'last_name' => 'Cruz', 'username' => $username, 'email' => "$username@example.com",
+            'first_name' => 'Juan', 'last_name' => 'Cruz', 'email' => "$username@example.com",
             'contact_number' => '09171234567', 'address' => 'Baguio City', 'password' => 'secret123',
         ]);
     }
@@ -60,6 +60,29 @@ class CartTest extends TestCase
         $this->assertSame(1, Cart::count());
         $this->assertSame(1, CartItem::count());
         $this->assertSame(5, (int) CartItem::first()->quantity);
+    }
+
+    public function test_background_add_returns_the_new_cart_count(): void
+    {
+        $customer = $this->customer();
+        $product = $this->product();
+
+        $this->actingAs($customer, 'customer')->postJson(route('customer.cart.add', $product), ['quantity' => 2])
+            ->assertOk()
+            ->assertJson(['count' => 2, 'message' => 'Claw Hammer added to your cart.']);
+        $this->actingAs($customer, 'customer')->postJson(route('customer.cart.add', $this->product('Nails')), ['quantity' => 3])
+            ->assertJson(['count' => 5]);
+    }
+
+    public function test_background_add_from_a_guest_is_unauthorized_and_beyond_stock_is_refused(): void
+    {
+        $product = $this->product(stock: 2);
+
+        $this->postJson(route('customer.cart.add', $product), ['quantity' => 1])->assertUnauthorized();
+        $this->actingAs($this->customer(), 'customer')->postJson(route('customer.cart.add', $product), ['quantity' => 3])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('quantity');
+        $this->assertDatabaseCount('cart_items', 0);
     }
 
     public function test_quantity_cannot_exceed_stock(): void

@@ -17,7 +17,7 @@ class DashboardTest extends TestCase
     private function signInAs(string $role): void
     {
         $this->actingAs(User::create([
-            'username' => 'user-'.md5($role),
+            'email' => 'user-'.md5($role).'@example.com',
             'password' => 'secret123',
             'role' => $role,
             'status' => User::STATUS_ACTIVE,

@@ -1,10 +1,11 @@
 @extends('layouts.app')
 @section('title', 'Recent sales')
+@section('heading', 'Recent Sales')
+@section('page-actions')<a class="btn" href="{{ route('sales.create') }}">New sale</a>@endsection
 @section('content')
 <div class="card">
- <div class="report-heading"><h2>Recent sales</h2><a class="btn" href="{{ route('sales.create') }}">New sale</a></div>
  <table>
-  <thead><tr><th>Invoice</th><th>Date</th><th>Customer</th><th>Cashier</th><th>Total</th><th></th></tr></thead>
+  <thead><tr><th>Invoice</th><th>Date</th><th>Customer</th><th>Cashier</th><th>Total</th><th>Actions</th></tr></thead>
   <tbody>
    @forelse($invoices as $invoice)
    <tr>

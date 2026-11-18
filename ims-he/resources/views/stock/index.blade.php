@@ -5,15 +5,13 @@
  .lowrow td{background:#fff1d6}
 </style>
 @endpush
-@section('content')
-<div class="card">
- <div class="row" style="justify-content:space-between">
-  <h3 style="margin:0">Stock monitoring</h3>
-  <div>
+@section('heading', 'Stock Monitoring')
+@section('page-actions')
    <a class="btn {{ request()->boolean('low') ? 'muted' : '' }}" href="{{ route('stock.index') }}">All</a>
    <a class="btn {{ request()->boolean('low') ? '' : 'muted' }}" href="{{ route('stock.index',['low'=>1]) }}">Low stock only</a>
-  </div>
- </div>
+@endsection
+@section('content')
+<div class="card">
  <table>
   <tr><th>Product</th><th>Category</th><th>Stock quantity</th><th>Reorder level</th><th>Status</th></tr>
   @forelse($products as $p)

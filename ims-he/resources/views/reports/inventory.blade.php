@@ -1,14 +1,14 @@
 @extends('layouts.app')
 @section('title', 'Inventory report')
-@section('content')
-<div class="card">
- <div class="report-heading">
-  <h2>Inventory / stock summary</h2>
-  <a class="btn no-print"
+@section('heading', 'Inventory Report')
+@section('page-actions')
+  <a class="btn"
      href="{{ route('reports.inventory.download', array_filter(['category_id' => $categoryId])) }}">
    Save as PDF
   </a>
- </div>
+@endsection
+@section('content')
+<div class="card">
  <form method="GET" action="{{ route('reports.inventory') }}" class="no-print report-filter">
   <label>Category
    <select name="category_id">

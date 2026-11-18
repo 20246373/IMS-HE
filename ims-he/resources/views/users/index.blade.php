@@ -1,15 +1,16 @@
 @extends('layouts.app')
 @section('title','Accounts')
+@section('heading', 'User Accounts')
 @section('content')
 @if($pending->isNotEmpty())
-<div class="card">
- <h3>Waiting for a role ({{ $pending->count() }})</h3>
- <p><small>These employees signed up themselves. Choose a role to give them access, or delete the account if you do not know them.</small></p>
+<div class="card" id="unassigned">
+ <h3>Unassigned accounts</h3>
+ <p><small>Choose a role to give them access, or delete the account.</small></p>
  <table>
-  <tr><th>Email</th><th>Signed up</th><th>Role</th><th>Employee record</th><th></th></tr>
+  <tr><th>Email</th><th>Signed Up</th><th>Role</th><th>Employee Record</th><th>Actions</th></tr>
   @foreach($pending as $p)
   <tr>
-   <td>{{ $p->label() }}</td>
+   <td>{{ $p->email }}</td>
    <td>{{ $p->created_at?->format('M d, Y') }}</td>
    <td>
     <select name="role" form="role-{{ $p->user_id }}" required>
@@ -23,8 +24,10 @@
     </select>
    </td>
    <td>
-    <form id="role-{{ $p->user_id }}" method="POST" action="{{ route('users.role', $p) }}" class="inline">@csrf<button>Approve</button></form>
-    <form method="POST" action="{{ route('users.destroy', $p) }}" class="inline" onsubmit="return confirm('Delete this account?')">@csrf @method('DELETE')<button class="danger">Delete</button></form>
+    <div class="actions">
+     <form id="role-{{ $p->user_id }}" method="POST" action="{{ route('users.role', $p) }}">@csrf<button>Approve</button></form>
+     <form method="POST" action="{{ route('users.destroy', $p) }}" onsubmit="return confirm('Delete this account?')">@csrf @method('DELETE')<button class="danger">Delete</button></form>
+    </div>
    </td>
   </tr>
   @endforeach
@@ -34,24 +37,32 @@
 
 <div class="card">
  <table>
-  <tr><th>Account</th><th>Employee</th><th>Role</th><th>Status</th><th>Last login</th><th></th></tr>
+  <tr><th>Email</th><th>Employee</th><th>Role</th><th>Status</th><th>Last Login</th><th>Actions</th></tr>
   @foreach($users as $u)
   <tr>
-   <td>{{ $u->label() }}@if($u->username && $u->email)<br><small>{{ $u->email }}</small>@endif</td>
+   <td>{{ $u->email }}</td>
    <td>{{ $u->employee?->full_name ?? '-' }}</td>
    <td>{{ $u->role }}</td>
    <td class="{{ $u->isLocked() ? 'low' : '' }}">{{ $u->status }}</td>
-   <td>{{ $u->last_login?->format('M d, Y H:i') ?? 'never' }}</td>
    <td>
-    <a class="btn" href="{{ route('users.edit', $u) }}">Edit</a>
-    @if($u->isLocked())
-     <form method="POST" action="{{ route('users.unlock', $u) }}" class="inline">@csrf<button>Unlock</button></form>
-    @elseif(!$u->is(auth()->user()))
-     <form method="POST" action="{{ route('users.lock', $u) }}" class="inline">@csrf<button class="danger">Lock</button></form>
+    @if($u->last_login)
+     {{ $u->last_login->format('M d, Y') }}<span class="cell-sub">{{ $u->last_login->format('h:i A') }}</span>
+    @else
+     <span class="text-muted">User has not logged in</span>
     @endif
-    @if(!$u->is(auth()->user()))
-     <form method="POST" action="{{ route('users.destroy', $u) }}" class="inline" onsubmit="return confirm('Delete this account?')">@csrf @method('DELETE')<button class="danger">Delete</button></form>
-    @endif
+   </td>
+   <td>
+    <div class="actions">
+     <a class="btn" href="{{ route('users.edit', $u) }}">Edit</a>
+     @if($u->isLocked())
+      <form method="POST" action="{{ route('users.unlock', $u) }}">@csrf<button>Unlock</button></form>
+     @elseif(!$u->is(auth()->user()))
+      <form method="POST" action="{{ route('users.lock', $u) }}">@csrf<button class="danger">Lock</button></form>
+     @endif
+     @if(!$u->is(auth()->user()))
+      <form method="POST" action="{{ route('users.destroy', $u) }}" onsubmit="return confirm('Delete this account?')">@csrf @method('DELETE')<button class="danger">Delete</button></form>
+     @endif
+    </div>
    </td>
   </tr>
   @endforeach

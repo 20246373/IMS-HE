@@ -1,5 +1,6 @@
 @extends('layouts.app')
 @section('title', 'Receipt #'.$invoice->invoice_id)
+@section('heading')Receipt #{{ $invoice->invoice_id }}@endsection
 @section('content')
 <div class="card receipt" id="receipt">
  <h2>Ibay Enterprises Corporation</h2>
@@ -19,7 +20,7 @@
 @push('head')
 <style>
  @media print {
-  nav,.no-print,[role=alert]{display:none!important} body{background:#fff} main{margin:0!important;padding:0!important;width:80mm!important;max-width:80mm!important}.receipt{box-shadow:none;padding:0!important;margin:0!important;width:80mm!important;max-width:80mm!important;font-size:11px}.receipt table{font-size:10px}
+  nav,.no-print,.page-head,[role=alert]{display:none!important} body{background:#fff} main{margin:0!important;padding:0!important;width:80mm!important;max-width:80mm!important}.receipt{box-shadow:none;padding:0!important;margin:0!important;width:80mm!important;max-width:80mm!important;font-size:11px}.receipt table{font-size:10px}
  }
 </style>
 @endpush

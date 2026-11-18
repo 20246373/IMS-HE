@@ -59,16 +59,33 @@ class User extends Authenticatable
         return $this->hasMany(AuditLog::class, 'user_id', 'user_id');
     }
 
-    /** Roles the Administrator can assign (Administrator and Pending are excluded). */
+    /** @var list<string>|null this account's permissions, loaded once per request */
+    private ?array $permissionCache = null;
+
+    /** Roles the Administrator can assign: every role in the Roles list except the Administrator. */
     public static function roleChoices(): array
     {
-        return array_values(array_diff(self::ROLES, [self::ADMINISTRATOR, self::PENDING]));
+        return Role::where('role_name', '!=', self::ADMINISTRATOR)->orderBy('role_name')->pluck('role_name')->all();
     }
 
-    /** Name shown in lists and menus: username if there is one, otherwise the email. */
+    /** True when this account's role is allowed any of the given permissions (keys from App\Support\Permissions). */
+    public function hasPermission(string ...$permissions): bool
+    {
+        $this->permissionCache ??= Role::permissionsFor((string) $this->role);
+
+        return array_intersect($permissions, $this->permissionCache) !== [];
+    }
+
+    /** Name shown in lists and menus: the email (emails are unique per account). */
     public function label(): string
     {
-        return $this->username ?: (string) $this->email;
+        return (string) $this->email;
+    }
+
+    /** The person's name from the linked employee record, or the email when there is none (e.g. the Administrator). */
+    public function displayName(): string
+    {
+        return $this->employee?->full_name ?? (string) $this->email;
     }
 
     public function isPending(): bool

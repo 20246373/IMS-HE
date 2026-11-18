@@ -1,15 +1,15 @@
 @extends('layouts.app')
 @section('title', 'Customers')
+@section('heading', 'Customers')
 @section('content')
 <div class="card">
- <div class="report-heading"><h2>Customers</h2></div>
  <form method="GET" action="{{ route('customers.index') }}" class="report-filter">
   <label>Search email or name <input type="search" name="q" value="{{ $search }}" placeholder="Email or name"></label>
   <button type="submit">Search</button>
   @if($search !== '')<a class="btn btn-alt" href="{{ route('customers.index') }}">Clear</a>@endif
  </form>
  <table>
-  <thead><tr><th>Email</th><th>Name</th><th>Contact number</th><th>Orders</th><th>Email status</th><th></th></tr></thead>
+  <thead><tr><th>Email</th><th>Name</th><th>Contact number</th><th>Orders</th><th>Email status</th><th>Actions</th></tr></thead>
   <tbody>
    @forelse($customers as $customer)
     <tr>

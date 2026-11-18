@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title', 'Sales POS')
+@section('heading')Sales (POS)@endsection
 @section('content')
 <div class="card">
- <h2>Sales (POS)</h2>
  <x-required-note />
  <form method="GET" action="{{ route('sales.create') }}" class="report-filter no-print">
   <x-field label="Search product" name="q" :value="$filters['q'] ?? null" :required="false" placeholder="Name or brand" />

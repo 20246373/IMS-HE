@@ -25,7 +25,7 @@ class LedgerController extends Controller
         ];
         $totals['Net'] = $totals['Income'] - $totals['Expense'];
 
-        $entries = $query->with('recorder')
+        $entries = $query->with('recorder.employee')
             ->orderByDesc('entry_date')
             ->orderByDesc('ledger_id')
             ->paginate(20)

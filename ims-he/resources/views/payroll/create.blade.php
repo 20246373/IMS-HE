@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title', 'Run payroll')
+@section('heading', 'Run Payroll')
 @section('content')
 <div class="card">
- <h2>Run payroll</h2>
  <x-required-note />
  <form method="POST" action="{{ route('payrolls.store') }}">
   @csrf

@@ -30,7 +30,15 @@ class CartController extends Controller
     {
         $data = $request->validate(['quantity' => 'required|integer|min:1|max:9999']);
 
-        $this->carts->add($request->user('customer'), $product, $data['quantity']);
+        $item = $this->carts->add($request->user('customer'), $product, $data['quantity']);
+
+        // The product page adds in the background so the shopper stays on the page; it only needs the new cart count.
+        if ($request->expectsJson()) {
+            return response()->json([
+                'message' => "{$product->product_name} added to your cart.",
+                'count' => (int) $item->cart->items()->sum('quantity'),
+            ]);
+        }
 
         return redirect()->route('customer.cart.index')->with('status', "{$product->product_name} added to your cart.");
     }

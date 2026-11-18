@@ -7,18 +7,13 @@
  .badge.amber{background:#fff5d8;color:#785b00}
 </style>
 @endpush
+@section('heading')Stock History: {{ $product->product_name }}@endsection
 @section('content')
 <div class="card">
- <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;flex-wrap:wrap">
-  <div>
-   <h2 style="margin:0">Stock history: {{ $product->product_name }}</h2>
-   <p style="margin:.35rem 0 0">
+ <p style="margin:0">
     Current stock: <strong>{{ $product->stock_quantity }}</strong>
     &middot; Reorder level: <strong>{{ $product->reorder_level }}</strong>
-   </p>
-  </div>
-  <a class="btn" href="{{ route('products.index') }}">Back to products</a>
- </div>
+ </p>
 
  <table style="margin-top:1rem">
   <tr>

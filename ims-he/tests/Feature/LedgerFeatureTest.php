@@ -31,7 +31,6 @@ class LedgerFeatureTest extends TestCase
         $number++;
 
         return User::create([
-            'username' => "ledger-user-{$number}",
             'email' => "ledger{$number}@example.com",
             'password' => 'secret123',
             'role' => $role,
