@@ -58,7 +58,7 @@ class CatalogController extends Controller
 
         return view('catalog.index', [
             'products' => $products,
-            'categories' => Category::active()->orderBy('category_name')->get(),
+            'categories' => Category::active()->withCount('products')->orderBy('category_name')->get(),
             'brands' => Product::whereNotNull('brand')->where('brand', '!=', '')->distinct()->orderBy('brand')->pluck('brand'),
             'q' => $filters['q'] ?? '',
             'categoryId' => (int) ($filters['category'] ?? 0),

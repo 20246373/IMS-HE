@@ -34,7 +34,7 @@
  @endunless
  <x-field label="Reorder level" name="reorder_level" type="number" min="0" :value="$product?->reorder_level ?? 0" />
  <div class="field">
-  <label class="optional" for="image">Photo (jpg, png or webp, max 2 MB)</label>
+  <label class="optional" for="image">Photo (jpg, png or webp, max 5 MB)</label>
   @if($product?->image_path)<img src="{{ asset('storage/' . $product->image_path) }}" alt="" style="display:block;max-height:90px;margin:.3rem 0">@endif
   <input id="image" type="file" name="image" accept="image/jpeg,image/png,image/webp">
   @error('image')<div class="field-error">{{ $message }}</div>@enderror

@@ -204,8 +204,11 @@
  /* Storefront (Product Catalog Module) */
  .search{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center} .search input{flex:1;min-width:180px}
  .cats a{display:inline-block;margin:.2rem .4rem .2rem 0;padding:.2rem .6rem;border:1px solid #1f3a5f;border-radius:999px;color:#1f3a5f;text-decoration:none;font-size:.85rem}
- .product{display:flex;flex-direction:column;gap:.25rem;color:inherit;text-decoration:none;margin:0} .product:hover{box-shadow:0 2px 8px #0002}
+ .product{display:flex;flex-direction:column;gap:.25rem;color:inherit;text-decoration:none;margin:0;overflow:hidden;transition:box-shadow .18s ease,transform .18s ease}
+ .product:hover{box-shadow:0 8px 20px #0002;transform:translateY(-3px)}
  .product img,.product .noimg{width:100%;height:150px;object-fit:cover;border-radius:5px}
+ .product img{transition:transform .25s ease}
+ .product:hover img{transform:scale(1.05)}
  .noimg{background:#eef0f3;color:#888;display:flex;align-items:center;justify-content:center;font-size:.85rem}
  .product small,.detail small{color:#666}
  .stock{font-size:.8rem;font-weight:600;padding:.1rem .5rem;border-radius:999px;align-self:flex-start}
@@ -241,14 +244,65 @@
  .stepper button:hover{background:#dde2e8}
  .stepper input{width:3.5rem;margin:0;border:0;border-left:1px solid #ccc;border-right:1px solid #ccc;text-align:center;-moz-appearance:textfield}
  .stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+ /* Storefront chrome (Ace-style structure, project theme) */
+ body.storefront main{max-width:1240px}
+ .sf-head{background:#fff;box-shadow:0 1px 3px #0001}
+ .sf-head-in{max-width:1240px;margin:0 auto;padding:.75rem 1.2rem;display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap}
+ .sf-logo{display:flex;flex-direction:column;color:#1f3a5f;text-decoration:none;line-height:1.05;flex-shrink:0}
+ .sf-logo strong{font-size:1.45rem;letter-spacing:.05em}
+ .sf-logo span{font-size:.64rem;color:#f2b705;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+ .sf-search{flex:1;display:flex;min-width:200px;max-width:600px}
+ .sf-search input{flex:1;min-width:0;border:1px solid #c8cfda;border-right:0;border-radius:6px 0 0 6px;padding:.6rem .8rem;margin:0;font-size:.95rem}
+ .sf-search button{border-radius:0 6px 6px 0;padding:.6rem 1.3rem;font-weight:600;white-space:nowrap}
+ .sf-actions{display:flex;align-items:center;gap:.9rem;margin-left:auto}
+ .sf-actions > a{color:#22303f;text-decoration:none;font-size:.88rem;font-weight:600}
+ .sf-actions > a:hover{color:#1f3a5f}
+ .sf-logout{display:inline;margin:0}
+ .sf-logout button{background:none;border:0;padding:0;color:#22303f;font-size:.88rem;font-weight:600;cursor:pointer}
+ .sf-logout button:hover{color:#1f3a5f}
+ .sf-cart{position:relative;display:inline-flex;align-items:center;gap:.3rem}
+ .sf-cart b{display:inline-grid;place-items:center;min-width:1.25rem;height:1.25rem;padding:0 .3rem;border-radius:999px;background:#f2b705;color:#1a1a1a;font-size:.72rem}
+ .sf-nav{background:#fff;border-top:1px solid #e6e9ef;border-bottom:1px solid #e6e9ef}
+ .sf-nav-in{max-width:1240px;margin:0 auto;padding:0 1.2rem;display:flex;gap:.15rem;overflow-x:auto;scrollbar-width:thin}
+ .sf-nav a{display:block;padding:.68rem .75rem;color:#22303f;text-decoration:none;font-size:.88rem;font-weight:600;white-space:nowrap;border-bottom:2px solid transparent}
+ .sf-nav a:hover{color:#1f3a5f}
+ .sf-nav a.active{color:#1f3a5f;border-bottom-color:#f2b705}
+ .sf-footer{background:#172d49;color:#c6d2e0;margin-top:2.5rem}
+ .sf-footer-in{max-width:1240px;margin:0 auto;padding:2rem 1.2rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1.5rem}
+ .sf-footer h4{color:#fff;margin:0 0 .6rem;font-size:.8rem;letter-spacing:.07em;text-transform:uppercase}
+ .sf-footer a{color:#c6d2e0;text-decoration:none;display:block;padding:.15rem 0;font-size:.88rem}
+ .sf-footer a:hover{color:#fff;text-decoration:underline}
+ .sf-footer-note{display:block;padding:.15rem 0;font-size:.85rem;color:#9db1c7}
+ .sf-footer-base{border-top:1px solid #ffffff22;padding:.8rem 1.2rem;text-align:center;font-size:.78rem;color:#9db1c7}
+ /* Shop page: Ace-style filter sidebar + product grid */
+ .shop{display:grid;grid-template-columns:230px minmax(0,1fr);gap:1.2rem;align-items:start}
+ .shop-side .card{padding:.9rem 1rem}
+ .shop-side h3,.shop-side h4{margin:.15rem 0 .55rem}
+ .shop-side form label{margin-top:.45rem}
+ .shop-side form button{margin-top:.6rem}
+ .shop-cats a{display:flex;justify-content:space-between;gap:.6rem;padding:.32rem .15rem;color:#22303f;text-decoration:none;font-size:.88rem;border-bottom:1px solid #eef1f5}
+ .shop-cats a:hover{color:#1f3a5f}
+ .shop-cats a.active{color:#1f3a5f;font-weight:700}
+ .shop-cats small{color:#98a2b3}
+ .shop-count{margin:.2rem 0 .8rem;color:#555;font-size:.9rem}
+ @media (max-width:800px){.shop{grid-template-columns:1fr}}
+ .grid .card.product{margin-bottom:0}
+ .product-media{display:block}
+ .product a{color:inherit;text-decoration:none}
+ .product .product-name{display:block;margin-top:.15rem}
+ .product .product-name:hover strong{text-decoration:underline}
+ .product-foot{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-top:.2rem}
+ .product .price{font-size:1.05rem;font-weight:700;margin:0}
+ .product-add{width:100%;margin-top:.55rem;padding:.45rem .6rem;font-size:.88rem}
+ @media (max-width:520px){.sf-logo strong{font-size:1.15rem}.sf-head-in{padding:.6rem .8rem}.sf-nav-in{padding:0 .8rem}}
 </style>
 @stack('head')
 </head>
-<body class="@auth('web') staff-layout @endauth">
-<nav class="@auth('web') staff-nav @else top-nav @endauth">
+<body class="@auth('web') staff-layout @else storefront @endauth">
+@auth('web')
+<nav class="staff-nav">
     <strong>IMS-HE</strong>
 
-    @auth('web')
         @php
             $user = auth()->user();
 
@@ -433,48 +487,59 @@
             <button type="submit">Logout</button>
         </form>
 
-    @elseauth('customer')
-
-        {{-- CUSTOMER NAVIGATION --}}
-        <a class="{{ request()->routeIs('home') ? 'nav-link-active' : '' }}" href="{{ route('home') }}">Home</a>
-        <a class="{{ request()->routeIs('catalog.*') ? 'nav-link-active' : '' }}" href="{{ route('catalog.index') }}">Products</a>
-
-        <a class="{{ request()->routeIs('customer.cart.*') ? 'nav-link-active' : '' }}" href="{{ route('customer.cart.index') }}">
-            Cart (
-            <span id="cart-count">
-                {{ auth('customer')->user()->cart?->items()->sum('quantity') ?? 0 }}
-            </span>
-            )
-        </a>
-
-        <a class="{{ request()->routeIs('customer.orders.*') ? 'nav-link-active' : '' }}" href="{{ route('customer.orders.index') }}">My Orders</a>
-        <a class="{{ request()->routeIs('customer.account*') ? 'nav-link-active' : '' }}" href="{{ route('customer.account') }}">My Account</a>
-
-        <span class="sp"></span>
-
-        <span>{{ auth('customer')->user()->display_name }}</span>
-
-        <form method="POST"
-              action="{{ route('customer.logout') }}"
-              class="inline">
-            @csrf
-            <button type="submit">Logout</button>
-        </form>
-
-    @else
-
-        {{-- GUEST NAVIGATION --}}
-        <a class="{{ request()->routeIs('home') ? 'nav-link-active' : '' }}" href="{{ route('home') }}">Home</a>
-        <a class="{{ request()->routeIs('catalog.*') ? 'nav-link-active' : '' }}" href="{{ route('catalog.index') }}">Products</a>
-
-        <span class="sp"></span>
-
-        {{-- Hidden on the log in / sign up pages, where the card already offers both --}}
-        <a class="nav-guest-auth" href="{{ route('register') }}">Sign Up</a>
-        <a class="nav-guest-auth nav-cta" href="{{ route('login') }}">Log In</a>
-
-    @endauth
 </nav>
+@else
+<header class="sf">
+    <div class="sf-head">
+        <div class="sf-head-in">
+            <a class="sf-logo" href="{{ route('home') }}">
+                <strong>IMS-HE</strong>
+                <span>Ibay Enterprises</span>
+            </a>
+            <form class="sf-search" method="GET" action="{{ route('catalog.index') }}">
+                <input type="search" name="q" value="{{ request('q') }}"
+                       placeholder="Search tools, paint, plumbing &amp; more"
+                       maxlength="100" aria-label="Search products">
+                <button type="submit">Search</button>
+            </form>
+            <div class="sf-actions">
+                @auth('customer')
+                    <a href="{{ route('customer.account') }}">My Account</a>
+                    <form method="POST" action="{{ route('customer.logout') }}" class="sf-logout">@csrf
+                        <button type="submit">Log Out</button>
+                    </form>
+                @else
+                    <a href="{{ route('login') }}">Sign In</a>
+                    <a href="{{ route('register') }}">Sign Up</a>
+                @endauth
+                <a class="sf-cart" href="{{ route('customer.cart.index') }}">
+                    Cart
+                    <b id="cart-count">{{ auth('customer')->user()?->cart?->items()->sum('quantity') ?? 0 }}</b>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <nav class="sf-nav">
+        <div class="sf-nav-in">
+            <a href="{{ route('home') }}"
+               class="{{ request()->routeIs('home') ? 'active' : '' }}">Home</a>
+            <a href="{{ route('catalog.index') }}"
+               class="{{ request()->routeIs('catalog.index', 'catalog.show') ? 'active' : '' }}">All Products</a>
+            @foreach($sfCategories as $sfCategory)
+                <a href="{{ route('catalog.index', ['category' => $sfCategory->category_id]) }}"
+                   class="{{ request('category') == $sfCategory->category_id ? 'active' : '' }}">
+                    {{ $sfCategory->category_name }}
+                </a>
+            @endforeach
+            @auth('customer')
+                <a href="{{ route('customer.orders.index') }}"
+                   class="{{ request()->routeIs('customer.orders.*') ? 'active' : '' }}">My Orders</a>
+            @endauth
+        </div>
+    </nav>
+</header>
+@endif
 
 @yield('hero')
 <main>
@@ -503,6 +568,38 @@
  @endif
  @yield('content')
 </main>
+@auth('web')@else
+<footer class="sf-footer">
+    <div class="sf-footer-in">
+        <div>
+            <h4>Shop</h4>
+            <a href="{{ route('catalog.index') }}">All Products</a>
+            @foreach($sfCategories->take(5) as $sfCategory)
+                <a href="{{ route('catalog.index', ['category' => $sfCategory->category_id]) }}">
+                    {{ $sfCategory->category_name }}
+                </a>
+            @endforeach
+        </div>
+        <div>
+            <h4>My Account</h4>
+            @auth('customer')
+                <a href="{{ route('customer.account') }}">Account Settings</a>
+                <a href="{{ route('customer.orders.index') }}">My Orders</a>
+                <a href="{{ route('customer.cart.index') }}">Cart</a>
+            @else
+                <a href="{{ route('login') }}">Sign In</a>
+                <a href="{{ route('register') }}">Create Account</a>
+            @endauth
+        </div>
+        <div>
+            <h4>Ibay Enterprises</h4>
+            <a href="{{ route('home') }}">Home</a>
+            <span class="sf-footer-note">Tools, plumbing, electrical and building supplies.</span>
+        </div>
+    </div>
+    <div class="sf-footer-base">&copy; {{ date('Y') }} Ibay Enterprises Corporation. All rights reserved.</div>
+</footer>
+@endif
 <script>
  // Quantity steppers (partials/qty): - / + stay within the input's min and max (available stock).
  document.addEventListener('click', function (e) {

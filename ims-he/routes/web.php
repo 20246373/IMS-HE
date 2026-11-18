@@ -192,6 +192,7 @@ Route::middleware(['auth', 'permission'])->group(function () {
         Route::get('customers', [CustomerManagementController::class, 'index'])->name('customers.index');
         Route::get('customers/{customer}/edit', [CustomerManagementController::class, 'edit'])->name('customers.edit');
         Route::put('customers/{customer}', [CustomerManagementController::class, 'update'])->name('customers.update');
+        Route::delete('customers/{customer}', [CustomerManagementController::class, 'destroy'])->name('customers.destroy');
         Route::get('customers/{customer}', [CustomerManagementController::class, 'show'])->name('customers.show');
     });
     Route::middleware('permission:payroll.view')->group(function () {

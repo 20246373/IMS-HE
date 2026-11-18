@@ -80,6 +80,12 @@ class ProductController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        // PHP-level upload failures (e.g. over the server limit) never reach the validator,
+        // so without this check the image would be silently dropped.
+        if ($message = $this->failedUploadMessage($request)) {
+            return back()->withErrors(['image' => $message])->withInput();
+        }
+
         $data = $request->validate($this->rules(), self::MESSAGES);
         $opening = (int) $data['stock_quantity'];
 
@@ -115,6 +121,10 @@ class ProductController extends Controller
     {
         // Product ID and stock quantity are not editable. Only validated fields are returned,
         // and the explicit exclusion keeps a tampered request from changing them.
+        if ($message = $this->failedUploadMessage($request)) {
+            return back()->withErrors(['image' => $message])->withInput();
+        }
+
         $data = $request->validate($this->rules($product), self::MESSAGES);
         $attributes = Arr::except($data, ['image', 'stock_quantity', 'product_id']);
 
@@ -177,6 +187,20 @@ class ProductController extends Controller
         return null;
     }
 
+    // Returns a user-facing message when PHP rejected the upload before Laravel saw it
+    // (size limits, partial upload, no temp dir), or null when the upload is fine/absent.
+    private function failedUploadMessage(Request $request): ?string
+    {
+        $error = $_FILES['image']['error'] ?? UPLOAD_ERR_OK;
+
+        return match ($error) {
+            UPLOAD_ERR_OK, UPLOAD_ERR_NO_FILE => null,
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'The photo is too large (max 5 MB).',
+            UPLOAD_ERR_PARTIAL => 'The upload was interrupted. Please try again.',
+            default => 'The photo could not be uploaded. Please try again.',
+        };
+    }
+
     private function rules(?Product $product = null): array
     {
         $rules = [
@@ -187,7 +211,7 @@ class ProductController extends Controller
             'unit_price' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
             'reorder_level' => ['required', 'integer', 'min:0', 'max:4294967295'],
             'supplier_id' => ['nullable', 'integer', 'exists:suppliers,supplier_id'],
-            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ];
 
         // Opening stock is only entered when the product is created. On edit it is read-only.

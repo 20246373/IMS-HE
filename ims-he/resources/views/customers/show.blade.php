@@ -1,7 +1,14 @@
 @extends('layouts.app')
 @section('title', 'Customer profile')
 @section('heading', 'Customer Profile')
-@section('page-actions')<a class="btn" href="{{ route('customers.edit', $customer) }}">Edit profile</a>@endsection
+@section('page-actions')
+ <a class="btn" href="{{ route('customers.edit', $customer) }}">Edit profile</a>
+ <form method="POST" action="{{ route('customers.destroy', $customer) }}" class="inline"
+       onsubmit="return confirm('Delete this customer account?')">
+  @csrf @method('DELETE')
+  <button type="submit" class="danger">Delete account</button>
+ </form>
+@endsection
 @section('content')
 <div class="card">
  <div class="form-grid">
