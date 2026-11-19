@@ -14,8 +14,8 @@
  @else
   {{-- Step 2: the form. Both post to the same login, which finds the account by email. --}}
   <a class="auth-back" href="{{ route('login') }}">Change access</a>
-  <h2>{{ $as === 'customer' ? 'Customer log in' : 'Employee log in' }}</h2>
-  <p class="auth-sub">Enter your email and password to continue.</p>
+  <h2>Welcome back</h2>
+  <p class="auth-sub">Log in to your {{ $as === 'customer' ? 'customer' : 'employee' }} account.</p>
   <form method="POST" action="{{ route('login') }}">@csrf
    <div class="form-grid">
     <x-field label="Email" name="login" type="email" value="{{ old('login') }}" maxlength="100" autocomplete="email" autofocus />

@@ -1,4 +1,11 @@
-<div class="grid">
- <a class="card card-link" href="{{ route('reports.sales') }}"><div>Revenue this month</div><h2>{{ money($monthRevenue) }}</h2></a>
- <a class="card card-link" href="{{ route('reports.sales') }}"><div>Completed sales this month</div><h2>{{ number_format($monthTransactions) }}</h2></a>
+<div class="dash-grid">
+ <a class="stat-card" href="{{ route('reports.sales') }}">
+  <div class="stat-label">Revenue This Month</div>
+  <div class="stat-value" style="color: #1f3a5f;">{{ money($monthRevenue) }}</div>
+ </a>
+ 
+ <a class="stat-card" href="{{ route('reports.sales') }}">
+  <div class="stat-label">Completed Sales</div>
+  <div class="stat-value">{{ number_format($monthTransactions) }}</div>
+ </a>
 </div>

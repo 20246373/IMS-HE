@@ -14,7 +14,9 @@ use App\Models\PurchaseOrderItem;
 use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 // UC12 Add / UC13 Edit / UC14 Delete for products, and the supplier role rules.
@@ -76,6 +78,44 @@ class ProductManagementTest extends TestCase
             'product_id' => $product->product_id, 'transaction_type' => 'IN', 'quantity' => 20, 'reference_type' => 'Adjustment',
         ]);
         $this->assertDatabaseHas('audit_logs', ['action' => 'Created', 'table_name' => 'products', 'record_id' => $product->product_id]);
+    }
+
+    public function test_clerk_can_add_a_product_with_an_image(): void
+    {
+        Storage::fake('public');
+        $clerk = $this->staff(User::INVENTORY_CLERK);
+
+        $this->actingAs($clerk)->post(route('products.store'), $this->payload([
+            'image' => UploadedFile::fake()->image('claw-hammer.jpg', 100, 100),
+        ]))->assertRedirect(route('products.index'));
+
+        $product = Product::where('product_name', 'Claw Hammer')->firstOrFail();
+        $this->assertNotNull($product->image_path);
+        Storage::disk('public')->assertExists($product->image_path);
+    }
+
+    public function test_product_image_must_be_a_supported_image(): void
+    {
+        Storage::fake('public');
+        $clerk = $this->staff(User::INVENTORY_CLERK);
+
+        $this->actingAs($clerk)->post(route('products.store'), $this->payload([
+            'image' => UploadedFile::fake()->create('manual.pdf', 100, 'application/pdf'),
+        ]))->assertSessionHasErrors(['image']);
+
+        $this->assertDatabaseCount('products', 0);
+    }
+
+    public function test_employee_cannot_add_a_product_with_an_image(): void
+    {
+        Storage::fake('public');
+        $employee = $this->staff(User::EMPLOYEE);
+
+        $this->actingAs($employee)->post(route('products.store'), $this->payload([
+            'image' => UploadedFile::fake()->image('claw-hammer.jpg', 100, 100),
+        ]))->assertForbidden();
+
+        $this->assertDatabaseCount('products', 0);
     }
 
     public function test_brand_is_required_for_product_creation(): void

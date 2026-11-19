@@ -37,11 +37,12 @@ class StaffAccessTest extends TestCase
 
     public function test_employee_signs_up_with_email_and_password_and_waits_for_a_role(): void
     {
-        $this->post('/register/employee', ['email' => 'New.Hire@Example.com', 'password' => 'secret123'])
+        $this->post('/register/employee', ['first_name' => 'Nina', 'last_name' => 'Reyes', 'email' => 'New.Hire@Example.com', 'password' => 'secret123'])
             ->assertRedirect(route('staff.pending'));
 
         $user = User::where('email', 'new.hire@example.com')->firstOrFail();
         $this->assertSame(User::PENDING, $user->role);
+        $this->assertSame('Nina Reyes', $user->displayName());
         $this->assertNotSame('secret123', $user->password);
         $this->assertAuthenticatedAs($user, 'web');
         $this->assertDatabaseHas('audit_logs', ['action' => 'Registered', 'table_name' => 'users', 'record_id' => $user->user_id]);
@@ -49,14 +50,14 @@ class StaffAccessTest extends TestCase
 
     public function test_employee_signup_rejects_bad_input_and_emails_already_in_use(): void
     {
-        $this->post('/register/employee', ['email' => 'nope', 'password' => 'short'])->assertSessionHasErrors(['email', 'password']);
+        $this->post('/register/employee', ['email' => 'nope', 'password' => 'short'])->assertSessionHasErrors(['first_name', 'last_name', 'email', 'password']);
 
         $this->staff(User::EMPLOYEE, ['email' => 'taken@example.com']);
-        $this->post('/register/employee', ['email' => 'taken@example.com', 'password' => 'secret123'])
+        $this->post('/register/employee', ['first_name' => 'A', 'last_name' => 'B', 'email' => 'taken@example.com', 'password' => 'secret123'])
             ->assertSessionHasErrors(['email' => 'This email is already registered.']);
 
         Customer::create(['email' => 'shopper@example.com', 'password' => 'secret123']);
-        $this->post('/register/employee', ['email' => 'shopper@example.com', 'password' => 'secret123'])->assertSessionHasErrors('email');
+        $this->post('/register/employee', ['first_name' => 'A', 'last_name' => 'B', 'email' => 'shopper@example.com', 'password' => 'secret123'])->assertSessionHasErrors('email');
     }
 
     public function test_pending_employee_only_sees_the_waiting_page(): void
@@ -132,6 +133,25 @@ class StaffAccessTest extends TestCase
 
         $this->actingAs($pending->fresh())->get(route('products.index'))->assertOk();
         $this->actingAs($pending->fresh())->get(route('users.index'))->assertForbidden();   // only what the role allows
+    }
+
+    public function test_approving_links_the_one_employee_record_with_the_same_name(): void
+    {
+        $administrator = $this->staff(User::ADMINISTRATOR);
+        $employee = fn (string $first, string $last) => Employee::create(['first_name' => $first, 'last_name' => $last, 'position' => 'Clerk', 'daily_rate' => 500, 'date_hired' => today(), 'status' => 'Active']);
+        $nina = $employee('Nina', 'Reyes');
+        $employee('Jose', 'Cruz');
+        $employee('Jose', 'Cruz');
+
+        $matched = $this->staff(User::PENDING, ['first_name' => 'nina', 'last_name' => 'REYES']);
+        $this->actingAs($administrator)->post(route('users.role', $matched), ['role' => User::EMPLOYEE])->assertSessionHasNoErrors();
+        $this->assertSame($nina->employee_id, $matched->fresh()->employee_id);
+
+        // Two employees share the name, so neither is linked.
+        $ambiguous = $this->staff(User::PENDING, ['first_name' => 'Jose', 'last_name' => 'Cruz']);
+        $this->actingAs($administrator)->post(route('users.role', $ambiguous), ['role' => User::EMPLOYEE])->assertSessionHasNoErrors();
+        $this->assertNull($ambiguous->fresh()->employee_id);
+        $this->assertSame('Jose Cruz', $ambiguous->fresh()->displayName());
     }
 
     public function test_only_the_administrator_can_give_roles_and_only_real_roles(): void
@@ -216,11 +236,11 @@ class StaffAccessTest extends TestCase
 
         // Welcome message and the sidebar box show the person's name, not the email.
         $this->get(route('dashboard'))->assertOk()
-            ->assertSee('Welcome, Anton Sanchez')
+            ->assertSee('Welcome back, Anton Sanchez')
             ->assertSee('<strong>Anton Sanchez</strong>', false);
     }
 
-    public function test_user_edit_updates_email_role_status_and_employee_and_audits_changes(): void
+    public function test_user_edit_updates_name_email_role_status_links_the_matching_employee_and_audits(): void
     {
         $administrator = $this->staff(User::ADMINISTRATOR);
         $employee = Employee::create([
@@ -234,10 +254,11 @@ class StaffAccessTest extends TestCase
         $target = $this->staff(User::EMPLOYEE, ['email' => 'original@example.com']);
 
         $this->actingAs($administrator)->put(route('users.update', $target), [
+            'first_name' => 'Linked',
+            'last_name' => 'Employee',
             'email' => 'Changed@Example.com',
             'role' => User::TREASURER,
             'status' => User::STATUS_LOCKED,
-            'employee_id' => $employee->employee_id,
         ])->assertRedirect(route('users.index'));
 
         $updated = $target->fresh();
@@ -245,6 +266,7 @@ class StaffAccessTest extends TestCase
         $this->assertSame(User::TREASURER, $updated->role);
         $this->assertSame(User::STATUS_LOCKED, $updated->status);
         $this->assertSame($employee->employee_id, $updated->employee_id);
+        $this->assertSame('Linked Employee', $updated->displayName());
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'Updated',
             'table_name' => 'users',
@@ -253,10 +275,11 @@ class StaffAccessTest extends TestCase
 
         $updated->update(['login_attempt_count' => 2]);
         $this->actingAs($administrator)->put(route('users.update', $updated), [
+            'first_name' => 'Linked',
+            'last_name' => 'Employee',
             'email' => 'changed@example.com',
             'role' => User::TREASURER,
             'status' => User::STATUS_ACTIVE,
-            'employee_id' => $employee->employee_id,
         ])->assertRedirect(route('users.index'));
 
         $this->assertSame(0, $updated->fresh()->login_attempt_count);
@@ -268,7 +291,7 @@ class StaffAccessTest extends TestCase
 
         $this->actingAs($administrator)->get(route('users.index'))->assertOk()
             ->assertSee('class="back-link no-print"', false)
-            ->assertSeeInOrder(['<div class="page-head">', '<h1>User Accounts</h1>', '<div class="card'], false);
+            ->assertSeeInOrder(['<div class="page-head">', '<h1>Employee Accounts</h1>', '<div class="card'], false);
 
         $this->actingAs($administrator)->get(route('dashboard'))->assertOk()
             ->assertDontSee('class="back-link', false);
@@ -281,11 +304,11 @@ class StaffAccessTest extends TestCase
         Customer::create(['email' => 'shopper@example.com', 'password' => 'secret123']);
 
         $this->actingAs($administrator)->put(route('users.update', $target), ['email' => '', 'role' => User::EMPLOYEE, 'status' => User::STATUS_ACTIVE])
-            ->assertSessionHasErrors(['email', 'employee_id']);
+            ->assertSessionHasErrors(['first_name', 'last_name', 'email']);
 
-        $this->actingAs($administrator)->put(route('users.update', $target), ['email' => $administrator->email, 'role' => User::EMPLOYEE, 'status' => User::STATUS_ACTIVE])
+        $this->actingAs($administrator)->put(route('users.update', $target), ['first_name' => 'A', 'last_name' => 'B', 'email' => $administrator->email, 'role' => User::EMPLOYEE, 'status' => User::STATUS_ACTIVE])
             ->assertSessionHasErrors('email');
-        $this->actingAs($administrator)->put(route('users.update', $target), ['email' => 'shopper@example.com', 'role' => User::EMPLOYEE, 'status' => User::STATUS_ACTIVE])
+        $this->actingAs($administrator)->put(route('users.update', $target), ['first_name' => 'A', 'last_name' => 'B', 'email' => 'shopper@example.com', 'role' => User::EMPLOYEE, 'status' => User::STATUS_ACTIVE])
             ->assertSessionHasErrors('email');
 
         $this->assertSame('target@example.com', $target->fresh()->email);
@@ -294,8 +317,7 @@ class StaffAccessTest extends TestCase
     public function test_administrator_cannot_change_own_role_or_lock_own_account(): void
     {
         $administrator = $this->staff(User::ADMINISTRATOR);
-        $employee = Employee::create(['first_name' => 'Anton', 'last_name' => 'Sanchez', 'position' => 'Administrator', 'daily_rate' => 700, 'date_hired' => today(), 'status' => 'Active']);
-        $fields = ['email' => $administrator->email, 'employee_id' => $employee->employee_id];
+        $fields = ['first_name' => 'Anton', 'last_name' => 'Sanchez', 'email' => $administrator->email];
 
         $this->actingAs($administrator)->put(route('users.update', $administrator), $fields + [
             'role' => User::PRESIDENT,
@@ -306,5 +328,51 @@ class StaffAccessTest extends TestCase
             'role' => User::ADMINISTRATOR,
             'status' => User::STATUS_LOCKED,
         ])->assertSessionHasErrors('status');
+    }
+
+    public function test_administrator_creates_an_account_and_it_links_the_employee_with_the_same_name(): void
+    {
+        $administrator = $this->staff(User::ADMINISTRATOR);
+        $employee = Employee::create([
+            'first_name' => 'New',
+            'last_name' => 'Cashier',
+            'position' => 'Cashier',
+            'daily_rate' => 500,
+            'date_hired' => today(),
+            'status' => 'Active',
+        ]);
+
+        $this->actingAs($administrator)->get(route('users.create'))->assertOk()->assertSee('First name');
+
+        $this->actingAs($administrator)->post(route('users.store'), [
+            'first_name' => 'new',
+            'last_name' => 'cashier',
+            'email' => 'Cashier@Example.com',
+            'role' => User::EMPLOYEE,
+            'password' => 'secret123',
+            'password_confirmation' => 'secret123',
+        ])->assertRedirect(route('users.index'));
+
+        $account = User::where('email', 'cashier@example.com')->firstOrFail();
+        $this->assertSame($employee->employee_id, $account->employee_id);
+        $this->assertSame(User::EMPLOYEE, $account->role);
+        $this->assertSame(User::STATUS_ACTIVE, $account->status);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'Created', 'table_name' => 'users', 'record_id' => $account->user_id]);
+
+        // The email cannot be used twice.
+        $this->actingAs($administrator)->post(route('users.store'), [
+            'first_name' => 'Other',
+            'last_name' => 'Person',
+            'email' => 'cashier@example.com',
+            'role' => User::EMPLOYEE,
+            'password' => 'secret123',
+            'password_confirmation' => 'secret123',
+        ])->assertSessionHasErrors('email');
+    }
+
+    public function test_only_the_administrator_can_create_accounts(): void
+    {
+        $this->actingAs($this->staff(User::PRESIDENT))->get(route('users.create'))->assertForbidden();
+        $this->actingAs($this->staff(User::PRESIDENT))->post(route('users.store'), [])->assertForbidden();
     }
 }

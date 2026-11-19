@@ -15,12 +15,10 @@ class CatalogController extends Controller
 
     public function home()
     {
-        // Staff keep landing on their dashboard.
         if (auth()->check()) {
             return redirect()->route('dashboard');
         }
 
-        // The schema has no "featured" flag, so feature the newest products that are in stock.
         $featured = Product::where('stock_quantity', '>', 0)
             ->with('category')->latest('product_id')->take(self::FEATURED_COUNT)->get();
 
@@ -30,9 +28,13 @@ class CatalogController extends Controller
                 ->withCount('products')
                 ->orderBy('category_name')
                 ->get(),
-            // category_id => image_path of its first product that has a photo (used for the category tiles)
-            'categoryThumbs' => Product::whereNotNull('image_path')->orderBy('product_id')
-                ->get(['category_id', 'image_path'])->unique('category_id')->pluck('image_path', 'category_id'),
+            // Filters out both NULL and empty string image paths
+            'categoryThumbs' => Product::whereNotNull('image_path')
+                ->where('image_path', '!=', '')
+                ->orderBy('product_id')
+                ->get(['category_id', 'image_path'])
+                ->unique('category_id')
+                ->pluck('image_path', 'category_id'),
         ]);
     }
 
@@ -58,7 +60,7 @@ class CatalogController extends Controller
 
         return view('catalog.index', [
             'products' => $products,
-            'categories' => Category::active()->orderBy('category_name')->get(),
+            'categories' => Category::active()->withCount('products')->orderBy('category_name')->get(),
             'brands' => Product::whereNotNull('brand')->where('brand', '!=', '')->distinct()->orderBy('brand')->pluck('brand'),
             'q' => $filters['q'] ?? '',
             'categoryId' => (int) ($filters['category'] ?? 0),

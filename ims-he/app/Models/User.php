@@ -82,10 +82,33 @@ class User extends Authenticatable
         return (string) $this->email;
     }
 
-    /** The person's name from the linked employee record, or the email when there is none (e.g. the Administrator). */
+    /** The person's name: the name on the account (entered at sign-up), else the linked employee's, else the email. */
     public function displayName(): string
     {
-        return $this->employee?->full_name ?? (string) $this->email;
+        $ownName = trim($this->first_name.' '.$this->last_name);
+
+        return $ownName !== '' ? $ownName : ($this->employee?->full_name ?? (string) $this->email);
+    }
+
+    /** Links the account to the active employee record with the same name that has no account yet, if there is one. */
+    public function linkMatchingEmployee(): void
+    {
+        if ($this->employee_id || blank($this->first_name) || blank($this->last_name)) {
+            return;
+        }
+
+        $taken = self::whereNotNull('employee_id')->pluck('employee_id');
+
+        $match = Employee::where('status', 'Active')
+            ->whereRaw('LOWER(first_name) = ?', [mb_strtolower(trim($this->first_name))])
+            ->whereRaw('LOWER(last_name) = ?', [mb_strtolower(trim($this->last_name))])
+            ->whereNotIn('employee_id', $taken)
+            ->get();
+
+        // Only link when exactly one record matches, so two employees with the same name are never mixed up.
+        if ($match->count() === 1) {
+            $this->employee_id = $match->first()->employee_id;
+        }
     }
 
     public function isPending(): bool

@@ -134,6 +134,8 @@ class EmployeeController extends Controller
             'status' => User::STATUS_ACTIVE,
             'login_attempt_count' => 0,
             'employee_id' => $employee->employee_id,
+            'first_name' => $employee->first_name,
+            'last_name' => $employee->last_name,
         ]);
         AuditLog::record('Created', 'users', $account->user_id);
     }

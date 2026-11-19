@@ -19,7 +19,7 @@
 
 @php
     $accountCards = [
-        'all' => ['User accounts', route('users.index'), 'Manage accounts'],
+        'all' => ['Employee accounts', route('users.index'), 'Manage accounts'],
         'unassigned' => ['Unassigned accounts', route('users.index').($accountSummaries['unassigned']['count'] ? '#unassigned' : ''), 'Review assignments'],
         'locked' => ['Locked accounts', route('users.index'), 'Manage accounts'],
     ];

@@ -183,11 +183,15 @@ class AuthController extends Controller
         $request->merge(['email' => mb_strtolower(trim((string) $request->input('email')))]);
 
         $data = $request->validate([
+            'first_name' => ['required', 'string', 'max:50'],
+            'last_name' => ['required', 'string', 'max:50'],
             'email' => ['required', 'email', 'max:100', Rule::unique('users', 'email'), Rule::unique('customers', 'email')],
             'password' => ['required', 'string', 'min:8', 'max:72'],        // bcrypt reads only 72 bytes
         ], ['email.unique' => 'This email is already registered.']);
 
         $user = User::create([
+            'first_name' => trim($data['first_name']),
+            'last_name' => trim($data['last_name']),
             'email' => $data['email'],
             'password' => $data['password'],             // hashed by the model cast
             'role' => User::PENDING,

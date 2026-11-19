@@ -46,13 +46,15 @@ class DatabaseSeeder extends Seeder
         // The Administrator's name comes from a linked employee record, like every other staff account.
         $administrator = Employee::firstOrCreate(
             ['first_name' => 'Anton', 'last_name' => 'Sanchez'],
-            ['position' => 'Administrator', 'daily_rate' => 700, 'date_hired' => now()->subYear()->toDateString(), 'status' => 'Active'] + $this->govIds(1)
+            ['position' => 'Administrator', 'daily_rate' => 1000, 'date_hired' => now()->subYear()->toDateString(), 'status' => 'Active'] + $this->govIds(1)
         );
 
         User::updateOrCreate(
             ['email' => 'admin@example.com'],
             [
                 'employee_id' => $administrator->employee_id,
+                'first_name' => $administrator->first_name,
+                'last_name' => $administrator->last_name,
                 'role' => User::ADMINISTRATOR,
                 'password' => 'password123',
                 'status' => User::STATUS_ACTIVE,
@@ -75,7 +77,7 @@ class DatabaseSeeder extends Seeder
 
             User::updateOrCreate(
                 ['email' => "{$emailName}@example.com"],
-                ['employee_id' => $emp->employee_id, 'role' => $role, 'password' => 'password123', 'status' => User::STATUS_ACTIVE, 'login_attempt_count' => 0]
+                ['employee_id' => $emp->employee_id, 'first_name' => $first, 'last_name' => $last, 'role' => $role, 'password' => 'password123', 'status' => User::STATUS_ACTIVE, 'login_attempt_count' => 0]
             );
         }
 
@@ -87,7 +89,7 @@ class DatabaseSeeder extends Seeder
         );
         User::updateOrCreate(
             ['email' => 'newhire@example.com'],
-            ['employee_id' => $newHire->employee_id, 'role' => User::PENDING, 'password' => 'password123', 'status' => User::STATUS_ACTIVE, 'login_attempt_count' => 0]
+            ['employee_id' => $newHire->employee_id, 'first_name' => 'Pedro', 'last_name' => 'Cruz', 'role' => User::PENDING, 'password' => 'password123', 'status' => User::STATUS_ACTIVE, 'login_attempt_count' => 0]
         );
 
         // Categories + products (stock_quantity / reorder_level per SDD 7.2.4)

@@ -29,7 +29,7 @@ class DashboardTest extends TestCase
         $this->signInAs(User::ADMINISTRATOR);
 
         $this->get(route('dashboard'))->assertOk()
-            ->assertSee('User accounts')
+            ->assertSee('Employee accounts')
             ->assertDontSee('Revenue this month')
             ->assertDontSee('Low-stock products')
             ->assertDontSee('Pending Purchase Orders');
@@ -88,10 +88,10 @@ class DashboardTest extends TestCase
         $this->signInAs(User::PRESIDENT);
 
         $this->get(route('dashboard'))->assertOk()
-            ->assertSee('Revenue this month')
+            ->assertSee('Revenue This Month')
             ->assertSee('Low-stock products')
             ->assertSee('Pending Purchase Orders')
-            ->assertDontSee('User accounts');
+            ->assertDontSee('Employee accounts');
     }
 
     public function test_treasurer_only_sees_sales(): void
@@ -99,8 +99,8 @@ class DashboardTest extends TestCase
         $this->signInAs(User::TREASURER);
 
         $this->get(route('dashboard'))->assertOk()
-            ->assertSee('Revenue this month')
-            ->assertDontSee('User accounts')
+            ->assertSee('Revenue This Month')
+            ->assertDontSee('Employee accounts')
             ->assertDontSee('Low-stock products')
             ->assertDontSee('Pending Purchase Orders');
     }
@@ -113,7 +113,7 @@ class DashboardTest extends TestCase
             ->assertSee('Low-stock products')
             ->assertSee('Pending Purchase Orders')
             ->assertDontSee('Revenue this month')
-            ->assertDontSee('User accounts');
+            ->assertDontSee('Employee accounts');
     }
 
     public function test_low_stock_widget_uses_the_shared_warning_alert_and_links_to_the_low_stock_list(): void
@@ -144,10 +144,10 @@ class DashboardTest extends TestCase
         $this->signInAs(User::STORE_SUPERVISOR);
 
         $this->get(route('dashboard'))->assertOk()
-            ->assertSee('Revenue this month')
+            ->assertSee('Revenue This Month')
             ->assertSee('Low-stock products')
             ->assertSee('Pending Purchase Orders')
-            ->assertDontSee('User accounts');
+            ->assertDontSee('Employee accounts');
     }
 
     public function test_dashboard_sales_widget_excludes_pending_paid_invoices(): void
@@ -191,7 +191,7 @@ class DashboardTest extends TestCase
         $this->get(route('dashboard'))->assertOk()
             ->assertSee('100.00')
             ->assertDontSee('900.00')
-            ->assertSee('Completed sales this month');
+            ->assertSee('Completed Sales');
     }
 
     public function test_employee_sees_no_modules(): void

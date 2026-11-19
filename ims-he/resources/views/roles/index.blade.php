@@ -45,7 +45,7 @@
   <p>This role has access to the following:</p>
   <div class="access-groups">
   @if($role->is_system)
-   <div><h4>Administration</h4><ul class="access-list"><li>User accounts</li><li>Roles</li><li>Audit log</li></ul></div>
+   <div><h4>Administration</h4><ul class="access-list"><li>Employee accounts</li><li>Customer accounts</li><li>Roles</li><li>Audit log</li></ul></div>
   @endif
   @foreach($groups as $group => $groupPermissions)
    @php($inGroup = array_intersect_key($groupPermissions, array_flip($granted)))

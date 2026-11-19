@@ -73,6 +73,12 @@
 }
 .storefront button:hover,
 .storefront a.btn:hover { background: #25466d; }
+/* Link-style buttons (btn-primary) keep white text; the storefront's navy link color would make them unreadable. */
+.storefront a.btn-primary,
+.storefront a.btn-primary:hover { color: #fff; text-decoration: none; }
+/* Small red "Remove" button in the cart: light red with dark red text (the storefront's navy button style would hide it). */
+.storefront button.btn-danger-sm { min-height: 0; padding: .4rem .75rem; background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; font-size: .82rem; }
+.storefront button.btn-danger-sm:hover { background: #fecaca; color: #7f1d1d; }
 .storefront a.btn-alt,
 .storefront .btn.muted { background: transparent; color: var(--store-navy); border-color: var(--store-navy); }
 .storefront a.btn-alt:hover,
@@ -113,30 +119,6 @@
 .storefront .stepper button:hover { background: #dde2e8; }
 .storefront .stepper input { border: 0; border-radius: 0; padding-inline: .2rem; }
 
-.storefront .hero {
-    max-width: 76rem;
-    margin: clamp(1rem, 3vw, 2.5rem) auto 0;
-    background: #17304f;
-    color: white;
-    overflow: hidden;
-    border-radius: 16px;
-}
-.storefront .hero-inner { padding: clamp(1.5rem, 5vw, 4rem); }
-.storefront .hero h1 {
-    margin: 0;
-    font-size: clamp(2.2rem, 4.7vw, 4.5rem);
-    line-height: 1;
-    letter-spacing: -.04em;
-    font-weight: 820;
-}
-.storefront .hero p { margin: 1rem 0 1.5rem; color: #dbe4ef; font-size: 1.06rem; }
-.storefront .hero-search { display: flex; gap: .4rem; max-width: 29rem; }
-.storefront .hero-search input { flex: 1; min-width: 0; width: 100%; margin: 0; }
-.storefront .hero-search button { background: var(--store-gold); color: var(--store-ink); }
-.storefront .hero-search button:hover { background: #ffd24d; }
-.storefront .hero-links { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin-top: .9rem; }
-.storefront .hero-links a { color: white; }
-.storefront .hero :focus-visible { outline-color: var(--store-gold); }
 
 .storefront .section-head {
     display: flex;
@@ -147,31 +129,6 @@
     margin: 2.5rem 0 .9rem;
 }
 .storefront .section-head h2 { margin: 0; font-size: clamp(1.45rem, 3vw, 2rem); letter-spacing: -.03em; }
-.storefront .cat-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
-    gap: .75rem;
-}
-.storefront .cat-tile {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    align-items: center;
-    gap: .75rem;
-    min-width: 0;
-    padding: .7rem;
-    min-height: 3.25rem;
-    background: var(--store-navy);
-    color: #fff;
-    border: 1px solid var(--store-navy);
-    border-radius: 12px;
-    font-weight: 700;
-    overflow-wrap: anywhere;
-    text-decoration: none;
-}
-.storefront .cat-tile:hover { background: #25466d; }
-.storefront .cat-tile img { width: 3rem; height: 3rem; border-radius: 7px; object-fit: cover; }
-.storefront .cat-tile span { grid-column: 2; }
-.storefront .cat-tile:not(.has-img) span { grid-column: 1 / -1; }
 .storefront .cta {
     display: flex;
     flex-wrap: wrap;
@@ -190,11 +147,14 @@
 .storefront .grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr)); }
 .storefront .product {
     gap: 0;
-    padding: 0;
+    padding: 0 0 1rem;
     overflow: hidden;
     color: var(--store-ink);
     transition: border-color .15s ease, box-shadow .15s ease;
 }
+/* Text, price and button sit inside the card with even side margins; only the photo runs edge to edge. */
+.storefront .product > :not(.product-media) { margin-inline: 1rem; }
+.storefront .product > .product-name { margin-top: .8rem; }
 .storefront .product:hover { border-color: #879bb6; box-shadow: 0 5px 14px #17304f16; }
 .storefront .product img,
 .storefront .product .noimg {
@@ -354,9 +314,6 @@
 .storefront .checkout-summary .cart-table th,
 .storefront .checkout-summary .cart-table td { overflow-wrap: anywhere; }
 
-@media (max-width: 83rem) {
-    .storefront .hero { margin-inline: var(--store-gutter); }
-}
 @media (max-width: 48rem) {
     .storefront nav.top-nav { position: static; }
     .storefront .checkout-layout { grid-template-columns: 1fr; }
@@ -367,9 +324,6 @@
     .storefront nav.top-nav .store-brand { width: 100%; }
     .storefront .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .storefront .product-copy { padding: .65rem; }
-    .storefront .cat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .storefront .cat-tile { grid-template-columns: 1fr; gap: .35rem; }
-    .storefront .cat-tile span { grid-column: 1; }
     .storefront .cart-table { display: block; overflow-x: auto; }
 }
 @media (max-width: 28rem) {

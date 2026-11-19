@@ -149,8 +149,8 @@ class CatalogTest extends TestCase
         $out = $this->branded('Sold Out', null, $this->tools, stock: 0, reorder: 10);
 
         $this->get('/shop/'.$in->product_id)->assertSee('In stock')->assertDontSee('Low stock');
-        $this->get('/shop/'.$low->product_id)->assertSee('Low stock')->assertSee('Add to cart');
-        $this->get('/shop/'.$out->product_id)->assertSee('Out of stock')->assertDontSee('Add to cart');
+        $this->get('/shop/'.$low->product_id)->assertSee('Low stock')->assertSee('Add to Cart');
+        $this->get('/shop/'.$out->product_id)->assertSee('Out of stock')->assertDontSee('Add to Cart');
         $this->get('/shop')->assertSee('In stock')->assertSee('Low stock')->assertSee('Out of stock');
     }
 

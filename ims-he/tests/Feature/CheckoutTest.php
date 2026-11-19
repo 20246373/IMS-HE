@@ -158,7 +158,7 @@ class CheckoutTest extends TestCase
             ->assertRedirect(route('customer.orders.confirmation', $invoice = Invoice::firstOrFail()));
 
         $this->actingAs($customer, 'customer')->get(route('customer.orders.confirmation', $invoice))
-            ->assertOk()->assertSee('Order placed')->assertSee('#'.$invoice->invoice_id)
+            ->assertOk()->assertSee('Order Successfully Placed!')->assertSee('#'.$invoice->invoice_id)
             ->assertSee('₱1,234.50')->assertSee('Pending')->assertSee(route('customer.orders.show', $invoice));
     }
 
@@ -306,7 +306,7 @@ class CheckoutTest extends TestCase
         $this->inCart($customer, $this->product(), 1);
 
         $this->actingAs($customer, 'customer')->get(route('customer.checkout.show'))->assertOk()
-            ->assertSee('Delivering to')->assertSee('Maria Santos')->assertSee('La Trinidad')
+            ->assertSee('Recipient:')->assertSee('Maria Santos')->assertSee('La Trinidad')
             ->assertDontSee('name="first_name"', false)->assertDontSee('name="address"', false);
 
         // Only the payment method is sent; the saved details are used and left unchanged.

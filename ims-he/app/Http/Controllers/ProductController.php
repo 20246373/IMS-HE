@@ -80,14 +80,25 @@ class ProductController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        // Guard against PHP engine upload limits (e.g. post_max_size exceeded)
+        if ($message = $this->failedUploadMessage($request)) {
+            return back()->withErrors(['image' => $message])->withInput();
+        }
+
         $data = $request->validate($this->rules(), self::MESSAGES);
         $opening = (int) $data['stock_quantity'];
 
         $product = DB::transaction(function () use ($request, $data, $opening) {
-            // Create at 0, then let InventoryService add the opening stock so the movement is logged (UC12 includes UC05).
+            // Handle public disk upload
+            $imagePath = null;
+            if ($request->hasFile('image') && $request->file('image')->isValid()) {
+                $imagePath = $request->file('image')->store('products', 'public');
+            }
+
+            // Create product record
             $product = Product::create(Arr::except($data, ['stock_quantity', 'image']) + [
                 'stock_quantity' => 0,
-                'image_path' => $request->hasFile('image') ? $request->file('image')->store('products', 'public') : null,
+                'image_path' => $imagePath,
             ]);
 
             if ($opening > 0) {
@@ -115,6 +126,10 @@ class ProductController extends Controller
     {
         // Product ID and stock quantity are not editable. Only validated fields are returned,
         // and the explicit exclusion keeps a tampered request from changing them.
+        if ($message = $this->failedUploadMessage($request)) {
+            return back()->withErrors(['image' => $message])->withInput();
+        }
+
         $data = $request->validate($this->rules($product), self::MESSAGES);
         $attributes = Arr::except($data, ['image', 'stock_quantity', 'product_id']);
 
@@ -177,6 +192,26 @@ class ProductController extends Controller
         return null;
     }
 
+    // Returns a user-facing message when PHP rejected the upload before Laravel saw it
+    // (size limits, partial upload, no temp dir), or null when the upload is fine/absent.
+    private function failedUploadMessage(Request $request): ?string
+    {
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            if (! $file->isValid()) {
+                // This will tell us the exact PHP upload error code
+                return 'Upload failed with PHP error code: '.$file->getError().' ('.$file->getErrorMessage().')';
+            }
+        }
+
+        // Check if POST data was completely emptied (happens when post_max_size is exceeded)
+        if (empty($_POST) && empty($_FILES) && isset($_SERVER['CONTENT_LENGTH']) && $_SERVER['CONTENT_LENGTH'] > 0) {
+            return 'The uploaded file exceeds the post_max_size directive in php.ini.';
+        }
+
+        return null;
+    }
+
     private function rules(?Product $product = null): array
     {
         $rules = [
@@ -187,7 +222,7 @@ class ProductController extends Controller
             'unit_price' => ['required', 'numeric', 'min:0.01', 'max:99999999.99'],
             'reorder_level' => ['required', 'integer', 'min:0', 'max:4294967295'],
             'supplier_id' => ['nullable', 'integer', 'exists:suppliers,supplier_id'],
-            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ];
 
         // Opening stock is only entered when the product is created. On edit it is read-only.

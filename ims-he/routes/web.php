@@ -7,6 +7,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\CustomerAccountController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\CustomerManagementController;
 use App\Http\Controllers\DashboardController;
@@ -157,6 +158,13 @@ Route::middleware(['auth', 'permission'])->group(function () {
         Route::post('users/{user}/password', [UserController::class, 'resetPassword'])->name('users.password');
         Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit.index');
         Route::resource('roles', RoleController::class)->except(['show']);
+
+        // Customers' storefront logins (account data only; order history is on the business Customers page).
+        Route::resource('customer-accounts', CustomerAccountController::class)
+            ->only(['index', 'edit', 'update', 'destroy'])
+            ->parameters(['customer-accounts' => 'customer']);
+        Route::post('customer-accounts/{customer}/verify', [CustomerAccountController::class, 'verify'])->name('customer-accounts.verify');
+        Route::post('customer-accounts/{customer}/password', [CustomerAccountController::class, 'resetPassword'])->name('customer-accounts.password');
     });
 
     Route::middleware('permission:reports.inventory')->group(function () {
@@ -192,6 +200,7 @@ Route::middleware(['auth', 'permission'])->group(function () {
         Route::get('customers', [CustomerManagementController::class, 'index'])->name('customers.index');
         Route::get('customers/{customer}/edit', [CustomerManagementController::class, 'edit'])->name('customers.edit');
         Route::put('customers/{customer}', [CustomerManagementController::class, 'update'])->name('customers.update');
+        Route::delete('customers/{customer}', [CustomerManagementController::class, 'destroy'])->name('customers.destroy');
         Route::get('customers/{customer}', [CustomerManagementController::class, 'show'])->name('customers.show');
     });
     Route::middleware('permission:payroll.view')->group(function () {

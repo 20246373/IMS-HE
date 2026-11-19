@@ -18,7 +18,14 @@
      <td>{{ $customer->contact_number ?: '—' }}</td>
      <td>{{ $customer->invoices_count }}</td>
      <td>{{ $customer->hasVerifiedEmail() ? 'Verified' : 'Not verified' }}</td>
-     <td><a class="btn" href="{{ route('customers.show', $customer) }}">View</a></td>
+     <td>
+      <a class="btn" href="{{ route('customers.show', $customer) }}">View</a>
+      <form method="POST" action="{{ route('customers.destroy', $customer) }}" class="inline"
+            onsubmit="return confirm('Delete this customer account?')">
+       @csrf @method('DELETE')
+       <button type="submit" class="danger">Delete</button>
+      </form>
+     </td>
     </tr>
    @empty
     <tr><td colspan="6">No customers found.</td></tr>

@@ -1,26 +1,22 @@
 @extends('layouts.app')
-@section('title','Accounts')
-@section('heading', 'User Accounts')
+@section('title','Employee Accounts')
+@section('heading', 'Employee Accounts')
+@section('page-actions')<a class="btn" href="{{ route('users.create') }}">+ Add account</a>@endsection
 @section('content')
 @if($pending->isNotEmpty())
 <div class="card" id="unassigned">
  <h3>Unassigned accounts</h3>
  <p><small>Choose a role to give them access, or delete the account.</small></p>
  <table>
-  <tr><th>Email</th><th>Signed Up</th><th>Role</th><th>Employee Record</th><th>Actions</th></tr>
+  <tr><th>Name</th><th>Email</th><th>Signed Up</th><th>Role</th><th>Actions</th></tr>
   @foreach($pending as $p)
   <tr>
+   <td>{{ $p->displayName() }}</td>
    <td>{{ $p->email }}</td>
    <td>{{ $p->created_at?->format('M d, Y') }}</td>
    <td>
     <select name="role" form="role-{{ $p->user_id }}" required>
      @foreach($roles as $r)<option value="{{ $r }}">{{ $r }}</option>@endforeach
-    </select>
-   </td>
-   <td>
-    <select name="employee_id" form="role-{{ $p->user_id }}">
-     <option value="">-- none --</option>
-     @foreach($employees as $e)<option value="{{ $e->employee_id }}">{{ $e->full_name }}</option>@endforeach
     </select>
    </td>
    <td>
@@ -37,10 +33,10 @@
 
 <div class="card">
  <table>
-  <tr><th>Employee</th><th>Email</th><th>Role</th><th>Status</th><th>Last Login</th><th>Actions</th></tr>
+  <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last Login</th><th>Actions</th></tr>
   @foreach($users as $u)
   <tr>
-   <td>{{ $u->employee?->full_name ?? '-' }}</td>
+   <td>{{ $u->displayName() }}</td>
    <td>{{ $u->email }}</td>
    <td>{{ $u->role }}</td>
    <td class="{{ $u->isLocked() ? 'low' : '' }}">{{ $u->status }}</td>

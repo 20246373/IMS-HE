@@ -117,11 +117,45 @@ class CustomerManagementTest extends TestCase
             ->assertSessionHasErrors('email');
     }
 
-    public function test_only_president_and_store_supervisor_can_manage_customers(): void
+    public function test_customer_delete_redirects_audits_and_preserves_orders(): void
+    {
+        $customer = $this->customer();
+        $order = Invoice::create([
+            'invoice_date' => '2026-11-18',
+            'customer_id' => $customer->customer_id,
+            'channel' => 'In-store',
+            'status' => 'Completed',
+            'total_amount' => 500,
+        ]);
+
+        $this->actingAs($this->staff(User::STORE_SUPERVISOR))
+            ->delete(route('customers.destroy', $customer))
+            ->assertRedirect(route('customers.index'))
+            ->assertSessionHas('status');
+
+        $this->assertDatabaseMissing('customers', ['customer_id' => $customer->customer_id]);
+        $this->assertDatabaseHas('invoices', [
+            'invoice_id' => $order->invoice_id,
+            'customer_id' => null,
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'Deleted',
+            'table_name' => 'customers',
+            'record_id' => $customer->customer_id,
+        ]);
+    }
+
+    public function test_authorized_roles_can_manage_customers(): void
     {
         $customer = $this->customer();
 
-        foreach ([User::EMPLOYEE, User::TREASURER, User::INVENTORY_CLERK, User::ADMINISTRATOR] as $role) {
+        foreach ([User::PRESIDENT, User::STORE_SUPERVISOR] as $role) {
+            $this->actingAs($this->staff($role))
+                ->get(route('customers.index'))
+                ->assertOk();
+        }
+
+        foreach ([User::ADMINISTRATOR, User::EMPLOYEE, User::TREASURER, User::INVENTORY_CLERK] as $role) {
             $this->actingAs($this->staff($role))
                 ->get(route('customers.index'))
                 ->assertForbidden();

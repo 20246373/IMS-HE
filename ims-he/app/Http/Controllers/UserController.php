@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
-use App\Models\Employee;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,17 +17,13 @@ class UserController extends Controller
             'pending' => User::where('role', User::PENDING)->orderBy('created_at')->get(),
             'users' => User::with('employee')->where('role', '!=', User::PENDING)->orderBy('email')->get(),
             'roles' => User::roleChoices(),
-            'employees' => $this->employeeOptions(null),
         ]);
     }
 
-    /** SDD 4.1 User Account Management: the Administrator creates a staff account for an employee who has none yet. */
+    /** SDD 4.1 User Account Management: the Administrator creates a staff account directly. */
     public function create()
     {
-        return view('users.create', [
-            'employees' => $this->employeeOptions(null),
-            'roles' => User::roleChoices(),
-        ]);
+        return view('users.create', ['roles' => User::roleChoices()]);
     }
 
     public function store(Request $request)
@@ -36,17 +31,25 @@ class UserController extends Controller
         $request->merge(['email' => mb_strtolower(trim((string) $request->input('email')))]);
 
         $data = $request->validate([
+            'first_name' => ['required', 'string', 'max:50'],
+            'last_name' => ['required', 'string', 'max:50'],
             'email' => ['required', 'email', 'max:100', Rule::unique('users', 'email'), Rule::unique('customers', 'email')],
-            'employee_id' => ['required', 'exists:employees,employee_id', Rule::unique('users', 'employee_id')],
             'role' => ['required', Rule::in(User::roleChoices())],
             'password' => ['required', 'string', 'min:8', 'max:72', 'confirmed'],
-        ], [
-            'email.unique' => 'This email is already used by another account.',
-            'employee_id.unique' => 'This employee already has an account.',
-        ]);
+        ], ['email.unique' => 'This email is already used by another account.']);
 
         $user = DB::transaction(function () use ($data) {
-            $user = User::create($data + ['status' => User::STATUS_ACTIVE, 'login_attempt_count' => 0]);
+            $user = new User([
+                'first_name' => trim($data['first_name']),
+                'last_name' => trim($data['last_name']),
+                'email' => $data['email'],
+                'role' => $data['role'],
+                'password' => $data['password'],
+                'status' => User::STATUS_ACTIVE,
+                'login_attempt_count' => 0,
+            ]);
+            $user->linkMatchingEmployee();
+            $user->save();
             AuditLog::record('Created', 'users', $user->user_id);
 
             return $user;
@@ -59,7 +62,6 @@ class UserController extends Controller
     {
         return view('users.edit', [
             'user' => $user,
-            'employees' => $this->employeeOptions($user),
             'roles' => User::roleChoices(),
             'statuses' => [User::STATUS_ACTIVE, User::STATUS_LOCKED],
         ]);
@@ -71,16 +73,14 @@ class UserController extends Controller
 
         // Every field on the account form is required; the email must stay unique across staff and customers.
         $data = $request->validate([
+            'first_name' => ['required', 'string', 'max:50'],
+            'last_name' => ['required', 'string', 'max:50'],
             'email' => ['required', 'email', 'max:100', Rule::unique('users', 'email')->ignore($user->user_id, 'user_id'), Rule::unique('customers', 'email')],
             'role' => ['required', Rule::in($user->hasRole(User::ADMINISTRATOR)
                 ? [...User::roleChoices(), $user->role]
                 : User::roleChoices())],
             'status' => ['required', Rule::in([User::STATUS_ACTIVE, User::STATUS_LOCKED])],
-            'employee_id' => ['required', 'exists:employees,employee_id', Rule::unique('users', 'employee_id')->ignore($user->user_id, 'user_id')],
-        ], [
-            'email.unique' => 'This email is already used by another account.',
-            'employee_id.required' => 'Choose the employee this account belongs to.',
-        ]);
+        ], ['email.unique' => 'This email is already used by another account.']);
 
         if ($user->is($request->user()) && $data['role'] !== $user->role) {
             return back()->withErrors(['role' => 'You cannot change your own role.'])->withInput();
@@ -90,18 +90,20 @@ class UserController extends Controller
             return back()->withErrors(['status' => 'You cannot lock your own account.'])->withInput();
         }
 
-        $updates = [
+        $user->fill([
+            'first_name' => trim($data['first_name']),
+            'last_name' => trim($data['last_name']),
             'email' => $data['email'],
             'role' => $data['role'],
             'status' => $data['status'],
-            'employee_id' => $data['employee_id'],
-        ];
+        ]);
 
-        if ($user->isLocked() && $data['status'] === User::STATUS_ACTIVE) {
-            $updates['login_attempt_count'] = 0;
+        if ($data['status'] === User::STATUS_ACTIVE && $user->getOriginal('status') === User::STATUS_LOCKED) {
+            $user->login_attempt_count = 0;
         }
 
-        $user->update($updates);
+        $user->linkMatchingEmployee();
+        $user->save();
 
         AuditLog::record('Updated', 'users', $user->user_id);
 
@@ -111,19 +113,19 @@ class UserController extends Controller
     /** Gives a role to an employee who signed up and is waiting (role "Pending"). */
     public function assignRole(Request $request, User $user)
     {
-        $data = $request->validate([
-            'role' => ['required', Rule::in(User::roleChoices())],
-            'employee_id' => ['nullable', 'exists:employees,employee_id', Rule::unique('users', 'employee_id')->ignore($user->user_id, 'user_id')],
-        ]);
+        $data = $request->validate(['role' => ['required', Rule::in(User::roleChoices())]]);
 
         if ($user->is($request->user())) {
             return back()->withErrors(['role' => 'You cannot change your own role.']);
         }
 
-        $user->update(['role' => $data['role'], 'employee_id' => $data['employee_id'] ?? null]);
+        // The name comes from sign-up; the account is linked to the matching employee record when there is one.
+        $user->role = $data['role'];
+        $user->linkMatchingEmployee();
+        $user->save();
         AuditLog::record('Role Assigned', 'users', $user->user_id);
 
-        return back()->with('status', "{$user->label()} is now {$data['role']}.");
+        return back()->with('status', "{$user->displayName()} is now {$data['role']}.");
     }
 
     public function lock(Request $request, User $user)
@@ -135,7 +137,7 @@ class UserController extends Controller
         $user->update(['status' => User::STATUS_LOCKED]);
         AuditLog::record('Locked', 'users', $user->user_id);
 
-        return back()->with('status', "{$user->label()} locked.");
+        return back()->with('status', "{$user->displayName()} locked.");
     }
 
     public function unlock(User $user)
@@ -143,7 +145,7 @@ class UserController extends Controller
         $user->update(['status' => User::STATUS_ACTIVE, 'login_attempt_count' => 0]);
         AuditLog::record('Unlocked', 'users', $user->user_id);
 
-        return back()->with('status', "{$user->label()} unlocked.");
+        return back()->with('status', "{$user->displayName()} unlocked.");
     }
 
     public function resetPassword(Request $request, User $user)
@@ -153,7 +155,7 @@ class UserController extends Controller
         $user->update(['password' => $data['password'], 'login_attempt_count' => 0]);
         AuditLog::record('Password Reset', 'users', $user->user_id);
 
-        return back()->with('status', "Password reset for {$user->label()}.");
+        return back()->with('status', "Password reset for {$user->displayName()}.");
     }
 
     public function destroy(Request $request, User $user)
@@ -170,23 +172,10 @@ class UserController extends Controller
         }
 
         $id = $user->user_id;
-        $name = $user->label();
+        $name = $user->displayName();
         $user->delete();
         AuditLog::record('Deleted', 'users', $id);
 
         return redirect()->route('users.index')->with('status', "Account {$name} deleted.");
-    }
-
-    /** Active employees that do not already have an account (plus the one linked to $user). */
-    private function employeeOptions(?User $user)
-    {
-        $taken = User::whereNotNull('employee_id')
-            ->when($user, fn ($q) => $q->where('user_id', '!=', $user->user_id))
-            ->pluck('employee_id');
-
-        return Employee::where('status', 'Active')
-            ->whereNotIn('employee_id', $taken)
-            ->orderBy('last_name')
-            ->get();
     }
 }

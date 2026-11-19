@@ -212,7 +212,7 @@ class CartTest extends TestCase
 
         $this->actingAs($customer, 'customer')->get('/cart')->assertOk()
             ->assertSee('Claw Hammer is out of stock and was removed from your cart.')
-            ->assertSee('Your cart is empty.');
+            ->assertSee('Your shopping cart is currently empty.');
         $this->assertDatabaseCount('cart_items', 0);
     }
 

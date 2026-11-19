@@ -62,4 +62,16 @@ class CustomerManagementController extends Controller
 
         return redirect()->route('customers.show', $customer)->with('status', 'Customer updated.');
     }
+
+    public function destroy(Customer $customer): RedirectResponse
+    {
+        $id = $customer->customer_id;
+        $name = $customer->display_name;
+
+        $customer->delete();
+        AuditLog::record('Deleted', 'customers', $id);
+
+        return redirect()->route('customers.index')
+            ->with('status', "Customer {$name} deleted.");
+    }
 }
