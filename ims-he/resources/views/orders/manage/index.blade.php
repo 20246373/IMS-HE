@@ -17,7 +17,7 @@
   <p>{{ $status === 'All' ? 'There are no online orders yet.' : "There are no {$status} online orders." }}</p>
  @else
   <table class="cart-table">
-   <tr><th>Order</th><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th>Actions</th></tr>
+   <tr><th>Order</th><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Pickup or Delivery</th><th>Status</th><th>Actions</th></tr>
    @foreach($orders as $o)
     <tr>
      <td>#{{ $o->invoice_id }}</td>
@@ -26,6 +26,7 @@
      <td>{{ $o->items_count }}</td>
      <td>{{ money($o->total_amount) }}</td>
      <td>{{ $o->payment?->payment_method }}</td>
+     <td>{{ $o->fulfillmentLabel() }}</td>
      <td>@include('orders._status', ['status' => $o->status])</td>
      <td><a class="btn" href="{{ route('online-orders.show', $o) }}">{{ $o->status === 'Pending' ? 'Review' : 'View' }}</a></td>
     </tr>

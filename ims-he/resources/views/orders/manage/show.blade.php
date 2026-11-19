@@ -8,6 +8,7 @@
    <div><dt>Order number</dt><dd>#{{ $invoice->invoice_id }}</dd></div>
    <div><dt>Date</dt><dd>{{ $invoice->invoice_date->format('M d, Y') }}</dd></div>
    <div><dt>Number of items</dt><dd>{{ $invoice->items->sum('quantity') }}</dd></div>
+   <div><dt>Pickup or delivery</dt><dd><strong>{{ $invoice->fulfillmentLabel() }}</strong></dd></div>
    <div><dt>Payment method</dt><dd>{{ $invoice->payment?->payment_method }}</dd></div>
    <div><dt>Total</dt><dd><strong>{{ money($invoice->total_amount) }}</strong></dd></div>
   </dl>
@@ -16,8 +17,8 @@
    @if($invoice->customer)
     <p><strong>{{ trim($invoice->customer->first_name.' '.$invoice->customer->last_name) ?: $invoice->customer->email }}</strong><br>
     {{ $invoice->customer->email }}<br>
-    {{ $invoice->customer->contact_number }}<br>
-    {{ $invoice->customer->address }}</p>
+    {{ $invoice->customer->contact_number }}
+    @if($invoice->isDelivery())<br>Deliver to: {{ $invoice->customer->address }}@endif</p>
    @else
     <p>Deleted account</p>
    @endif

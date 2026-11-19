@@ -15,14 +15,18 @@ class CheckoutService
 {
     public const PAYMENT_METHODS = ['Cash', 'GCash'];     // SDD 7.2.14. No online payment gateway yet (SDD 1.2).
 
+    /** How an online order reaches the customer. Pickup is the default; Delivery also needs an address. */
+    public const FULFILLMENT = ['Pickup', 'Delivery'];
+
     public function __construct(private CartService $carts, private InventoryService $inventory) {}
 
     /**
-     * @param  array{first_name:string,last_name:string,contact_number:string,address:string}  $details
+     * @param  array{first_name:string,last_name:string,contact_number:string,address:?string}  $details
+     * @param  'Pickup'|'Delivery'  $fulfillment
      */
-    public function placeOrder(Customer $customer, array $details, string $paymentMethod): Invoice
+    public function placeOrder(Customer $customer, array $details, string $paymentMethod, string $fulfillment = 'Pickup'): Invoice
     {
-        return DB::transaction(function () use ($customer, $details, $paymentMethod) {
+        return DB::transaction(function () use ($customer, $details, $paymentMethod, $fulfillment) {
             $cart = $this->carts->cartFor($customer);
             $items = $cart->items()->with('product')->get();
 
@@ -45,13 +49,14 @@ class CheckoutService
                 throw ValidationException::withMessages(['cart' => $problems]);
             }
 
-            $customer->update($details);              // delivery details become the profile
+            $customer->update($details);              // the details entered at checkout become the profile
 
             $invoice = Invoice::create([
                 'invoice_date' => today(),
                 'customer_id' => $customer->customer_id,
                 'employee_id' => null,                // online order: no employee involved
                 'channel' => 'Online',
+                'fulfillment' => $fulfillment,
                 'status' => 'Pending',                // staff confirm and fulfil the order later
                 'total_amount' => 0,
             ]);

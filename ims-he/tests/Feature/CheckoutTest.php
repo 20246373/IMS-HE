@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Product;
+use App\Models\User;
 use App\Services\CartService;
 use App\Services\InventoryService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -51,7 +52,7 @@ class CheckoutTest extends TestCase
     {
         return array_merge([
             'first_name' => 'Juan', 'last_name' => 'Cruz', 'contact_number' => '09171234567',
-            'address' => 'Baguio City', 'payment_method' => 'Cash',
+            'address' => 'Baguio City', 'payment_method' => 'Cash', 'fulfillment' => 'Delivery',
         ], $overrides);
     }
 
@@ -306,11 +307,11 @@ class CheckoutTest extends TestCase
         $this->inCart($customer, $this->product(), 1);
 
         $this->actingAs($customer, 'customer')->get(route('customer.checkout.show'))->assertOk()
-            ->assertSee('Recipient:')->assertSee('Maria Santos')->assertSee('La Trinidad')
+            ->assertSee('Name:')->assertSee('Maria Santos')->assertSee('La Trinidad')
             ->assertDontSee('name="first_name"', false)->assertDontSee('name="address"', false);
 
         // Only the payment method is sent; the saved details are used and left unchanged.
-        $this->actingAs($customer, 'customer')->post(route('customer.checkout.store'), ['payment_method' => 'Cash'])
+        $this->actingAs($customer, 'customer')->post(route('customer.checkout.store'), ['fulfillment' => 'Delivery', 'payment_method' => 'Cash'])
             ->assertSessionHasNoErrors();
         $this->assertDatabaseCount('invoices', 1);
         $this->assertSame('La Trinidad', $customer->fresh()->address);
@@ -327,12 +328,12 @@ class CheckoutTest extends TestCase
         $this->actingAs($customer, 'customer');
 
         $this->get(route('customer.checkout.show'))->assertOk()->assertSee('name="contact_number"', false);
-        $this->post(route('customer.checkout.store'), ['payment_method' => 'Cash'])
+        $this->post(route('customer.checkout.store'), ['fulfillment' => 'Delivery', 'payment_method' => 'Cash'])
             ->assertSessionHasErrors('contact_number');
         $this->assertDatabaseCount('invoices', 0);
 
         $this->post(route('customer.checkout.store'), [
-            'payment_method' => 'Cash', 'contact_number' => '0123456',
+            'fulfillment' => 'Delivery', 'payment_method' => 'Cash', 'contact_number' => '0123456',
         ])->assertRedirect(route('customer.orders.confirmation', Invoice::firstOrFail()));
         $this->assertSame('0123456', $customer->fresh()->contact_number);
     }
@@ -346,13 +347,13 @@ class CheckoutTest extends TestCase
         $this->actingAs($customer, 'customer')->get(route('customer.checkout.show'))
             ->assertDontSee('name="first_name"', false)->assertSee('name="contact_number"', false)->assertSee('name="address"', false);
 
-        $this->actingAs($customer, 'customer')->post(route('customer.checkout.store'), ['payment_method' => 'Cash'])
+        $this->actingAs($customer, 'customer')->post(route('customer.checkout.store'), ['fulfillment' => 'Delivery', 'payment_method' => 'Cash'])
             ->assertSessionHasErrors(['contact_number', 'address'])->assertSessionDoesntHaveErrors('first_name');
         $this->assertDatabaseCount('invoices', 0);
 
         // A name sent for a field that is already saved is ignored.
         $this->actingAs($customer, 'customer')->post(route('customer.checkout.store'), [
-            'first_name' => 'Hacked', 'contact_number' => '09171112222', 'address' => 'Baguio City', 'payment_method' => 'GCash',
+            'fulfillment' => 'Delivery', 'first_name' => 'Hacked', 'contact_number' => '09171112222', 'address' => 'Baguio City', 'payment_method' => 'GCash',
         ])->assertSessionHasNoErrors();
 
         $customer->refresh();
@@ -430,5 +431,50 @@ class CheckoutTest extends TestCase
         $this->actingAs($customer, 'customer')->get(route('customer.orders.show', Invoice::firstOrFail()))
             ->assertOk()->assertSee('₱1,234.50')->assertSee('₱2,469.00')
             ->assertSee('window.print()', false)->assertSee('Pending');
+    }
+
+    public function test_pickup_is_the_default_and_needs_no_address(): void
+    {
+        $customer = $this->customer();
+        $this->inCart($customer, $this->product(), 1);
+        $this->actingAs($customer, 'customer');
+
+        // The choice is on the page with Pickup already selected; the address field only belongs to Delivery.
+        $this->get(route('customer.checkout.show'))->assertOk()
+            ->assertSee('How will you get your order?')
+            ->assertSee('value="Pickup" checked', false)
+            ->assertSee('data-show-for="Delivery"', false);
+
+        $this->post(route('customer.checkout.store'), $this->details(['fulfillment' => 'Pickup', 'address' => '']))
+            ->assertSessionHasNoErrors();
+
+        $invoice = Invoice::firstOrFail();
+        $this->assertSame('Pickup', $invoice->fulfillment);
+        $this->assertNull($customer->fresh()->address);
+
+        $this->get(route('customer.orders.confirmation', $invoice))->assertOk()
+            ->assertSee('Pick up at store')->assertSee('prepare your order for pickup')->assertDontSee('Delivery Address');
+        $this->get(route('customer.orders.show', $invoice))->assertOk()->assertSee('Pick up at store');
+    }
+
+    public function test_delivery_needs_an_address_and_staff_see_where_to_deliver(): void
+    {
+        $customer = $this->customer();
+        $this->inCart($customer, $this->product(), 1);
+
+        $this->actingAs($customer, 'customer')->post(route('customer.checkout.store'), $this->details(['address' => '']))
+            ->assertSessionHasErrors(['address' => 'Enter a delivery address, or choose Pick up at store.']);
+        $this->actingAs($customer, 'customer')->post(route('customer.checkout.store'), $this->details(['fulfillment' => 'Shipping']))
+            ->assertSessionHasErrors('fulfillment');
+        $this->assertDatabaseCount('invoices', 0);
+
+        $this->actingAs($customer, 'customer')->post(route('customer.checkout.store'), $this->details(['address' => 'Session Road, Baguio']))
+            ->assertSessionHasNoErrors();
+        $invoice = Invoice::firstOrFail();
+        $this->assertSame('Delivery', $invoice->fulfillment);
+
+        $staff = User::create(['email' => 'supervisor-x@example.com', 'password' => 'secret123', 'role' => User::STORE_SUPERVISOR, 'status' => User::STATUS_ACTIVE]);
+        $this->actingAs($staff)->get(route('online-orders.show', $invoice))->assertOk()
+            ->assertSee('Delivery')->assertSee('Deliver to: Session Road, Baguio');
     }
 }

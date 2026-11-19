@@ -67,7 +67,7 @@
  .field input[readonly],.field textarea[readonly]{border:0;background:transparent;padding-left:0;font-weight:600;color:inherit;outline:0}
  input[readonly],textarea[readonly]{background:#eef0f3;color:#666}.field-error{margin-top:.25rem;color:#b42318;font-size:.82rem}
  .required-note{margin:0 0 .9rem;color:#555;font-size:.85rem}.required-note span{color:#b42318;font-weight:700}   /* "* Required" legend, only on forms that mix required and optional fields */
- .alert{display:flex;align-items:flex-start;gap:.7rem;padding:.75rem 1rem;margin-bottom:1rem;border:1px solid;border-radius:7px}.alert-success{background:#e8f7ed;border-color:#98d5aa;color:#176b35}.alert-error{background:#fcedeb;border-color:#e7a39c;color:#8a1f17}.alert-warning{background:#fff5d8;border-color:#e8c66d;color:#785b00}.alert-icon svg{display:block;width:1.2rem;height:1.2rem}.alert-body{flex:1}.alert-body strong{display:block;margin-bottom:.15rem}.alert-body ul{margin:.25rem 0 0;padding-left:1.2rem}.alert-dismiss{padding:0;background:transparent;color:currentColor;font-size:1.2rem;line-height:1;border:0}
+ .alert{display:flex;align-items:flex-start;gap:.7rem;padding:.75rem 1rem;margin-bottom:1rem;border:1px solid;border-radius:7px}.alert-success{background:#e8f7ed;border-color:#98d5aa;color:#176b35}.alert-error{background:#fcedeb;border-color:#e7a39c;color:#8a1f17}.alert-warning{background:#fff5d8;border-color:#e8c66d;color:#785b00}.alert-icon svg{display:block;width:1.2rem;height:1.2rem}.alert-body{flex:1}.alert-body > strong{display:block;margin-bottom:.15rem}.alert-body ul{margin:.25rem 0 0;padding-left:1.2rem}.alert-dismiss{padding:0;background:transparent;color:currentColor;font-size:1.2rem;line-height:1;border:0}
  @media (max-width:700px){.form-grid{grid-template-columns:1fr}}
  button,.btn{background:#1f3a5f;color:#fff;border:0;border-radius:8px;padding:.45rem .9rem;cursor:pointer;text-decoration:none;display:inline-block;box-sizing:border-box;font:inherit;font-size:.9rem;line-height:1.25;vertical-align:middle}
  .danger{background:#a33}.ok{background:#e6f4ea;padding:.6rem;border-radius:5px;margin-bottom:1rem}
@@ -197,10 +197,8 @@
  .choice-list a:hover{border-color:#1f3a5f66;background:#f8fafd;box-shadow:0 8px 20px -10px #1f3a5f55;transform:translateY(-1px)}
  .choice-list a:focus-visible{outline:none;border-color:#1f3a5f;box-shadow:0 0 0 4px #1f3a5f1f}
  .choice-icon{flex:none;display:grid;place-items:center;width:42px;height:42px;border-radius:11px;background:#eef3fa;color:#1f3a5f}
- .choice-icon svg,.choice-arrow svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+ .choice-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
  .choice-text{flex:1;display:grid;gap:.15rem} .choice-text strong{font-size:.98rem;font-weight:650} .choice-text small{color:#67768a;font-size:.82rem}
- .choice-arrow{color:#9aa8b9;transition:transform .15s ease,color .15s ease}
- .choice-list a:hover .choice-arrow{color:#1f3a5f;transform:translateX(3px)}
  @media (max-width:520px){.card.auth{padding:1.8rem 1.4rem 1.5rem;border-radius:16px}}
  /* Top bar for guests and customers: navy, sticky, current page highlighted */
  nav.top-nav{position:sticky;top:0;z-index:30;gap:.3rem;padding:.8rem 2rem;background:#1f3a5f;box-shadow:0 6px 24px -14px #0f1f3399;color:#fff}
@@ -287,6 +285,10 @@
  .stepper button:hover{background:#dde2e8}
  .stepper input{width:3.5rem;margin:0;border:0;border-radius:0;border-left:1px solid #ccc;border-right:1px solid #ccc;text-align:center;-moz-appearance:textfield}
  .stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+ /* Page links under paginated lists (partials/pagination) */
+ .pager{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-top:1rem;padding-top:.8rem;border-top:1px solid #e4e9f0;font-size:.9rem;color:#505d6e}
+ .pager a{color:#1f3a5f;font-weight:600;text-decoration:none} .pager a:hover{text-decoration:underline}
+ .pager-off{color:#a3adba}
  /* Storefront header: one row (logo, Home, Products, search, account links) spread toward the screen edges */
  body.storefront main{max-width:1240px}
  .sf-head{background:#fff;box-shadow:0 1px 3px #0001}
@@ -709,8 +711,10 @@
 
  // Tables: each cell's content goes in an invisible box as wide as the widest entry in its column, centered under
  // the column title. The table keeps the full width, but every column reads as narrow and lines up on the left.
- // Skipped: the customer cart (its own layout), tables marked .no-fit, and tables you type into (their inputs need the whole cell).
+ // Staff pages only: the customer pages (cart, checkout, receipts) lay out their own tables.
+ // Also skipped: tables marked .no-fit, and tables you type into (their inputs need the whole cell).
  (function () {
+  if (!document.body.classList.contains('staff-layout')) return;
   function column(td) { var i = 0, c = td; while ((c = c.previousElementSibling)) { i += c.colSpan; } return i; }
 
   document.querySelectorAll('main table').forEach(function (table) {

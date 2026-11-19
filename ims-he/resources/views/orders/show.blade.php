@@ -22,18 +22,19 @@
     {{-- Recipient & Order Details Grid --}}
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; background: #f9fafb; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid #e5e7eb; font-size: 0.9rem;">
         <div>
-            <strong style="color: #111827; display: block; margin-bottom: 0.25rem;">Deliver To:</strong>
+            <strong style="color: #111827; display: block; margin-bottom: 0.25rem;">{{ $invoice->isDelivery() ? 'Deliver To:' : 'Customer:' }}</strong>
             <div style="color: #374151;">
                 {{ trim($invoice->customer->first_name.' '.$invoice->customer->last_name) }}<br>
-                📞 {{ $invoice->customer->contact_number }}<br>
-                📍 {{ $invoice->customer->address }}
+                {{ $invoice->customer->contact_number }}
+                @if($invoice->isDelivery())<br>{{ $invoice->customer->address }}@endif
             </div>
         </div>
         <div>
-            <strong style="color: #111827; display: block; margin-bottom: 0.25rem;">Order Metadata:</strong>
+            <strong style="color: #111827; display: block; margin-bottom: 0.25rem;">Order Details:</strong>
             <div style="color: #374151;">
                 <strong>Order #:</strong> {{ $invoice->invoice_id }}<br>
                 <strong>Channel:</strong> {{ $invoice->channel ?? 'Online' }}<br>
+                <strong>Pickup or Delivery:</strong> {{ $invoice->fulfillmentLabel() }}<br>
                 <strong>Payment Method:</strong> {{ $invoice->payment?->payment_method ?? 'Cash' }}
             </div>
         </div>

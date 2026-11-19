@@ -37,6 +37,10 @@
                     <td style="color: #4b5563; font-weight: 500;">Payment Method</td>
                     <td style="text-align: right; font-weight: 600; color: #111827;">{{ $invoice->payment?->payment_method ?? 'Cash' }}</td>
                 </tr>
+                <tr>
+                    <td style="color: #4b5563; font-weight: 500;">Pickup or Delivery</td>
+                    <td style="text-align: right; font-weight: 600; color: #111827;">{{ $invoice->fulfillmentLabel() }}</td>
+                </tr>
                 <tr style="border-top: 2px dashed #e5e7eb;">
                     <td style="font-size: 1rem; font-weight: 700; color: #111827; padding-top: 0.85rem;">Grand Total</td>
                     <td style="text-align: right; font-size: 1.25rem; font-weight: 800; color: #1f3a5f; padding-top: 0.85rem;">
@@ -47,18 +51,23 @@
         </table>
     </div>
 
-    {{-- Next Steps & Delivery Info Card --}}
+    {{-- Next steps: depends on Pickup or Delivery --}}
     <div class="checkout-card">
         <h3 style="margin-top: 0; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.75rem; font-size: 1.1rem; color: #111827;">
             What Happens Next?
         </h3>
-        <p style="font-size: 0.95rem; color: #374151; line-height: 1.6; margin-top: 0.75rem;">
-            Our store team will contact you at <strong style="color: #111827;">{{ $invoice->customer->contact_number }}</strong> to verify your order and arrange fulfillment to:
-        </p>
-        
-        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.85rem 1rem; font-size: 0.9rem; color: #1f2937; margin: 0.75rem 0 1.25rem 0;">
-            📍 <strong>Delivery Address:</strong> {{ $invoice->customer->address }}
-        </div>
+        @if($invoice->isDelivery())
+            <p style="font-size: 0.95rem; color: #374151; line-height: 1.6; margin-top: 0.75rem;">
+                Our store team will contact you at <strong style="color: #111827;">{{ $invoice->customer->contact_number }}</strong> to confirm your order and arrange the delivery to:
+            </p>
+            <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 0.85rem 1rem; font-size: 0.9rem; color: #1f2937; margin: 0.75rem 0 1.25rem 0;">
+                <strong>Delivery Address:</strong> {{ $invoice->customer->address }}
+            </div>
+        @else
+            <p style="font-size: 0.95rem; color: #374151; line-height: 1.6; margin: 0.75rem 0 1.25rem;">
+                We will prepare your order for pickup at the store. Our store team will contact you at <strong style="color: #111827;">{{ $invoice->customer->contact_number }}</strong> when it is ready. Please bring your order number <strong style="color: #111827;">#{{ $invoice->invoice_id }}</strong>.
+            </p>
+        @endif
 
         {{-- Action Buttons --}}
         <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem;">

@@ -26,13 +26,31 @@
         <form method="POST" action="{{ route('customer.checkout.store') }}">
             @csrf
 
-            {{-- Profile & Delivery Info --}}
+            {{-- How the order reaches the customer: Pickup (default) or Delivery --}}
             <div class="checkout-card">
-                <h3 style="margin-top:0; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.75rem;">1. Delivery Details</h3>
-                
-                @if(!empty($missing))
-                    <x-required-note />
-                    <p><small style="color: #6b7280;">Please complete your profile details for delivery.</small></p>
+                <h3 style="margin-top:0; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.75rem;">1. How will you get your order?</h3>
+                <div class="fulfillment-options" style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+                    @foreach($fulfillmentOptions as $option)
+                        <label style="display: flex; align-items: center; gap: 0.6rem; padding: 0.85rem 1.15rem; border: 1.5px solid #d1d5db; border-radius: 8px; cursor: pointer; background: #fff;">
+                            <input type="radio" name="fulfillment" value="{{ $option }}" @checked(old('fulfillment', 'Pickup') === $option)>
+                            <span style="font-size: 0.95rem; font-weight: 600; color: #111827;">{{ $option === 'Pickup' ? 'Pick up at store' : 'Delivery' }}</span>
+                        </label>
+                    @endforeach
+                </div>
+                <p style="font-size: 0.85rem; color: #6b7280; margin: 0.75rem 0 0;" data-show-for="Pickup">Our store team will contact you when your order is ready to pick up.</p>
+                <p style="font-size: 0.85rem; color: #6b7280; margin: 0.75rem 0 0;" data-show-for="Delivery">Our store team will contact you to arrange the delivery.</p>
+                @error('fulfillment')
+                    <p style="color: #dc2626; font-size: 0.85rem; margin-top: 0.5rem;">{{ $message }}</p>
+                @enderror
+            </div>
+
+            {{-- Contact details (only the ones missing from the profile are asked for) --}}
+            <div class="checkout-card">
+                <h3 style="margin-top:0; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.75rem;">2. Your Details</h3>
+                @php($askDetails = array_values(array_diff($missing, ['address'])))
+
+                @if($askDetails)
+                    <p><small style="color: #6b7280;">Please complete your details so our store team can contact you.</small></p>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 1rem;">
                         @if(in_array('first_name', $missing))
                             <x-field label="First name" name="first_name" :value="old('first_name')" maxlength="50" autocomplete="given-name" />
@@ -43,24 +61,30 @@
                         @if(in_array('contact_number', $missing))
                             <x-field label="Contact Number" name="contact_number" :value="old('contact_number')" maxlength="14" autocomplete="tel" />
                         @endif
-                        @if(in_array('address', $missing))
-                            <div style="grid-column: 1 / -1;">
-                                <x-field label="Delivery Address" name="address" :value="old('address')" maxlength="100" autocomplete="street-address" />
-                            </div>
-                        @endif
                     </div>
-                @else
+                @endif
+
+                @if(count($askDetails) < 3)
                     <p style="font-size: 0.95rem; color: #374151; line-height: 1.6; margin-top: 0.5rem;">
-                        <strong>Recipient:</strong> {{ $customer->first_name }} {{ $customer->last_name }}<br>
-                        <strong>Contact:</strong> {{ $customer->contact_number }}<br>
-                        <strong>Address:</strong> {{ $customer->address }}
+                        @unless(in_array('first_name', $missing) || in_array('last_name', $missing))<strong>Name:</strong> {{ $customer->first_name }} {{ $customer->last_name }}<br>@endunless
+                        @unless(in_array('contact_number', $missing))<strong>Contact:</strong> {{ $customer->contact_number }}@endunless
                     </p>
                 @endif
+
+                {{-- Delivery address: only shown (and only sent) when Delivery is chosen --}}
+                <div data-show-for="Delivery" style="margin-top: 1rem;">
+                    @if(in_array('address', $missing))
+                        <x-field label="Delivery Address" name="address" :value="old('address')" maxlength="100" autocomplete="street-address" />
+                    @else
+                        <p style="font-size: 0.95rem; color: #374151; margin: 0;"><strong>Delivery address:</strong> {{ $customer->address }}</p>
+                        <p style="font-size: 0.8rem; color: #6b7280; margin: 0.25rem 0 0;">To deliver somewhere else, change it on <a href="{{ route('customer.account') }}">My Account</a> first.</p>
+                    @endif
+                </div>
             </div>
 
             {{-- Payment Options (Populated from CheckoutService::PAYMENT_METHODS) --}}
             <div class="checkout-card">
-                <h3 style="margin-top:0; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.75rem;">2. Payment Method</h3>
+                <h3 style="margin-top:0; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.75rem;">3. Payment Method</h3>
                 
                 <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
                     @foreach($methods as $key => $label)
@@ -76,7 +100,7 @@
             </div>
 
             <button type="submit" class="btn-primary" style="width: 100%; padding: 0.85rem; font-size: 1.05rem; font-weight: 700; margin-top: 0.5rem;">
-                Place Order Now &rarr;
+                Place Order Now
             </button>
         </form>
     </div>
@@ -114,3 +138,22 @@
     </div>
 </div>
 @endsection
+@push('scripts')
+<script>
+ // Pickup / Delivery: show only the parts for the chosen option. Hidden inputs are disabled so they are not sent,
+ // which means the address is only required (and only saved) for Delivery.
+ (function () {
+  var radios = document.querySelectorAll('input[name=fulfillment]');
+  function apply() {
+   var chosen = (document.querySelector('input[name=fulfillment]:checked') || {}).value;
+   document.querySelectorAll('[data-show-for]').forEach(function (el) {
+    var show = el.dataset.showFor === chosen;
+    el.hidden = !show;
+    el.querySelectorAll('input, select, textarea').forEach(function (input) { input.disabled = !show; });
+   });
+  }
+  radios.forEach(function (r) { r.addEventListener('change', apply); });
+  apply();
+ })();
+</script>
+@endpush

@@ -67,9 +67,9 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; font-size: 0.9rem;">
                 <div>
                     @if($orders->onFirstPage())
-                        <span style="color: #9ca3af; cursor: not-allowed;">&laquo; Previous</span>
+                        <span style="color: #9ca3af; cursor: not-allowed;">Previous</span>
                     @else
-                        <a href="{{ $orders->previousPageUrl() }}" style="color: #1f3a5f; font-weight: 600; text-decoration: none;">&laquo; Previous</a>
+                        <a href="{{ $orders->previousPageUrl() }}" style="color: #1f3a5f; font-weight: 600; text-decoration: none;">Previous</a>
                     @endif
                 </div>
 
@@ -77,9 +77,9 @@
 
                 <div>
                     @if($orders->hasMorePages())
-                        <a href="{{ $orders->nextPageUrl() }}" style="color: #1f3a5f; font-weight: 600; text-decoration: none;">Next &raquo;</a>
+                        <a href="{{ $orders->nextPageUrl() }}" style="color: #1f3a5f; font-weight: 600; text-decoration: none;">Next</a>
                     @else
-                        <span style="color: #9ca3af; cursor: not-allowed;">Next &raquo;</span>
+                        <span style="color: #9ca3af; cursor: not-allowed;">Next</span>
                     @endif
                 </div>
             </div>

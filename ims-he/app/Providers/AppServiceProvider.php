@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -24,5 +25,9 @@ class AppServiceProvider extends ServiceProvider
     {
         RateLimiter::for('password-reset', fn (Request $request) => Limit::perMinute(3)
             ->by('password-reset|'.$request->ip()));
+
+        // Plain "Previous / Page X of Y / Next" links; the framework's default needs Tailwind, which the app does not load.
+        Paginator::defaultView('partials.pagination');
+        Paginator::defaultSimpleView('partials.pagination');
     }
 }
