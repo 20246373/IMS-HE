@@ -6,20 +6,24 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# ---------- Stage 2: PHP + Nginx runtime ----------
-FROM serversideup/php:8.3-fpm-nginx AS runtime
-WORKDIR /var/www/html
+# ---------- Stage 2: PHP app served by FrankenPHP (single process, no s6) ----------
+FROM dunglas/frankenphp:1-php8.3
+WORKDIR /app
 
-# On container start: run migrations, storage:link, config/route/view cache
-ENV AUTORUN_ENABLED=true
-ENV PHP_OPCACHE_ENABLE=1
+RUN install-php-extensions @composer pdo_mysql bcmath intl zip gd exif pcntl opcache
 
-COPY --chown=www-data:www-data composer.json composer.lock ./
+COPY composer.json composer.lock ./
 RUN composer install --no-dev --no-interaction --no-scripts --no-autoloader --prefer-dist
 
-COPY --chown=www-data:www-data . .
-COPY --chown=www-data:www-data --from=assets /app/public/build ./public/build
+COPY . .
+COPY --from=assets /app/public/build ./public/build
 
-RUN composer dump-autoload --optimize --no-dev
+RUN composer dump-autoload --optimize --no-dev \
+    && mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    && chmod -R 777 storage bootstrap/cache
+
+COPY start.sh /start.sh
+RUN sed -i 's/\r$//' /start.sh && chmod +x /start.sh
 
 EXPOSE 8080
+CMD ["/start.sh"]
