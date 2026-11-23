@@ -18,7 +18,7 @@ class CustomerAuthTest extends TestCase
 
     private function signup(array $overrides = []): array
     {
-        return array_merge(['email' => 'juan@example.com', 'password' => 'secret123'], $overrides);
+        return array_merge(['email' => 'juan@example.com', 'password' => 'secret123', 'password_confirmation' => 'secret123'], $overrides);
     }
 
     private function customer(array $overrides = []): Customer

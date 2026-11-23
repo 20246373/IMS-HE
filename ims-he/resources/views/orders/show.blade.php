@@ -35,7 +35,8 @@
                 <strong>Order #:</strong> {{ $invoice->invoice_id }}<br>
                 <strong>Channel:</strong> {{ $invoice->channel ?? 'Online' }}<br>
                 <strong>Pickup or Delivery:</strong> {{ $invoice->fulfillmentLabel() }}<br>
-                <strong>Payment Method:</strong> {{ $invoice->payment?->payment_method ?? 'Cash' }}
+                <strong>Payment Method:</strong> {{ $invoice->payment?->payment_method ?? 'Cash' }}@if($invoice->payment?->reference_no)<br>
+                <strong>GCash Ref. No.:</strong> {{ $invoice->payment->reference_no }}@endif
             </div>
         </div>
     </div>

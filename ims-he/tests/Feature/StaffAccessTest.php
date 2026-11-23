@@ -9,6 +9,7 @@ use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 // Employees sign up with email + password, wait as "Pending", and the Administrator gives them a role.
@@ -37,7 +38,7 @@ class StaffAccessTest extends TestCase
 
     public function test_employee_signs_up_with_email_and_password_and_waits_for_a_role(): void
     {
-        $this->post('/register/employee', ['first_name' => 'Nina', 'last_name' => 'Reyes', 'email' => 'New.Hire@Example.com', 'password' => 'secret123'])
+        $this->post('/register/employee', ['first_name' => 'Nina', 'last_name' => 'Reyes', 'email' => 'New.Hire@Example.com', 'password' => 'secret123', 'password_confirmation' => 'secret123'])
             ->assertRedirect(route('staff.pending'));
 
         $user = User::where('email', 'new.hire@example.com')->firstOrFail();
@@ -226,6 +227,36 @@ class StaffAccessTest extends TestCase
             ->assertDontSee('<th>Record</th>', false);
     }
 
+    public function test_audit_log_says_what_each_action_applied_to_and_filters_employees_or_customers(): void
+    {
+        $administrator = $this->staff(User::ADMINISTRATOR);
+        AuditLog::record('Completed', 'invoices', 12, $administrator->user_id);
+        AuditLog::record('Updated', 'customers', 3, $administrator->user_id);
+        AuditLog::record('Locked', 'users', 5, $administrator->user_id);
+        AuditLog::record('Login', 'users', $administrator->user_id, $administrator->user_id);
+        $this->actingAs($administrator);
+
+        // The action says what it applied to, both in the list and in the Action filter.
+        $this->get(route('audit.index'))->assertOk()
+            ->assertSee('Completed online order #12')
+            ->assertSee('Updated customer account #3')
+            ->assertSee('Locked employee account #5')
+            ->assertSee('Logged in')
+            ->assertSee('<option value="Completed|invoices"', false)
+            ->assertSee('Completed online order</option>', false);
+
+        $this->get(route('audit.index', ['action' => 'Completed|invoices']))->assertOk()
+            ->assertSee('Completed online order #12')->assertDontSee('Updated customer account #3');
+
+        // About: entries about employees or about customers (online orders count as customer entries).
+        $this->get(route('audit.index', ['about' => 'customers']))->assertOk()
+            ->assertSee('Completed online order #12')->assertSee('Updated customer account #3')
+            ->assertDontSee('Locked employee account #5');
+        $this->get(route('audit.index', ['about' => 'employees']))->assertOk()
+            ->assertSee('Locked employee account #5')->assertDontSee('Completed online order #12');
+        $this->get(route('audit.index', ['about' => 'suppliers']))->assertSessionHasErrors('about');
+    }
+
     public function test_seeded_administrator_can_log_in(): void
     {
         $this->seed(DatabaseSeeder::class);
@@ -342,21 +373,23 @@ class StaffAccessTest extends TestCase
             'status' => 'Active',
         ]);
 
-        $this->actingAs($administrator)->get(route('users.create'))->assertOk()->assertSee('First name');
+        // No password fields: the default is the last name + 123.
+        $this->actingAs($administrator)->get(route('users.create'))->assertOk()->assertSee('First name')
+            ->assertDontSee('name="password"', false);
 
         $this->actingAs($administrator)->post(route('users.store'), [
             'first_name' => 'new',
             'last_name' => 'cashier',
             'email' => 'Cashier@Example.com',
             'role' => User::EMPLOYEE,
-            'password' => 'secret123',
-            'password_confirmation' => 'secret123',
-        ])->assertRedirect(route('users.index'));
+        ])->assertRedirect(route('users.index'))->assertSessionHas('status', 'Account created.');
+        $this->assertTrue(Hash::check('cashier123', User::where('email', 'cashier@example.com')->value('password')));   // default: last name + 123
 
         $account = User::where('email', 'cashier@example.com')->firstOrFail();
         $this->assertSame($employee->employee_id, $account->employee_id);
         $this->assertSame(User::EMPLOYEE, $account->role);
         $this->assertSame(User::STATUS_ACTIVE, $account->status);
+        $this->assertTrue($account->must_change_password);
         $this->assertDatabaseHas('audit_logs', ['action' => 'Created', 'table_name' => 'users', 'record_id' => $account->user_id]);
 
         // The email cannot be used twice.
@@ -365,9 +398,73 @@ class StaffAccessTest extends TestCase
             'last_name' => 'Person',
             'email' => 'cashier@example.com',
             'role' => User::EMPLOYEE,
-            'password' => 'secret123',
-            'password_confirmation' => 'secret123',
         ])->assertSessionHasErrors('email');
+    }
+
+    public function test_an_account_the_administrator_creates_must_change_its_default_password_at_first_login(): void
+    {
+        $administrator = $this->staff(User::ADMINISTRATOR);
+        $this->actingAs($administrator)->post(route('users.store'), [
+            'first_name' => 'Nina', 'last_name' => 'Reyes', 'email' => 'nina@example.com', 'role' => User::EMPLOYEE,
+        ]);
+        $default = 'reyes123';   // last name in lowercase + 123
+        $this->assertTrue(Hash::check($default, User::where('email', 'nina@example.com')->value('password')));
+        $this->post('/logout');
+
+        // First login goes to the change-password page, and every other page sends them back to it.
+        // A wrong password on the new account explains that it still uses the default password (without saying what it is).
+        $this->post('/login', ['login' => 'nina@example.com', 'password' => 'wrong-guess'])
+            ->assertSessionHasErrors(['login' => 'This account is new and still uses its default password. Log in with the default password your administrator gave you, then you must change your password.']);
+        $this->post('/login', ['login' => $administrator->email, 'password' => 'wrong-guess'])
+            ->assertSessionHasErrors(['login' => 'Invalid email or password.']);   // ordinary accounts: the usual message
+
+        $this->post('/login', ['login' => 'nina@example.com', 'password' => $default])->assertRedirect(route('password.change'));
+        $this->get(route('dashboard'))->assertRedirect(route('password.change'));
+        $this->get(route('sales.create'))->assertRedirect(route('password.change'));
+        $this->get(route('password.change'))->assertOk()->assertSee('Change your password');
+
+        $this->post(route('password.change.update'), ['password' => 'mypassword1', 'password_confirmation' => 'different1'])
+            ->assertSessionHasErrors(['password' => 'The two passwords do not match.']);
+        $this->post(route('password.change.update'), ['password' => $default, 'password_confirmation' => $default])
+            ->assertSessionHasErrors(['password' => 'Choose a new password, not the default one.']);
+
+        $this->post(route('password.change.update'), ['password' => 'mypassword1', 'password_confirmation' => 'mypassword1'])
+            ->assertRedirect(route('dashboard'));
+        $nina = User::where('email', 'nina@example.com')->firstOrFail();
+        $this->assertFalse($nina->must_change_password);
+        $this->assertTrue(Hash::check('mypassword1', $nina->password));
+        $this->get(route('dashboard'))->assertOk();
+        $this->get(route('password.change'))->assertRedirect(route('dashboard'));   // nothing to change any more
+    }
+
+    public function test_login_errors_show_once_in_the_box_above_not_under_the_fields(): void
+    {
+        $this->staff(User::EMPLOYEE, ['email' => 'once@example.com']);
+
+        $this->from(route('login', ['as' => 'employee']))
+            ->post('/login', ['login' => 'once@example.com', 'password' => 'wrong-guess']);
+        $page = $this->get(route('login', ['as' => 'employee']))->assertOk();
+
+        $this->assertSame(1, substr_count($page->getContent(), 'Invalid email or password.'));
+        $page->assertDontSee('class="field-error"', false);
+    }
+
+    public function test_sign_up_pages_ask_to_confirm_the_password(): void
+    {
+        $this->get(route('staff.register'))->assertOk()->assertSee('name="password_confirmation"', false);
+        $this->get(route('customer.register'))->assertOk()->assertSee('name="password_confirmation"', false);
+
+        $this->post('/register/employee', ['first_name' => 'A', 'last_name' => 'B', 'email' => 'ab@example.com', 'password' => 'secret123', 'password_confirmation' => 'secret999'])
+            ->assertSessionHasErrors(['password' => 'The two passwords do not match.']);
+        $this->post(route('customer.register'), ['email' => 'cd@example.com', 'password' => 'secret123', 'password_confirmation' => 'secret999'])
+            ->assertSessionHasErrors(['password' => 'The two passwords do not match.']);
+        $this->assertDatabaseMissing('users', ['email' => 'ab@example.com']);
+        $this->assertDatabaseMissing('customers', ['email' => 'cd@example.com']);
+
+        // Employees who sign up themselves are never asked to change their password.
+        $this->post('/register/employee', ['first_name' => 'A', 'last_name' => 'B', 'email' => 'ab@example.com', 'password' => 'secret123', 'password_confirmation' => 'secret123'])
+            ->assertRedirect(route('staff.pending'));
+        $this->assertFalse(User::where('email', 'ab@example.com')->firstOrFail()->must_change_password);
     }
 
     public function test_only_the_administrator_can_create_accounts(): void

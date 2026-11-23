@@ -20,6 +20,8 @@ class AuthController extends Controller
 {
     private const INVALID = 'Invalid email or password.';
 
+    private const NEW_ACCOUNT = 'This account is new and still uses its default password. Log in with the default password your administrator gave you, then you must change your password.';
+
     private const LOCKED = 'Account locked after 3 failed attempts. Contact the administrator.';
 
     /**
@@ -140,7 +142,9 @@ class AuthController extends Controller
                 return back()->withErrors(['login' => self::LOCKED])->onlyInput('login');
             }
 
-            return back()->withErrors(['login' => self::INVALID])->onlyInput('login');
+            // A new account still on its default password gets a hint instead of the usual error.
+            // (The lockout above still applies; the default-password rule itself is not shown here.)
+            return back()->withErrors(['login' => $user->must_change_password ? self::NEW_ACCOUNT : self::INVALID])->onlyInput('login');
         }
 
         $user->update(['login_attempt_count' => 0, 'last_login' => now()]);
@@ -148,6 +152,10 @@ class AuthController extends Controller
         Auth::guard('web')->login($user);
         $request->session()->regenerate();
         AuditLog::record('Login', 'users', $user->user_id);
+
+        if ($user->must_change_password) {
+            return redirect()->route('password.change');
+        }
 
         return $user->isPending()
             ? redirect()->route('staff.pending')
@@ -186,8 +194,8 @@ class AuthController extends Controller
             'first_name' => ['required', 'string', 'max:50'],
             'last_name' => ['required', 'string', 'max:50'],
             'email' => ['required', 'email', 'max:100', Rule::unique('users', 'email'), Rule::unique('customers', 'email')],
-            'password' => ['required', 'string', 'min:8', 'max:72'],        // bcrypt reads only 72 bytes
-        ], ['email.unique' => 'This email is already registered.']);
+            'password' => ['required', 'string', 'min:8', 'max:72', 'confirmed'],   // bcrypt reads only 72 bytes
+        ], ['email.unique' => 'This email is already registered.', 'password.confirmed' => 'The two passwords do not match.']);
 
         $user = User::create([
             'first_name' => trim($data['first_name']),
@@ -204,6 +212,40 @@ class AuthController extends Controller
         $request->session()->regenerate();
 
         return redirect()->route('staff.pending');
+    }
+
+    /** First login of an account the Administrator created: the default password must be replaced. */
+    public function showChangePassword(Request $request)
+    {
+        if (! $request->user()->must_change_password) {
+            return redirect()->route('dashboard');
+        }
+
+        return view('auth.change-password');
+    }
+
+    public function changePassword(Request $request)
+    {
+        $user = $request->user();
+
+        if (! $user->must_change_password) {
+            return redirect()->route('dashboard');
+        }
+
+        $data = $request->validate(
+            ['password' => ['required', 'string', 'min:8', 'max:72', 'confirmed']],
+            ['password.confirmed' => 'The two passwords do not match.'],
+        );
+
+        if (Hash::check($data['password'], $user->password)) {
+            return back()->withErrors(['password' => 'Choose a new password, not the default one.']);
+        }
+
+        $user->update(['password' => $data['password'], 'must_change_password' => false]);
+        AuditLog::record('Password Changed', 'users', $user->user_id);
+
+        return redirect()->route($user->isPending() ? 'staff.pending' : 'dashboard')
+            ->with('status', 'Your password has been changed.');
     }
 
     public function pending(Request $request)

@@ -15,10 +15,15 @@ class OrderManagementService
 {
     public function __construct(private InventoryService $inventory, private LedgerService $ledger) {}
 
-    public function complete(Invoice $invoice, User $staff): Invoice
+    /** @param  string|null  $referenceNo  GCash Ref. No. from the customer's receipt (GCash orders only) */
+    public function complete(Invoice $invoice, User $staff, ?string $referenceNo = null): Invoice
     {
-        return DB::transaction(function () use ($invoice, $staff) {
+        return DB::transaction(function () use ($invoice, $staff, $referenceNo) {
             $invoice = $this->lockPending($invoice, 'completed');
+
+            if ($referenceNo !== null) {
+                $invoice->payment()->update(['reference_no' => $referenceNo]);
+            }
 
             $invoice->update(['status' => 'Completed']);
             $this->ledger->recordSale($invoice);

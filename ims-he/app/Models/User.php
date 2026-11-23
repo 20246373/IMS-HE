@@ -40,7 +40,7 @@ class User extends Authenticatable
 
     protected function casts(): array
     {
-        return ['password' => 'hashed', 'last_login' => 'datetime'];
+        return ['password' => 'hashed', 'last_login' => 'datetime', 'must_change_password' => 'boolean'];
     }
 
     // The SDD schema has no remember_token column.
@@ -109,6 +109,15 @@ class User extends Authenticatable
         if ($match->count() === 1) {
             $this->employee_id = $match->first()->employee_id;
         }
+    }
+
+    /**
+     * Default password for an account the Administrator creates: the last name in lowercase, without spaces,
+     * followed by 123 ("Dela Cruz" -> "delacruz123"). The employee must change it at their first login.
+     */
+    public static function defaultPassword(string $lastName): string
+    {
+        return mb_strtolower(preg_replace('/\s+/', '', $lastName)).'123';
     }
 
     public function isPending(): bool

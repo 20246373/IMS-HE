@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Invoice;
+use App\Models\Payment;
 use App\Services\OrderManagementService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -39,7 +40,16 @@ class OrderManagementController extends Controller
     public function complete(Request $request, Invoice $invoice)
     {
         abort_unless($invoice->channel === 'Online', 404);
-        $this->orders->complete($invoice, $request->user());
+
+        // A GCash order needs the Ref. No. from the customer's GCash receipt, entered by staff when completing it.
+        $paidByGCash = $invoice->payment?->payment_method === 'GCash';
+        $request->merge(['reference_no' => Payment::normalizeReference($request->input('reference_no'))]);
+        $data = $request->validate(
+            ['reference_no' => $paidByGCash ? ['required', ...Payment::referenceFormat()] : ['nullable', 'prohibited']],
+            Payment::referenceMessages(),
+        );
+
+        $this->orders->complete($invoice, $request->user(), $data['reference_no'] ?? null);
 
         return redirect()->route('online-orders.show', $invoice)->with('status', "Order #{$invoice->invoice_id} marked as Completed.");
     }

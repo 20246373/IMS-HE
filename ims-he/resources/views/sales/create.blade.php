@@ -49,7 +49,11 @@
     <x-required-note />
     <div class="form-grid">
      <x-field label="Amount paid" name="amount_paid" prefix="₱" inputmode="decimal" />
-     <x-select label="Payment method" name="payment_method"><option value="Cash">Cash</option><option value="GCash">GCash</option></x-select>
+     <x-select label="Payment method" name="payment_method"><option value="Cash" @selected(old('payment_method') !== 'GCash')>Cash</option><option value="GCash" @selected(old('payment_method') === 'GCash')>GCash</option></x-select>
+     {{-- Shown only for GCash: the 13-digit Ref. No. on the customer's GCash receipt --}}
+     <div data-gcash-only>
+      <x-field label="GCash reference no." name="reference_no" inputmode="numeric" maxlength="16" autocomplete="off" placeholder="13-digit Ref. No. on the GCash receipt" />
+     </div>
      <x-select label="Registered customer" name="customer_id" :required="false">
       <option value="">Walk-in customer</option>
       @foreach($customers as $customer)

@@ -53,7 +53,7 @@ class Permissions
 
     /** What each built-in role could do before roles became editable (same access as the old hardcoded checks). */
     public const DEFAULTS = [
-        User::ADMINISTRATOR => ['exports.inventory', 'exports.suppliers', 'exports.sales', 'exports.payroll', 'exports.customers'],
+        User::ADMINISTRATOR => [],   // account management only: Employee and Customer Accounts, Roles, Audit Log (admin routes)
         User::PRESIDENT => [
             'online_orders.manage', 'customers.manage', 'inventory.manage', 'suppliers.manage', 'suppliers.delete', 'procurement.manage',
             'employees.manage', 'payroll.view', 'ledger.view', 'reports.sales', 'reports.inventory', 'reports.procurement', 'reports.financial',

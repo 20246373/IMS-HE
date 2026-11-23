@@ -10,6 +10,7 @@
    <div><dt>Number of items</dt><dd>{{ $invoice->items->sum('quantity') }}</dd></div>
    <div><dt>Pickup or delivery</dt><dd><strong>{{ $invoice->fulfillmentLabel() }}</strong></dd></div>
    <div><dt>Payment method</dt><dd>{{ $invoice->payment?->payment_method }}</dd></div>
+   @if($invoice->payment?->reference_no)<div><dt>GCash reference no.</dt><dd>{{ $invoice->payment->reference_no }}</dd></div>@endif
    <div><dt>Total</dt><dd><strong>{{ money($invoice->total_amount) }}</strong></dd></div>
   </dl>
   <section class="details-aside">
@@ -39,10 +40,16 @@
  </table>
 
  @if($invoice->status === 'Pending')
+  <form method="POST" action="{{ route('online-orders.complete', $invoice) }}" id="complete-order">@csrf @method('PATCH')
+   @if($invoice->payment?->payment_method === 'GCash')
+    {{-- Paid by GCash: staff enter the Ref. No. from the customer's GCash receipt when completing the order --}}
+    <div class="gcash-ref">
+     <x-field label="GCash reference no." name="reference_no" inputmode="numeric" maxlength="16" autocomplete="off" placeholder="13-digit Ref. No. on the GCash receipt" />
+    </div>
+   @endif
+  </form>
   <div class="details-actions">
-   <form method="POST" action="{{ route('online-orders.complete', $invoice) }}" class="inline">@csrf @method('PATCH')
-    <button>Mark as Completed</button>
-   </form>
+   <button form="complete-order">Mark as Completed</button>
    <form method="POST" action="{{ route('online-orders.cancel', $invoice) }}" class="inline"
          onsubmit="return confirm('Cancel order #{{ $invoice->invoice_id }}? The items go back into stock. This cannot be undone.')">@csrf @method('PATCH')
     <button class="danger">Cancel order</button>
@@ -53,3 +60,9 @@
  @endif
 </div>
 @endsection
+
+@push('head')
+<style>
+ .gcash-ref{max-width:320px;margin-top:1rem}
+</style>
+@endpush

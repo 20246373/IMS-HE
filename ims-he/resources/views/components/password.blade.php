@@ -1,4 +1,4 @@
-@props(['label' => 'Password', 'name' => 'password', 'id' => null, 'hint' => null])
+@props(['label' => 'Password', 'name' => 'password', 'id' => null, 'hint' => null, 'inlineError' => true])
 @php($id = $id ?? $name)
 
 {{-- Password input with a show/hide toggle inside the field, and an optional gray hint below it. --}}
@@ -13,5 +13,7 @@
   </button>
  </div>
  @if($hint)<div class="field-hint" id="{{ $id }}-hint">{{ $hint }}</div>@endif
- @error($name)<div class="field-error">{{ $message }}</div>@enderror
+ @if($inlineError)
+  @error($name)<div class="field-error">{{ $message }}</div>@enderror
+ @endif
 </div>

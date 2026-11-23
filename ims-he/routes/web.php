@@ -59,6 +59,12 @@ Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
 
+// Accounts the Administrator created must replace their default password before using anything else.
+Route::middleware('auth')->group(function () {
+    Route::get('/password/change', [AuthController::class, 'showChangePassword'])->name('password.change');
+    Route::post('/password/change', [AuthController::class, 'changePassword'])->name('password.change.update');
+});
+
 // Waiting page for employees who have no role yet (not behind the role middleware).
 Route::get('/pending', [AuthController::class, 'pending'])
     ->middleware('auth')
@@ -157,6 +163,9 @@ Route::middleware(['auth', 'permission'])->group(function () {
         Route::post('users/{user}/unlock', [UserController::class, 'unlock'])->name('users.unlock');
         Route::post('users/{user}/password', [UserController::class, 'resetPassword'])->name('users.password');
         Route::get('audit-logs', [AuditLogController::class, 'index'])->name('audit.index');
+
+        // The Administrator's only export: the audit log (CSV, same format as the Export Center).
+        Route::get('audit-logs-export', [AuditLogController::class, 'export'])->name('audit.export');
         Route::resource('roles', RoleController::class)->except(['show']);
 
         // Customers' storefront logins (account data only; order history is on the business Customers page).

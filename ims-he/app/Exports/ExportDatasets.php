@@ -12,9 +12,6 @@ class ExportDatasets
      *
      * @var array<string, list<string>>
      */
-    /** Datasets only the Administrator may export (accounts and the audit log). */
-    public const ADMIN_ONLY = 'admin';
-
     public const STATUS_OPTIONS = [
         'purchase_orders' => ['Pending', 'Delivered', 'Cancelled'],
         'invoices' => ['Pending', 'Completed', 'Cancelled'],
@@ -123,18 +120,6 @@ class ExportDatasets
 
             self::dataset('customers', 'Customers', 'exports.customers', [], ['customer_id', 'email', 'first_name', 'last_name', 'contact_number', 'address', 'email_verified_at', 'created_at'],
                 fn (Request $r) => DB::table('customers')->select(['customer_id', 'email', 'first_name', 'last_name', 'contact_number', 'address', 'email_verified_at', 'created_at'])->orderBy('customer_id')->cursor()),
-
-            self::dataset('users', 'Users', self::ADMIN_ONLY, [], ['user_id', 'email', 'role', 'status', 'employee_name', 'last_login', 'created_at'],
-                fn (Request $r) => DB::table('users')->leftJoin('employees', 'employees.employee_id', '=', 'users.employee_id')
-                    ->select(['users.user_id', 'users.email', 'users.role', 'users.status', 'employees.first_name as employee_first_name', 'employees.last_name as employee_last_name', 'users.last_login', 'users.created_at'])
-                    ->orderBy('users.user_id')->cursor()->map(fn ($row) => [$row->user_id, $row->email, $row->role, $row->status, trim(($row->employee_first_name ?? '').' '.($row->employee_last_name ?? '')), $row->last_login, $row->created_at])),
-
-            self::dataset('audit_logs', 'Audit logs', self::ADMIN_ONLY, ['dates'], ['log_id', 'logged_at', 'user', 'action', 'table_name', 'record_id'],
-                fn (Request $r) => self::query($r, DB::table('audit_logs')
-                    ->leftJoin('users', 'users.user_id', '=', 'audit_logs.user_id')
-                    ->selectRaw('audit_logs.log_id, audit_logs.logged_at, COALESCE(users.email, \'System\') as audit_user, audit_logs.action, audit_logs.table_name, audit_logs.record_id')
-                    ->orderBy('audit_logs.logged_at'), null, 'audit_logs.logged_at')
-                    ->cursor()->map(fn ($row) => [$row->log_id, $row->logged_at, $row->audit_user ?: 'System', $row->action, $row->table_name, $row->record_id])),
         ];
     }
 

@@ -1,4 +1,4 @@
-@props(['label', 'name', 'type' => 'text', 'value' => null, 'required' => true, 'prefix' => null])
+@props(['label', 'name', 'type' => 'text', 'value' => null, 'required' => true, 'prefix' => null, 'inlineError' => true])
 
 <div class="field">
  <label for="{{ $attributes->get('id', $name) }}" class="{{ $attributes->has('readonly') ? '' : ($required ? 'required' : 'optional') }}">{{ $label }}</label>
@@ -24,5 +24,8 @@
    {{ $attributes->except('id') }}
   >
  @endif
- @error($name)<div class="field-error">{{ $message }}</div>@enderror
+ {{-- inline-error="false" when the page already shows the message in the alert above (e.g. the login form) --}}
+ @if($inlineError)
+  @error($name)<div class="field-error">{{ $message }}</div>@enderror
+ @endif
 </div>

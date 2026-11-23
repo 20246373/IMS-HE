@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Invoice;
+use App\Models\Payment;
 use App\Models\Product;
 use App\Services\SaleService;
 use App\Support\Money;
@@ -46,7 +47,10 @@ class SaleController extends Controller
 
     public function store(Request $request, SaleService $sales): RedirectResponse
     {
-        $request->merge(['amount_paid' => Money::parse($request->input('amount_paid'))]);
+        $request->merge([
+            'amount_paid' => Money::parse($request->input('amount_paid')),
+            'reference_no' => Payment::normalizeReference($request->input('reference_no')),
+        ]);
         $data = $request->validate([
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,product_id'],
@@ -54,7 +58,7 @@ class SaleController extends Controller
             'payment_method' => ['required', Rule::in(['Cash', 'GCash'])],
             'amount_paid' => ['required', 'numeric', 'gt:0'],
             'customer_id' => ['nullable', 'integer', 'exists:customers,customer_id'],
-        ]);
+        ] + Payment::referenceRules(), Payment::referenceMessages());
 
         $invoice = $sales->sell(
             $data['items'],
@@ -62,6 +66,7 @@ class SaleController extends Controller
             (float) $data['amount_paid'],
             $request->user(),
             isset($data['customer_id']) ? Customer::find($data['customer_id']) : null,
+            $data['reference_no'] ?? null,
         );
 
         return redirect()->route('sales.show', $invoice)

@@ -9,6 +9,7 @@
   <div class="form-grid">
    <x-field label="Email" name="email" type="email" value="{{ old('email') }}" maxlength="100" autocomplete="email" autofocus />
    <x-password id="customer-password" hint="Must be at least 8 characters." minlength="8" maxlength="72" autocomplete="new-password" />
+   <x-password label="Confirm password" name="password_confirmation" id="customer-password-confirm" autocomplete="new-password" />
   </div>
   <p><button>Sign up</button></p>
  </form>

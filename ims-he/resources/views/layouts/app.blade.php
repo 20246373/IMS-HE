@@ -366,6 +366,8 @@
             $can = fn (string ...$permissions) => $user->hasPermission(...$permissions);
         @endphp
 
+        {{-- Until the default password is replaced, only the account box and Logout show. --}}
+        @unless($user->must_change_password)
         {{-- WORKSPACE --}}
         <span class="nav-section">Workspace</span>
 
@@ -533,6 +535,8 @@
                 Export Center
             </a>
         @endif
+
+        @endunless
 
         {{-- USER ACCOUNT AND LOGOUT --}}
         <span class="nav-sp"></span>
@@ -705,6 +709,22 @@
    }).finally(function () { button.disabled = false; });
   });
  })();
+
+ // GCash reference field ([data-gcash-only]): shown, and sent, only while GCash is the chosen payment method.
+ document.querySelectorAll('form').forEach(function (form) {
+  var parts = form.querySelectorAll('[data-gcash-only]');
+  if (!parts.length) return;
+  function apply() {
+   var field = form.querySelector('select[name=payment_method], input[name=payment_method]:checked');
+   var gcash = field && field.value === 'GCash';
+   parts.forEach(function (part) {
+    part.hidden = !gcash;
+    part.querySelectorAll('input').forEach(function (input) { input.disabled = !gcash; });
+   });
+  }
+  form.addEventListener('change', function (e) { if (e.target.name === 'payment_method') apply(); });
+  apply();
+ });
 
  // A pop-up form the server sent back with errors opens again by itself (components/modal).
  document.querySelectorAll('dialog[data-open-on-load]').forEach(function (dialog) { dialog.showModal(); });

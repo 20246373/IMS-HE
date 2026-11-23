@@ -35,16 +35,19 @@ class UserController extends Controller
             'last_name' => ['required', 'string', 'max:50'],
             'email' => ['required', 'email', 'max:100', Rule::unique('users', 'email'), Rule::unique('customers', 'email')],
             'role' => ['required', Rule::in(User::roleChoices())],
-            'password' => ['required', 'string', 'min:8', 'max:72', 'confirmed'],
         ], ['email.unique' => 'This email is already used by another account.']);
 
-        $user = DB::transaction(function () use ($data) {
+        // Default password (last name + 123) that the employee must replace at their first login.
+        $defaultPassword = User::defaultPassword($data['last_name']);
+
+        $user = DB::transaction(function () use ($data, $defaultPassword) {
             $user = new User([
                 'first_name' => trim($data['first_name']),
                 'last_name' => trim($data['last_name']),
                 'email' => $data['email'],
                 'role' => $data['role'],
-                'password' => $data['password'],
+                'password' => $defaultPassword,
+                'must_change_password' => true,
                 'status' => User::STATUS_ACTIVE,
                 'login_attempt_count' => 0,
             ]);
@@ -55,7 +58,7 @@ class UserController extends Controller
             return $user;
         });
 
-        return redirect()->route('users.index')->with('status', "Account created for {$user->displayName()}.");
+        return redirect()->route('users.index')->with('status', 'Account created.');
     }
 
     public function edit(User $user)

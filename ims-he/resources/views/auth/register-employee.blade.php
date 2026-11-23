@@ -10,6 +10,7 @@
    <x-field label="Last name" name="last_name" value="{{ old('last_name') }}" maxlength="50" autocomplete="family-name" />
    <x-field label="Work email" name="email" type="email" value="{{ old('email') }}" maxlength="100" autocomplete="email" />
    <x-password id="employee-password" hint="Must be at least 8 characters." minlength="8" maxlength="72" autocomplete="new-password" />
+   <x-password label="Confirm password" name="password_confirmation" id="employee-password-confirm" autocomplete="new-password" />
   </div>
   <p><button>Sign up</button></p>
  </form>

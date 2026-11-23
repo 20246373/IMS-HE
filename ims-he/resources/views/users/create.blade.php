@@ -13,8 +13,6 @@
      <option value="{{ $r }}" @selected(old('role') === $r)>{{ $r }}</option>
     @endforeach
    </x-select>
-   <x-password label="Password" hint="Must be at least 8 characters." minlength="8" maxlength="72" autocomplete="new-password" />
-   <x-password label="Confirm password" name="password_confirmation" autocomplete="new-password" />
   </div>
   <div class="actions"><button>Create account</button> <a class="btn btn-alt" href="{{ route('users.index') }}">Cancel</a></div>
  </form>

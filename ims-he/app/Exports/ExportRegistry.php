@@ -11,7 +11,7 @@ class ExportRegistry
         return ExportDatasets::all();
     }
 
-    /** The datasets this account may export: its role's export permissions, plus accounts and audit log for the Administrator. */
+    /** The datasets this account may export: one export permission per dataset. The Administrator has none (account management only). */
     public static function forUser(User $user): array
     {
         return array_values(array_filter(self::all(), fn (array $dataset): bool => self::allows($user, $dataset)));
@@ -19,9 +19,7 @@ class ExportRegistry
 
     public static function allows(User $user, array $dataset): bool
     {
-        return $dataset['permission'] === ExportDatasets::ADMIN_ONLY
-            ? $user->hasRole(User::ADMINISTRATOR)
-            : $user->hasPermission($dataset['permission']);
+        return $user->hasPermission($dataset['permission']);
     }
 
     public static function find(string $key): ?array

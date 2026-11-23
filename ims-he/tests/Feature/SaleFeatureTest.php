@@ -191,4 +191,29 @@ class SaleFeatureTest extends TestCase
             ->assertSee('₱50.00')
             ->assertSee('Cash');
     }
+
+    public function test_gcash_sale_needs_a_unique_13_digit_reference_shown_on_the_receipt(): void
+    {
+        $product = $this->product('POS Drill', 100, 10);
+        $cashier = $this->cashier();
+        $sale = fn (array $payment) => $this->actingAs($cashier)->post(route('sales.store'), [
+            'items' => [['product_id' => $product->product_id, 'quantity' => 1]],
+            'amount_paid' => '100',
+        ] + $payment);
+
+        $sale(['payment_method' => 'GCash'])->assertSessionHasErrors(['reference_no' => 'Enter the GCash reference number from the GCash receipt.']);
+        $sale(['payment_method' => 'GCash', 'reference_no' => '12345'])->assertSessionHasErrors(['reference_no' => 'The GCash reference number has 13 digits.']);
+        $sale(['payment_method' => 'Cash', 'reference_no' => '1234567890123'])->assertSessionHasErrors('reference_no');
+        $this->assertDatabaseCount('invoices', 0);
+
+        $sale(['payment_method' => 'GCash', 'reference_no' => '1234 567 890123'])->assertSessionHasNoErrors();
+        $invoice = Invoice::firstOrFail();
+        $this->assertSame('1234567890123', $invoice->payment->reference_no);
+        $this->actingAs($cashier)->get(route('sales.show', $invoice))->assertOk()->assertSee('GCash ref. no.: 1234567890123');
+
+        // The same GCash transfer cannot pay for a second sale.
+        $sale(['payment_method' => 'GCash', 'reference_no' => '1234567890123'])
+            ->assertSessionHasErrors(['reference_no' => 'This GCash reference number was already used for another payment.']);
+        $this->assertDatabaseCount('invoices', 1);
+    }
 }

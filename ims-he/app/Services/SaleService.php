@@ -26,6 +26,7 @@ class SaleService
         float $tendered,
         User $cashier,
         ?Customer $customer = null,
+        ?string $referenceNo = null,             // GCash receipt reference; empty for Cash
     ): Invoice {
         if ($lines === []) {
             throw ValidationException::withMessages(['items' => 'Add at least one product.']);
@@ -35,7 +36,7 @@ class SaleService
             throw ValidationException::withMessages(['payment_method' => 'Choose Cash or GCash.']);
         }
 
-        return DB::transaction(function () use ($lines, $method, $tendered, $cashier, $customer): Invoice {
+        return DB::transaction(function () use ($lines, $method, $tendered, $cashier, $customer, $referenceNo): Invoice {
             $quantities = [];
 
             foreach ($lines as $line) {
@@ -91,6 +92,7 @@ class SaleService
                 'amount_paid' => $tendered,
                 'change_amount' => round($tendered - $total, 2),
                 'payment_method' => $method,
+                'reference_no' => $method === 'GCash' ? $referenceNo : null,
             ]);
 
             $this->ledger->recordSale($invoice);

@@ -18,8 +18,8 @@
   <p class="auth-sub">Log in to your {{ $as === 'customer' ? 'customer' : 'employee' }} account.</p>
   <form method="POST" action="{{ route('login') }}">@csrf
    <div class="form-grid">
-    <x-field label="Email" name="login" type="email" value="{{ old('login') }}" maxlength="100" autocomplete="email" autofocus />
-    <x-password id="login-password" autocomplete="current-password" />
+    <x-field label="Email" name="login" type="email" value="{{ old('login') }}" maxlength="100" autocomplete="email" autofocus :inline-error="false" />
+    <x-password id="login-password" autocomplete="current-password" :inline-error="false" />
    </div>
    <p><button>Log in</button></p>
   </form>

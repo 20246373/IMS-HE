@@ -29,8 +29,8 @@ class CustomerAuthController extends Controller
 
         $data = $request->validate([
             'email' => ['required', 'email', 'max:100', Rule::unique('customers', 'email'), Rule::unique('users', 'email')],
-            'password' => ['required', 'string', 'min:8', 'max:72'],        // bcrypt reads only 72 bytes
-        ], ['email.unique' => 'This email is already registered.']);
+            'password' => ['required', 'string', 'min:8', 'max:72', 'confirmed'],   // bcrypt reads only 72 bytes
+        ], ['email.unique' => 'This email is already registered.', 'password.confirmed' => 'The two passwords do not match.']);
 
         $customer = Customer::create($data);      // password is bcrypt-hashed by the model's 'hashed' cast
 

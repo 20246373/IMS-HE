@@ -14,7 +14,7 @@
    <tr><th colspan="3" style="text-align:right">Total</th><th>{{ money($invoice->total_amount) }}</th></tr>
   </tbody>
  </table>
- <p>Paid: {{ money($invoice->payment?->amount_paid) }}<br>Change: {{ money($invoice->payment?->change_amount) }}<br>Method: {{ $invoice->payment?->payment_method }}</p>
+ <p>Paid: {{ money($invoice->payment?->amount_paid) }}<br>Change: {{ money($invoice->payment?->change_amount) }}<br>Method: {{ $invoice->payment?->payment_method }}@if($invoice->payment?->reference_no)<br>GCash ref. no.: {{ $invoice->payment->reference_no }}@endif</p>
  <p class="no-print"><button type="button" onclick="window.print()">Print</button> <a class="btn btn-alt" href="{{ route('sales.create') }}">New sale</a></p>
 </div>
 @push('head')

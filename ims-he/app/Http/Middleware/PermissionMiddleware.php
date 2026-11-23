@@ -30,6 +30,11 @@ class PermissionMiddleware
             return redirect()->route('login')->withErrors(['login' => 'Your account is locked. Contact the administrator.']);
         }
 
+        // An account the Administrator created must replace its default password before anything else.
+        if ($user->must_change_password) {
+            return redirect()->route('password.change');
+        }
+
         // Self-registered employees have no role yet: send them to the waiting page instead of a 403.
         if ($user->isPending()) {
             return redirect()->route('staff.pending');

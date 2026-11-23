@@ -46,7 +46,7 @@ class OrderManagementTest extends TestCase
     }
 
     // A real online order placed through checkout: invoice, items, payment and OUT movements.
-    private function onlineOrder(array $lines): Invoice
+    private function onlineOrder(array $lines, string $paymentMethod = 'Cash'): Invoice
     {
         static $n = 0;
         $n++;
@@ -58,7 +58,7 @@ class OrderManagementTest extends TestCase
             app(CartService::class)->add($customer, $product, $qty);
         }
 
-        return app(CheckoutService::class)->placeOrder($customer, $customer->only(['first_name', 'last_name', 'contact_number', 'address']), 'Cash');
+        return app(CheckoutService::class)->placeOrder($customer, $customer->only(['first_name', 'last_name', 'contact_number', 'address']), $paymentMethod);
     }
 
     public function test_only_president_supervisor_and_employee_can_open_online_orders(): void
@@ -171,5 +171,34 @@ class OrderManagementTest extends TestCase
 
         $this->actingAs($order->customer, 'customer')->get(route('customer.orders.show', $order))
             ->assertSee('Cancelled')->assertSee('This order was cancelled.');
+    }
+
+    public function test_staff_enter_the_gcash_reference_when_completing_a_gcash_order(): void
+    {
+        $staff = $this->staff(User::STORE_SUPERVISOR);
+        $gcash = $this->onlineOrder([[$this->product('GCash Hammer', 10, 350), 1]], 'GCash');
+        $cash = $this->onlineOrder([[$this->product('Cash Hammer', 10, 350), 1]]);
+
+        // Only the GCash order asks for the reference.
+        $this->actingAs($staff)->get(route('online-orders.show', $gcash))->assertOk()->assertSee('name="reference_no"', false);
+        $this->actingAs($staff)->get(route('online-orders.show', $cash))->assertOk()->assertDontSee('name="reference_no"', false);
+
+        $this->actingAs($staff)->patch(route('online-orders.complete', $gcash))
+            ->assertSessionHasErrors(['reference_no' => 'Enter the GCash reference number from the GCash receipt.']);
+        $this->actingAs($staff)->patch(route('online-orders.complete', $gcash), ['reference_no' => '123'])
+            ->assertSessionHasErrors('reference_no');
+        $this->assertSame('Pending', $gcash->fresh()->status);
+
+        $this->actingAs($staff)->patch(route('online-orders.complete', $gcash), ['reference_no' => '1234 567 890123'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('Completed', $gcash->fresh()->status);
+        $this->assertSame('1234567890123', $gcash->fresh()->payment->reference_no);
+        $this->actingAs($staff)->get(route('online-orders.show', $gcash))->assertSee('1234567890123');
+
+        // A cash order completes without one, and the GCash number cannot be reused.
+        $this->actingAs($staff)->patch(route('online-orders.complete', $cash), ['reference_no' => '1234567890123'])
+            ->assertSessionHasErrors('reference_no');
+        $this->actingAs($staff)->patch(route('online-orders.complete', $cash))->assertSessionHasNoErrors();
+        $this->assertSame('Completed', $cash->fresh()->status);
     }
 }

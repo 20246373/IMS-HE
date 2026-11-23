@@ -37,6 +37,12 @@
                     <td style="color: #4b5563; font-weight: 500;">Payment Method</td>
                     <td style="text-align: right; font-weight: 600; color: #111827;">{{ $invoice->payment?->payment_method ?? 'Cash' }}</td>
                 </tr>
+                @if($invoice->payment?->reference_no)
+                    <tr>
+                        <td style="color: #4b5563; font-weight: 500;">GCash Ref. No.</td>
+                        <td style="text-align: right; font-weight: 600; color: #111827;">{{ $invoice->payment->reference_no }}</td>
+                    </tr>
+                @endif
                 <tr>
                     <td style="color: #4b5563; font-weight: 500;">Pickup or Delivery</td>
                     <td style="text-align: right; font-weight: 600; color: #111827;">{{ $invoice->fulfillmentLabel() }}</td>
