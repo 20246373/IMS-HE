@@ -312,7 +312,9 @@
  .sf-cart{position:relative;display:inline-flex;align-items:center;gap:.3rem}
  .sf-cart b{display:inline-grid;place-items:center;min-width:1.25rem;height:1.25rem;padding:0 .3rem;border-radius:999px;background:#f2b705;color:#1a1a1a;font-size:.72rem}
  /* Footer: light text on navy. ".storefront" in front so storefront.css's navy link color does not win. */
- .sf-footer{background:#172d49;color:#dbe4ee;margin-top:2.5rem}
+ body.storefront{min-height:100vh;display:flex;flex-direction:column}
+ body.storefront main{flex:1 0 auto;width:100%;box-sizing:border-box}
+ .sf-footer{background:#172d49;color:#dbe4ee;margin-top:2.5rem;flex-shrink:0}
  .sf-footer-in{padding:2rem clamp(1.25rem,2.5vw,3rem);display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1.5rem}
  .sf-footer h4{color:#fff;margin:0 0 .6rem;font-size:.8rem;letter-spacing:.07em;text-transform:uppercase}
  .storefront .sf-footer a{color:#dbe4ee;text-decoration:none;display:block;padding:.15rem 0;font-size:.88rem}
