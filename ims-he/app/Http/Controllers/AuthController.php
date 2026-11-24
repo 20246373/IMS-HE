@@ -99,6 +99,8 @@ class AuthController extends Controller
 
         if ($guard === 'web') {
             AuditLog::record('Password Reset', 'users', $account->user_id, $account->user_id);
+        } else {
+            AuditLog::recordByCustomer('Password Reset', 'customers', $account->customer_id, $account->customer_id);
         }
 
         return redirect()->route('login')->with('status', 'Your password has been reset. You can now log in.');
@@ -177,6 +179,7 @@ class AuthController extends Controller
 
         Auth::guard('customer')->login($customer);
         $request->session()->regenerate();
+        AuditLog::recordByCustomer('Login', 'customers', $customer->customer_id, $customer->customer_id);
 
         return redirect()->intended(route('home'));
     }

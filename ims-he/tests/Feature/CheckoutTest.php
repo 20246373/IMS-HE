@@ -474,7 +474,7 @@ class CheckoutTest extends TestCase
         $this->assertSame('Delivery', $invoice->fulfillment);
 
         $staff = User::create(['email' => 'supervisor-x@example.com', 'password' => 'secret123', 'role' => User::STORE_SUPERVISOR, 'status' => User::STATUS_ACTIVE]);
-        $this->actingAs($staff)->get(route('online-orders.show', $invoice))->assertOk()
+        $this->actingAs($staff, 'web')->get(route('online-orders.show', $invoice))->assertOk()
             ->assertSee('Delivery')->assertSee('Deliver to: Session Road, Baguio');
     }
 }

@@ -34,7 +34,7 @@
   <tr>
    <td>{{ $at->format('M d, Y') }}</td>
    <td>{{ $at->format('h:i:s A') }}</td>
-   <td>{{ $l->user?->displayName() ?? 'System' }}</td>
+   <td>{{ $l->actorName() }}</td>
    <td>{{ $l->describe() }}</td>
   </tr>
   @empty

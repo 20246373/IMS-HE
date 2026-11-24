@@ -62,7 +62,7 @@ class PasswordResetTest extends TestCase
 
         $this->assertTrue(Hash::check('new-password', $customer->fresh()->password));
         $this->get($url)->assertRedirect(route('password.forgot'))->assertSessionHasErrors('email');
-        $this->assertDatabaseCount('audit_logs', 0);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'Password Reset', 'table_name' => 'customers', 'customer_id' => $customer->customer_id, 'user_id' => null]);
     }
 
     public function test_staff_can_reset_even_when_locked_or_pending_and_is_audited(): void

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\VerifyCustomerEmail;
+use App\Models\AuditLog;
 use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -33,6 +34,7 @@ class CustomerAuthController extends Controller
         ], ['email.unique' => 'This email is already registered.', 'password.confirmed' => 'The two passwords do not match.']);
 
         $customer = Customer::create($data);      // password is bcrypt-hashed by the model's 'hashed' cast
+        AuditLog::recordByCustomer('Registered', 'customers', $customer->customer_id, $customer->customer_id);
 
         $sent = $this->sendVerification($customer);
 
@@ -54,6 +56,7 @@ class CustomerAuthController extends Controller
         }
 
         $customer->markEmailAsVerified();
+        AuditLog::recordByCustomer('Verified', 'customers', $customer->customer_id, $customer->customer_id);
 
         // First successful click: the customer is signed in right away, like most online shops.
         Auth::guard('customer')->login($customer);
@@ -96,6 +99,11 @@ class CustomerAuthController extends Controller
 
     public function logout(Request $request)
     {
+        $customerId = $request->user('customer')?->customer_id;
+        if ($customerId) {
+            AuditLog::recordByCustomer('Logout', 'customers', $customerId, $customerId);
+        }
+
         Auth::guard('customer')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
@@ -121,7 +129,9 @@ class CustomerAuthController extends Controller
             'contact_number.regex' => 'Contact number may only contain digits.',
         ]);
 
-        $request->user('customer')->update($data);
+        $customer = $request->user('customer');
+        $customer->update($data);
+        AuditLog::recordByCustomer('Updated', 'customers', $customer->customer_id, $customer->customer_id);
 
         return back()->with('status', 'Profile updated.');
     }

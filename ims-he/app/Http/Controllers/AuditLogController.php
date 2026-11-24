@@ -15,7 +15,7 @@ class AuditLogController extends Controller
     public function index(Request $request)
     {
         $logs = $this->filtered($request)
-            ->with('user.employee')
+            ->with('user.employee', 'customer')
             ->orderByDesc('log_id')
             ->paginate(25)
             ->withQueryString();
@@ -36,11 +36,12 @@ class AuditLogController extends Controller
         // Same columns as the old Export Center dataset: the user's email, or "System" for automatic entries.
         $rows = $this->filtered($request)->toBase()
             ->leftJoin('users', 'users.user_id', '=', 'audit_logs.user_id')
-            ->select(['audit_logs.log_id', 'audit_logs.logged_at', 'users.email', 'audit_logs.action', 'audit_logs.table_name', 'audit_logs.record_id'])
+            ->leftJoin('customers', 'customers.customer_id', '=', 'audit_logs.customer_id')
+            ->select(['audit_logs.log_id', 'audit_logs.logged_at', 'users.email', 'customers.email as customer_email', 'audit_logs.action', 'audit_logs.table_name', 'audit_logs.record_id'])
             ->orderBy('audit_logs.logged_at')
             ->orderBy('audit_logs.log_id')
             ->cursor()
-            ->map(fn ($row) => [$row->log_id, $row->logged_at, $row->email ?: 'System', $row->action, $row->table_name, $row->record_id]);
+            ->map(fn ($row) => [$row->log_id, $row->logged_at, $row->email ?: ($row->customer_email ?: 'System'), $row->action, $row->table_name, $row->record_id]);
 
         AuditLog::record('Exported', 'audit_logs');
 
@@ -57,7 +58,7 @@ class AuditLogController extends Controller
         $filters = $request->validate([
             'user_id' => ['nullable', 'integer', 'exists:users,user_id'],
             'action' => ['nullable', 'string', 'max:150'],                   // "Action|table", e.g. "Completed|invoices"
-            'about' => ['nullable', Rule::in(array_keys(AuditLog::ABOUT))],  // employees or customers
+            'about' => ['nullable', Rule::in(AuditLog::ACTOR_TYPES)],         // who did it: employees or customers
             'start_date' => ['nullable', 'date_format:Y-m-d'],
             'end_date' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:start_date'],
         ]);
@@ -68,7 +69,7 @@ class AuditLogController extends Controller
                 [$action, $table] = array_pad(explode('|', $value, 2), 2, null);
                 $q->where('audit_logs.action', $action)->when($table, fn ($q) => $q->where('audit_logs.table_name', $table));
             })
-            ->when($filters['about'] ?? null, fn ($q, $about) => $q->whereIn('audit_logs.table_name', AuditLog::ABOUT[$about]))
+            ->when($filters['about'] ?? null, fn ($q, $about) => $q->whereNotNull($about === 'customers' ? 'audit_logs.customer_id' : 'audit_logs.user_id'))
             ->when($filters['start_date'] ?? null, fn ($q, $date) => $q->whereDate('audit_logs.logged_at', '>=', $date))
             ->when($filters['end_date'] ?? null, fn ($q, $date) => $q->whereDate('audit_logs.logged_at', '<=', $date));
     }

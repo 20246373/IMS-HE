@@ -248,13 +248,38 @@ class StaffAccessTest extends TestCase
         $this->get(route('audit.index', ['action' => 'Completed|invoices']))->assertOk()
             ->assertSee('Completed online order #12')->assertDontSee('Updated customer account #3');
 
-        // About: entries about employees or about customers (online orders count as customer entries).
+        // Type of user = who did it. A customer's own actions are customer entries, shown with the customer's name;
+        // an employee's action on a customer record is still an employee entry.
+        $customer = Customer::create(['email' => 'maria@example.com', 'password' => 'secret123', 'first_name' => 'Maria', 'last_name' => 'Cruz']);
+        AuditLog::recordByCustomer('Placed', 'invoices', 40, $customer->customer_id);
+
         $this->get(route('audit.index', ['about' => 'customers']))->assertOk()
-            ->assertSee('Completed online order #12')->assertSee('Updated customer account #3')
-            ->assertDontSee('Locked employee account #5');
+            ->assertSee('Placed online order #40')->assertSee('Maria Cruz')
+            ->assertDontSee('Updated customer account #3')->assertDontSee('Locked employee account #5');
         $this->get(route('audit.index', ['about' => 'employees']))->assertOk()
-            ->assertSee('Locked employee account #5')->assertDontSee('Completed online order #12');
+            ->assertSee('Updated customer account #3')->assertSee('Locked employee account #5')
+            ->assertDontSee('Placed online order #40');
         $this->get(route('audit.index', ['about' => 'suppliers']))->assertSessionHasErrors('about');
+    }
+
+    public function test_customers_own_actions_are_audited_under_their_name(): void
+    {
+        $this->post(route('customer.register'), ['email' => 'Shopper@Example.com', 'password' => 'secret123', 'password_confirmation' => 'secret123']);
+        $customer = Customer::where('email', 'shopper@example.com')->firstOrFail();
+        $customer->markEmailAsVerified();
+
+        $this->post('/login', ['login' => 'shopper@example.com', 'password' => 'secret123']);
+        $this->patch(route('customer.account.update'), ['first_name' => 'Ana', 'last_name' => 'Reyes']);
+        $this->post(route('customer.logout'));
+
+        foreach (['Registered', 'Login', 'Updated', 'Logout'] as $action) {
+            $this->assertDatabaseHas('audit_logs', [
+                'action' => $action, 'table_name' => 'customers', 'customer_id' => $customer->customer_id, 'user_id' => null,
+            ]);
+        }
+
+        $this->actingAs($this->staff(User::ADMINISTRATOR), 'web')->get(route('audit.index', ['about' => 'customers']))->assertOk()
+            ->assertSee('Signed up as a customer')->assertSee('Logged in')->assertSee('Ana Reyes');
     }
 
     public function test_seeded_administrator_can_log_in(): void

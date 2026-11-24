@@ -359,7 +359,7 @@
     <strong>IMS-HE</strong>
 
         @php
-            $user = auth()->user();
+            $user = auth('web')->user();   // the staff account (a customer session never uses this sidebar)
 
             // Each link shows when the account's role has the permission its page needs (see the Roles page).
             $isAdministrator = $user->hasRole(\App\Models\User::ADMINISTRATOR);

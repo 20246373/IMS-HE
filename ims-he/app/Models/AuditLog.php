@@ -40,17 +40,37 @@ class AuditLog extends Model
         'roles' => 'role',
     ];
 
-    /** Entries about employees and about customers, for the Audit Log's "About" filter. */
-    public const ABOUT = [
-        'employees' => ['users', 'employees', 'attendance', 'payrolls'],
-        'customers' => ['customers', 'customer_accounts', 'invoices'],
-    ];
+    /** The customer who did the action (empty when an employee or the system did it). */
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class, 'customer_id', 'customer_id');
+    }
+
+    /** "Type of user" filter values: who did the action. */
+    public const ACTOR_TYPES = ['employees', 'customers'];
+
+    /** Who did it, for the Name column: the employee's name, the customer's name or email, or "System". */
+    public function actorName(): string
+    {
+        if ($this->user) {
+            return $this->user->displayName();
+        }
+
+        if ($this->customer) {
+            return trim($this->customer->first_name.' '.$this->customer->last_name) ?: $this->customer->email;
+        }
+
+        return 'System';
+    }
 
     /** Actions that already say what happened, without naming the record. */
     private const PLAIN_ACTIONS = [
         'Login|users' => 'Logged in',
         'Logout|users' => 'Logged out',
         'Registered|users' => 'Signed up as an employee',
+        'Login|customers' => 'Logged in',
+        'Logout|customers' => 'Logged out',
+        'Registered|customers' => 'Signed up as a customer',
         'Password Changed|users' => 'Replaced the default password',
         'Clocked In|attendance' => 'Clocked in',
         'Clocked Out|attendance' => 'Clocked out',
@@ -110,6 +130,18 @@ class AuditLog extends Model
     {
         return static::create([
             'user_id' => $userId ?? Auth::id(),
+            'action' => $action,
+            'table_name' => $table,
+            'record_id' => $recordId,
+        ]);
+    }
+
+    /** Same as record(), for an action a customer did themselves (sign up, log in, place an order, ...). */
+    public static function recordByCustomer(string $action, string $table, ?int $recordId, int $customerId): self
+    {
+        return static::create([
+            'user_id' => null,
+            'customer_id' => $customerId,
             'action' => $action,
             'table_name' => $table,
             'record_id' => $recordId,

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AuditLog;
 use App\Models\Customer;
 use App\Models\Invoice;
 use App\Models\Payment;
@@ -92,6 +93,8 @@ class CheckoutService
 
             $cart->items()->delete();
             $cart->touch();
+
+            AuditLog::recordByCustomer('Placed', 'invoices', $invoice->invoice_id, $customer->customer_id);   // "Placed online order #12"
 
             return $invoice->load('items.product', 'payment', 'customer');
         });

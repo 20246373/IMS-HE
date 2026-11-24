@@ -56,18 +56,18 @@ Route::middleware('guest:web,customer')->group(function () {
 });
 
 Route::post('/logout', [AuthController::class, 'logout'])
-    ->middleware('auth')
+    ->middleware('auth:web')
     ->name('logout');
 
 // Accounts the Administrator created must replace their default password before using anything else.
-Route::middleware('auth')->group(function () {
+Route::middleware('auth:web')->group(function () {
     Route::get('/password/change', [AuthController::class, 'showChangePassword'])->name('password.change');
     Route::post('/password/change', [AuthController::class, 'changePassword'])->name('password.change.update');
 });
 
 // Waiting page for employees who have no role yet (not behind the role middleware).
 Route::get('/pending', [AuthController::class, 'pending'])
-    ->middleware('auth')
+    ->middleware('auth:web')
     ->name('staff.pending');
 
 Route::name('customer.')->group(function () {
@@ -103,7 +103,7 @@ Route::name('customer.')->group(function () {
 
 // Staff area. Each group needs a permission (App\Support\Permissions); the Administrator decides on the Roles page
 // which roles have which permissions. Accounts, roles and the audit log stay Administrator-only.
-Route::middleware(['auth', 'permission'])->group(function () {
+Route::middleware(['auth:web', 'permission'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::middleware('permission:suppliers.manage')->group(function () {
